@@ -9,6 +9,12 @@
    * and the slope; the Amp and Env 2 stages; Time and Global Mod Amount.
    * No pitch/mod wheels (user's call, 2026-10-22).
    *
+   * One ink (ADR-544, 2026-11-17): every amount is the selected track's.
+   * The oscillators and the filters are told apart by their number, and
+   * the one a section shows has its number on ON's block (the level knob's
+   * mark, the filter's dot). The layout is as it was: it met the band's
+   * rules already (ADR-517).
+   *
    * The face has no oscillator PAD since 2026-11-06 (user: "we don't need
    * to duplicate XY controls between the effect chain and central views"):
    * the chain cell's XY is Osc 1's Effect 2 / Wave Position. The pad lives
@@ -58,9 +64,7 @@
   import { usePanelParams } from './panel/usePanelParams.svelte';
   import { WAVETABLE_PANEL } from './panel/wavetablePanel';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import WavetableWave from './wavetable/WavetableWave.svelte';
   import WavetablePages from './wavetable/WavetablePages.svelte';
@@ -233,7 +237,9 @@
       label: String(n),
       x: graphFilters[n - 1].x,
       y: graphFilters[n - 1].y,
-      color: (n === 1 ? osc1Ink : osc2Ink).primary,
+      // The dot the rows edit is the chosen one of the two: ON's block, no
+      // hue (ADR-544). The other is a ring in the track's ink.
+      color: n === fltTab ? 'var(--on-bg)' : wavetableInk.primary,
       on: graphFilters[n - 1].on,
       filled: n === fltTab
     }))
@@ -286,12 +292,14 @@
    * panel. Both oscillators side by side with the Sub after them (once:
    * until ADR-516 each oscillator's tile drew it); the two filters with
    * their routing between them; the three envelopes; both LFOs and Global.
+   * The weights give the oscillators' and the LFOs' rows a medium knob
+   * under their picture (2026-11-17: every knob of a tile is one size).
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'osc1', cols: 7 }, { id: 'osc2', cols: 7 }, { id: 'sub', cols: 3 }], weight: 1.25 },
+    { tiles: [{ id: 'osc1', cols: 7 }, { id: 'osc2', cols: 7 }, { id: 'sub', cols: 3 }], weight: 1.2 },
     { tiles: [{ id: 'filter1', cols: 7 }, { id: 'routing', cols: 2 }, { id: 'filter2', cols: 7 }], weight: 1 },
-    { tiles: [{ id: 'amp', cols: 6 }, { id: 'env2', cols: 6 }, { id: 'env3', cols: 6 }], weight: 1.2 },
-    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 4 }], weight: 1.1 }
+    { tiles: [{ id: 'amp', cols: 6 }, { id: 'env2', cols: 6 }, { id: 'env3', cols: 6 }], weight: 1.15 },
+    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 4 }], weight: 1.2 }
   ];
 
   /** Both envelopes in view, Amp over Envelope 2 (ADR-477). */
@@ -305,41 +313,16 @@
     return norm(read(stage.index, stage.atRest), min, max);
   }
 
-  // ===== Colors =====
+  // ===== Colour =====
   /**
-   * Osc 1 orange, Osc 2 blue — Drift's source colours, so the same colour
-   * means the same oscillator in both synths. Only the card wears them:
-   * the filter and the envelopes are shared by both oscillators.
+   * One ink, the selected track's (ADR-544): every arc, wave and curve.
+   * Osc 1 was orange and Osc 2 blue until 2026-11-17, and a filter wore its
+   * oscillator's; a second colour now has to mean a second owner. The two
+   * oscillators and the two filters are told apart by their number (in the
+   * level knob, in the filter's dot), and the one the section shows is the
+   * chosen one of the pair: its number on ON's block.
    */
-  const OSC_COLORS = {
-    1: { primary: '#ff8244', secondary: 'rgba(255, 130, 68, 0.1)', accent: '#ff9e60' },
-    2: { primary: '#12b2f4', secondary: 'rgba(18, 178, 244, 0.1)', accent: '#33cdff' }
-  } as const;
-  function inkFor(n: OscN) {
-    const raw = OSC_COLORS[n];
-    const mode = paintModeReactive();
-    return { primary: trackInk(raw.primary, mode), secondary: raw.secondary, accent: trackInk(raw.accent, mode) };
-  }
-  let osc1Ink = $derived(inkFor(1));
-  let osc2Ink = $derived(inkFor(2));
-  let oscInk = $derived(oscTab === 1 ? osc1Ink : osc2Ink);
-  /** A filter wears its oscillator's ink, so Split reads Osc 1 → Filter 1. */
-  let fltInk = $derived(fltTab === 1 ? osc1Ink : osc2Ink);
-
-  // Wavetable color scheme (purple/violet - matches Wavetable's UI aesthetic)
-  const wavetableColor = {
-    primary: '#8b5cf6',
-    secondary: 'rgba(139, 92, 246, 0.1)',
-    accent: '#a78bfa'
-  };
-
-  // GRATICULE (§5.5): normalize the per-section palette through trackInk at injection.
-  let trackScheme = $derived(selectedTrackScheme());
-  let wavetableInk = $derived(trackScheme ?? {
-    primary: trackInk(wavetableColor.primary, paintModeReactive()),
-    secondary: wavetableColor.secondary,
-    accent: trackInk(wavetableColor.accent, paintModeReactive())
-  });
+  let wavetableInk = $derived(selectedAmountScheme());
 
   // ===== Handlers =====
   // XY interaction handlers - just send to store, control component handles local state
@@ -384,7 +367,7 @@
      draggable, and the drag turns it on. -->
 {#snippet oscPad(n: OscN)}
   {@const on = n === 1 ? osc1On : osc2On}
-  {@const ink = n === 1 ? osc1Ink : osc2Ink}
+  {@const ink = wavetableInk}
   <DeviceXY
     xValue={read(OSC[n].effect2, 0)}
     yValue={read(OSC[n].position, 0.5)}
@@ -399,8 +382,8 @@
 {/snippet}
 
 <!-- A knob in a face column: medium, its name under it, or its mark inside. -->
-{#snippet faceKnob(index: number, value: number, title: string, color: typeof wavetableInk, onInteraction: (v: number) => void, opts: { size?: 's' | 'm'; mark?: string; ghost?: boolean; bipolar?: boolean; onDown?: () => void } = {})}
-  <div class="knob-cell min-h-0 min-w-0">
+{#snippet faceKnob(index: number, value: number, title: string, onInteraction: (v: number) => void, opts: { size?: 's' | 'm'; mark?: string; ghost?: boolean; bipolar?: boolean; onDown?: () => void; chosen?: boolean } = {})}
+  <div class="knob-cell min-h-0 min-w-0" class:chosen={opts.chosen}>
     <DeviceSlider
       {value}
       {title}
@@ -413,7 +396,7 @@
       centerOrigin={opts.bipolar}
       centerValue={opts.bipolar ? 0.5 : undefined}
       isGhost={opts.ghost}
-      {color}
+      color={wavetableInk}
       readout={display(index)}
       onDown={opts.onDown}
       {onInteraction}
@@ -429,7 +412,6 @@
           page={id}
           params={panelParams}
           ink={wavetableInk}
-          oscInks={{ 1: osc1Ink, 2: osc2Ink }}
           {oscPad}
           {effectTitles}
           tables={{ choice: oscWaves.tableChoice, setCategory: oscWaves.setCategory, setTable: oscWaves.setTable }}
@@ -443,28 +425,27 @@
     <!-- One grid, eleven columns (ADR-510, re-laid 2026-11-06): Oscillator
          5 (the levels, the octaves, the wave over Position, Effect 1 and
          Effect 2), Filter 3, Mod Sources 2 (Amp, Env 2), Global 1, in
-         Live's signal order. The swap pill rides over the wave, so the
+         Live's signal order, all in the track's one ink (ADR-544). The swap pill rides over the wave, so the
          face keeps the column the pill would take: ~80px columns, every
          knob medium (70px) and the envelopes' small (48px). -->
     <FaceGrid sections={[5, 3, 2, 1]}>
       <FaceSection span={5}>
-        {#snippet head()}<PanelEyebrow title="Osc {oscTab}" color={oscInk.primary} />{/snippet}
-        <!-- The levels, Osc 1 over Osc 2, each in its own colour and
-             marked with its number, as Drift's: touching one brings its
-             oscillator up in the rest of the section. -->
-        <div class="knob-stack min-h-0 min-w-0">
-          {@render faceKnob(OSC[1].gain, osc1Gain, 'Osc 1', osc1Ink, (v) => writeLevel(1, v), { mark: '1', ghost: !osc1On, onDown: () => (oscTab = 1) })}
-          {@render faceKnob(OSC[2].gain, osc2Gain, 'Osc 2', osc2Ink, (v) => writeLevel(2, v), { mark: '2', ghost: !osc2On, onDown: () => (oscTab = 2) })}
+        {#snippet head()}<PanelEyebrow title="Osc {oscTab}" color={wavetableInk.primary} />{/snippet}
+        <!-- The levels, Osc 1 over Osc 2, each marked with its number, as
+             Drift's: touching one brings its oscillator up in the rest of
+             the section, and its number stands on ON's block while it is
+             the one shown. -->
+        <div class="knob-stack min-h-0 min-w-0" data-osc-shown={oscTab}>
+          {@render faceKnob(OSC[1].gain, osc1Gain, 'Osc 1', (v) => writeLevel(1, v), { mark: '1', ghost: !osc1On, onDown: () => (oscTab = 1), chosen: oscTab === 1 })}
+          {@render faceKnob(OSC[2].gain, osc2Gain, 'Osc 2', (v) => writeLevel(2, v), { mark: '2', ghost: !osc2On, onDown: () => (oscTab = 2), chosen: oscTab === 2 })}
         </div>
         <!-- The octaves, +2 at the top (user, 2026-11-05). -->
         <div class="min-h-0 flex flex-col">
           <ScrubTabs
-            inked
             options={OCTAVES_DOWN}
             selected={OCTAVES_DOWN.findIndex((n) => oscTransp === n * 12)}
             onSelect={(_, n) => writeOsc(o.transp, n * 12)}
             cols={1}
-            tint={oscInk.primary}
             label={(n) => `Osc ${oscTab} octave ${octaveLabel(n)}`}
             class="flex-1"
           >
@@ -477,11 +458,11 @@
         <div class="osc-card face-span-3">
           <div class="span-all"><HostedSwapPill /></div>
           <div class="span-all wave-well" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'} data-osc-wave={oscTab}>
-            <WavetableWave cycle={oscWaveCycle} color={oscInk.primary} />
+            <WavetableWave cycle={oscWaveCycle} color={wavetableInk.primary} />
           </div>
-          {@render faceKnob(o.position, oscPosition, 'Position', oscInk, (v) => writeOsc(o.position, v), { ghost: !oscOn })}
-          {@render faceKnob(o.effect1, oscEffect1, effectTitles(oscTab)[0], oscInk, (v) => writeOsc(o.effect1, v), { ghost: !oscOn || oscEffectMode === 'none' })}
-          {@render faceKnob(o.effect2, oscEffect2, effectTitles(oscTab)[1], oscInk, (v) => writeOsc(o.effect2, v), { ghost: !oscOn || oscEffectMode === 'none' })}
+          {@render faceKnob(o.position, oscPosition, 'Position', (v) => writeOsc(o.position, v), { ghost: !oscOn })}
+          {@render faceKnob(o.effect1, oscEffect1, effectTitles(oscTab)[0], (v) => writeOsc(o.effect1, v), { ghost: !oscOn || oscEffectMode === 'none' })}
+          {@render faceKnob(o.effect2, oscEffect2, effectTitles(oscTab)[1], (v) => writeOsc(o.effect2, v), { ghost: !oscOn || oscEffectMode === 'none' })}
         </div>
       </FaceSection>
       <FaceSeam ink={wavetableInk.primary} />
@@ -492,15 +473,12 @@
            touched, all five at once (it was a ‹ type › stepper), then the
            routing and its slope. -->
       <FaceSection span={3}>
-        {#snippet head()}<PanelEyebrow title="Filter {fltTab}" color={fltInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Filter {fltTab}" color={wavetableInk.primary} />{/snippet}
         <div class="flt-card face-span-all">
           <div class="span-all min-h-0">
             <FilterDotsGraph
               dots={graphDots}
-              curves={graphCurves(graphFilters, filterRouting).map((c) => ({
-                d: c.d,
-                color: c.filter === null ? wavetableInk.primary : (c.filter === 1 ? osc1Ink : osc2Ink).primary
-              }))}
+              curves={graphCurves(graphFilters, filterRouting).map((c) => ({ d: c.d, color: wavetableInk.primary }))}
               ariaLabel="Filters: 1 at {Math.round(graphFilters[0].x * 100)}%, 2 at {Math.round(graphFilters[1].x * 100)}%"
               onGrab={(i) => (fltTab = i === 0 ? 1 : 2)}
               onMove={(i, x, y) => moveFilter(i === 0 ? 1 : 2, x, y)}
@@ -508,11 +486,9 @@
           </div>
           <div class="span-all strip-row" class:ghost-row={!fltOn} data-filter-type>
             <ScrubTabs
-              inked
               options={FILTER_TYPES}
               selected={fltType}
               onSelect={(i) => write(f.type, i)}
-              tint={fltInk.primary}
               label={(t) => `Filter ${fltTab} type ${t}`}
               class="h-full"
               style="--scrub-font-size: 0.75rem; --scrub-padding: 0 0.125rem;"
@@ -522,11 +498,9 @@
           </div>
           <div class="face-span-2 strip-row">
             <ScrubTabs
-              inked
               options={FILTER_ROUTINGS}
               selected={filterRouting}
               onSelect={(i) => writeRouting(i)}
-              tint={wavetableInk.primary}
               label={(r) => `Filter routing ${r}`}
               class="h-full"
               style="--scrub-font-size: 0.75rem; --scrub-padding: 0 0.125rem;"
@@ -536,11 +510,9 @@
           </div>
           <div class="strip-row" class:ghost-row={!fltOn}>
             <ScrubTabs
-              inked
               options={SLOPES}
               selected={fltSlope}
               onSelect={(i) => write(f.slope, i)}
-              tint={fltInk.primary}
               label={(l) => `Filter ${fltTab} slope ${l} dB`}
               class="h-full"
               style="--scrub-font-size: 0.75rem;"
@@ -557,14 +529,14 @@
            names over the columns. -->
       <FaceSection span={2}>
         {#snippet head()}
-          <span class="mod-names" style="color: {wavetableInk.primary};">
+          <span class="mod-names">
             <span>Amp</span><span>Env 2</span>
           </span>
         {/snippet}
         {#each ENVELOPES as envelope (envelope.title)}
           <div class="knob-stack env-stack min-h-0 min-w-0" data-envelope={envelope.title}>
             {#each envelope.stages as stage (stage.index)}
-              {@render faceKnob(stage.index, envelopeValue(stage), `${envelope.title} ${stage.title}`, wavetableInk, (v) => writeEnv(stage.index, stage.fallback, v), { size: 's', mark: stage.title })}
+              {@render faceKnob(stage.index, envelopeValue(stage), `${envelope.title} ${stage.title}`, (v) => writeEnv(stage.index, stage.fallback, v), { size: 's', mark: stage.title })}
             {/each}
           </div>
         {/each}
@@ -577,8 +549,8 @@
       <FaceSection span={1}>
         {#snippet head()}<PanelEyebrow title="Global" color={wavetableInk.primary} />{/snippet}
         <div class="knob-stack min-h-0 min-w-0">
-          {@render faceKnob(TIME, time, 'Time', wavetableInk, (v) => write(TIME, v), { bipolar: true })}
-          {@render faceKnob(GLOBAL_MOD, globalMod, 'Mod Amt', wavetableInk, (v) => write(GLOBAL_MOD, v))}
+          {@render faceKnob(TIME, time, 'Time', (v) => write(TIME, v), { bipolar: true })}
+          {@render faceKnob(GLOBAL_MOD, globalMod, 'Mod Amt', (v) => write(GLOBAL_MOD, v))}
         </div>
       </FaceSection>
     </FaceGrid>
@@ -650,20 +622,30 @@
     background: var(--surface-well);
     overflow: hidden;
   }
-  /* The envelopes' name line: each envelope's name over its column. */
+  /* The envelopes' name line: each envelope's name over its column, a
+     section name as the eyebrows beside it are (PanelEyebrow). */
   .mod-names {
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: var(--face-gutter, 0.5rem);
     width: 100%;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-medium);
     line-height: 1rem;
     white-space: nowrap;
     text-align: center;
+    color: var(--value);
   }
-  :global([data-grammar='flat']) .mod-names {
-    font-weight: var(--font-weight-medium);
+  /* The oscillator the section shows is the chosen one of the two: its
+     number on ON's block (ADR-544), where it wore a colour of its own. */
+  .knob-cell.chosen :global(.knob-mark) {
+    display: grid;
+    place-items: center;
+    width: 50cqw;
+    height: 50cqw;
+    border-radius: 999px;
+    background: var(--on-bg);
+    color: var(--on-fg);
   }
 
   /* The type and slope of a filter that is off. */

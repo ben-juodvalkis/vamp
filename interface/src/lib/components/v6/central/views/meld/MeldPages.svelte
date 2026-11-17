@@ -3,8 +3,10 @@
   /**
    * Meld's board tiles (ADR-512, ADR-513), each a `BoardTile` panel
    * (ADR-516) hand-laid on the face grid (ADR-510). An engine's tiles
-   * (`osc-a`, `filter-a`, `env-a`, `lfo-a`, and `-b`) wear its colour;
-   * Global holds what both share, each engine's mix in its own. Every
+   * (`osc-a`, `filter-a`, `env-a`, `lfo-a`, and `-b`) are named for it;
+   * Global holds what both share, each engine's mix marked A or B. Every
+   * amount is the track's one ink and the knobs of a tile one size
+   * (ADR-544, 2026-11-17; an engine had a colour before). Every
    * control binds a parameter by Live's name
    * (docs/reference/instruments/Meld.md) through `usePanelParams`.
    *
@@ -34,13 +36,14 @@
   interface Props {
     page: string;
     params: PanelParams;
-    /** Meld's own ink, for Global. */
+    /** The one ink every amount is drawn in: the selected track's (ADR-544). */
     ink: DeviceColorScheme;
-    /** Engine A's and B's colours, as on the face. */
-    engineInks: Record<MeldEngine, DeviceColorScheme>;
   }
 
-  let { page, params, ink, engineInks }: Props = $props();
+  let { page, params, ink }: Props = $props();
+
+  /** A pick's value is a name in plain ink, never the amount's colour (ADR-544). */
+  const PICK_INK = 'var(--label)';
 
   // Live's value lists (meldPanel.ts, read off the running Meld).
   const OSC_TYPES = [
@@ -70,7 +73,6 @@
   let engine = $derived<MeldEngine | null>(page.endsWith('-a') ? 'A' : page.endsWith('-b') ? 'B' : null);
   let X = $derived(engine ?? 'A');
   let section = $derived(page.replace(/-[ab]$/, ''));
-  let eInk = $derived(engine ? engineInks[engine] : ink);
 
   const TITLES: Record<string, string> = { osc: 'Engine', filter: 'Filter', env: 'Envelopes', lfo: 'LFOs', global: 'Global' };
   let title = $derived(`${TITLES[section] ?? section}${engine ? ` ${engine}` : ''}`);
@@ -95,7 +97,7 @@
 
 <!-- A knob bound by name, its name under it. A parameter that steps
      (Transpose, the synced rates) rounds. -->
-{#snippet knob(param: string, title: string, opts: { steps?: number; mark?: string; color?: DeviceColorScheme; size?: 's' | 'm' | 'l'; span?: number; below?: boolean } = {})}
+{#snippet knob(param: string, title: string, opts: { steps?: number; mark?: string; size?: 's' | 'm' | 'l'; span?: number; below?: boolean } = {})}
   {@const l = lo(param)}
   {@const h = hi(param)}
   {@const bipolar = BIPOLAR_SUFFIX.some((s) => param.endsWith(s))}
@@ -116,7 +118,7 @@
       orientation="vertical"
       labelSize="small"
       isGhost={!params.has(param)}
-      color={opts.color ?? eInk}
+      color={ink}
       readout={params.display(param)}
       onInteraction={(v) => params.write(param, opts.steps || h - l > 1 ? Math.round(v) : v)}
     />
@@ -124,7 +126,7 @@
 {/snippet}
 
 <!-- An on/off parameter: one touch row, lit while on. -->
-{#snippet sw(param: string, title: string, color: string = eInk.primary)}
+{#snippet sw(param: string, title: string)}
   {@const on = isOn(param)}
   <div class="cell sw-cell">
   <button
@@ -132,7 +134,6 @@
     class:active={on}
     aria-pressed={on}
     disabled={!params.has(param)}
-    style="--btn-tint: {color};"
     data-param={param}
     use:press={{ onPress: () => flip(param), disabled: !params.has(param) }}
   >{title}</button>
@@ -142,16 +143,16 @@
 <!-- A list's pick: a field naming its value, its own name over it. -->
 {#snippet picker(param: string, options: readonly string[], label: string, caption: string, span?: number)}
   <div class="cell sw-cell" style={span ? `grid-column: span ${span};` : undefined} data-param={param}>
-    <ChoicePicker {options} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i)} {label} {caption} tint={eInk.primary} ghost={!params.has(param)} />
+    <ChoicePicker {options} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i)} {label} {caption} tint={PICK_INK} ghost={!params.has(param)} />
   </div>
 {/snippet}
 
-{#snippet sub(text: string, color: string = eInk.primary)}<span class="sub" style="color: {color};">{text}</span>{/snippet}
+{#snippet sub(text: string)}<span class="sub">{text}</span>{/snippet}
 
 <!-- A section's header line: a name over each run of columns. -->
-{#snippet heads(items: readonly (readonly [string, number])[], color: string = eInk.primary)}
+{#snippet heads(items: readonly (readonly [string, number])[])}
   <div class="col-heads" style="grid-template-columns: repeat({items.reduce((n, [, span]) => n + span, 0)}, minmax(0, 1fr));">
-    {#each items as [text, span], i (i)}<span class="sub" style="color: {color}; grid-column: span {span};">{text}</span>{/each}
+    {#each items as [text, span], i (i)}<span class="sub" style="grid-column: span {span};">{text}</span>{/each}
   </div>
 {/snippet}
 
@@ -170,7 +171,7 @@
       params.writeUnit(`${X} Filter Freq`, x, `${X} Filter On`);
       params.writeUnit(`${X} Filter Q`, y, `${X} Filter On`);
     }}
-    color={eInk}
+    color={ink}
   />
 {/snippet}
 
@@ -185,33 +186,29 @@
       onSelect={(k) => params.write(`${X} Octave`, lo(`${X} Octave`) + order[k])}
       label="Engine {X} octave"
       caption="Octave"
-      tint={eInk.primary}
+      tint={PICK_INK}
       ghost={!params.has(`${X} Octave`)}
     />
   </div>
 {/snippet}
 
 <!-- An envelope's picture over its lettered stage knobs (the tile's columns
-     are too narrow for the words), its slopes lettered two to a column
-     beside it under a "Slope" head, the loop mode under them. -->
-{#snippet envelope(prefix: string, levels: boolean, loopLabel: string)}
-  <div class="face-span-3"><EnvelopeGraph {params} ink={eInk.primary} knobs="short" names={levels
+     are too narrow for the words), and beside it its three slopes, lettered
+     under a "Slope" head, two to a column at the stage knobs' size. (Its
+     loop mode is on the tile's bar.) -->
+{#snippet envelope(prefix: string, levels: boolean)}
+  <div class="face-span-3"><EnvelopeGraph {params} ink={ink.primary} knobs="short" names={levels
     ? { attack: `${prefix} Attack`, decay: `${prefix} Decay`, sustain: `${prefix} Sustain`, release: `${prefix} Release`, initial: `${prefix} Initial`, peak: `${prefix} Peak`, final: `${prefix} Final` }
     : { attack: `${prefix} Attack`, decay: `${prefix} Decay`, sustain: `${prefix} Sustain`, release: `${prefix} Release` }} /></div>
-  <div class="face-span-2 slopes">
-    {@render knob(`${prefix} A Slope`, 'A')}
-    {@render knob(`${prefix} R Slope`, 'R')}
-    {@render knob(`${prefix} D Slope`, 'D')}
-    <div class="cell"></div>
-    <div class="span-2">{@render picker(`${prefix} Loop Mode`, LOOP_MODES, loopLabel, 'Loop')}</div>
-  </div>
+  <div class="pair slope">{@render knob(`${prefix} A Slope`, 'A')}{@render knob(`${prefix} D Slope`, 'D')}</div>
+  <div class="pair slope">{@render knob(`${prefix} R Slope`, 'R')}<div class="cell"></div></div>
 {/snippet}
 
 <div class="meld-page" data-meld-page={page}>
 {#if section === 'osc'}
   <!-- The engine: its type, octave and glide mode and its four switches
-       one row, its knobs under them, Shape the lead over two columns. -->
-  <BoardTile title="Engine {X}" ink={eInk.primary} on={isOn(`${X} On`)} onToggle={() => flip(`${X} On`)} switchParam="{X} On" switchDisabled={!params.has(`${X} On`)}>
+       one row, its knobs under them, one size, Shape over two columns. -->
+  <BoardTile title="Engine {X}" ink={ink.primary} on={isOn(`${X} On`)} onToggle={() => flip(`${X} On`)} switchParam="{X} On" switchDisabled={!params.has(`${X} On`)}>
     <FaceGrid sections={[7]} heads={false}>
       <FaceSection span={7}>
         <div class="face-span-all two-rows">
@@ -222,10 +219,10 @@
           {@render sw(`${X} Osc Scale Aware`, 'Scale')}
           {@render sw(`${X} Reset`, 'Reset')}
           {@render sw(`${X} Reset To Voice Offset`, 'Offset')}
-          {@render knob(`${X} Osc Shape`, 'Shape', { span: 2, size: 'm', below: true })}
-          {@render knob(`${X} Osc Tone`, 'Tone', { size: 'm' })}
-          {@render knob(`${X} Transpose`, 'Semi', { steps: 25, size: 'm' })}
-          {@render knob(`${X} Detune`, 'Detune', { size: 'm' })}
+          {@render knob(`${X} Osc Shape`, 'Shape', { span: 2, below: true })}
+          {@render knob(`${X} Osc Tone`, 'Tone')}
+          {@render knob(`${X} Transpose`, 'Semi', { steps: 25 })}
+          {@render knob(`${X} Detune`, 'Detune')}
           {@render knob(`${X} Transp Scale`, 'Scale St')}
           {@render knob(`${X} Glide Time`, 'Glide')}
         </div>
@@ -235,7 +232,7 @@
 {:else if section === 'filter'}
   <!-- The filter: its pad over two columns, its type over Scale, its second
        macro named as Live names it under the type. -->
-  <BoardTile title="Filter {X}" ink={eInk.primary} on={isOn(`${X} Filter On`)} onToggle={() => flip(`${X} Filter On`)} switchParam="{X} Filter On" switchDisabled={!params.has(`${X} Filter On`)}>
+  <BoardTile title="Filter {X}" ink={ink.primary} on={isOn(`${X} Filter On`)} onToggle={() => flip(`${X} Filter On`)} switchParam="{X} Filter On" switchDisabled={!params.has(`${X} Filter On`)}>
     <FaceGrid sections={[5]} heads={false}>
       <FaceSection span={5}>
         <div class="face-span-2 pad">{@render filterPad()}</div>
@@ -249,40 +246,47 @@
   </BoardTile>
 {:else if section === 'env'}
   <!-- Each envelope as Live draws it (ADR-514) over its small stage knobs
-       (Mod's four levels dragged on it too), its slopes and loop mode two
-       to a column beside it. -->
-  <BoardTile title="Envelopes {X}" ink={eInk.primary}>
+       (Mod's four levels dragged on it too), its slopes two to a column
+       beside it, and both loop modes on the bar (2026-11-17: under the
+       slopes they cost the row a touch row's height, which the engines'
+       mixes and the LFO effects' amounts needed to draw at a knob's size). -->
+  <BoardTile title="Envelopes {X}" ink={ink.primary}>
+    {#snippet tools()}
+      {@render picker(`${X} Amp Loop Mode`, LOOP_MODES, `Engine ${X} amp loop`, 'Amp loop')}
+      {@render picker(`${X} Mod Loop Mode`, LOOP_MODES, `Engine ${X} mod loop`, 'Mod loop')}
+    {/snippet}
     <FaceGrid sections={[5, 5]}>
       <FaceSection span={5}>
         {#snippet head()}{@render heads([['Amp', 3], ['Slope', 2]])}{/snippet}
-        {@render envelope(`${X} Amp`, false, `Engine ${X} amp loop`)}
+        {@render envelope(`${X} Amp`, false)}
       </FaceSection>
-      <FaceSeam ink={eInk.primary} />
+      <FaceSeam ink={ink.primary} />
       <FaceSection span={5}>
         {#snippet head()}{@render heads([['Mod', 3], ['Slope', 2]])}{/snippet}
-        {@render envelope(`${X} Mod`, true, `Engine ${X} mod loop`)}
+        {@render envelope(`${X} Mod`, true)}
       </FaceSection>
     </FaceGrid>
   </BoardTile>
 {:else if section === 'lfo'}
-  <!-- Both LFOs: each its wave, sync and retrigger one row, its knobs
-       under; LFO 1's two effects a pick each over their amounts. -->
-  <BoardTile title="LFOs {X}" ink={eInk.primary}>
-    <FaceGrid sections={[4, 2, 3]}>
+  <!-- Both LFOs: each its wave (two columns, so its name is whole), sync
+       and retrigger one row, its knobs under; LFO 1's two effects a pick
+       each over their amounts. The row is tall enough that those amounts
+       draw at the other knobs' size (they were 28px until 2026-11-17). -->
+  <BoardTile title="LFOs {X}" ink={ink.primary}>
+    <FaceGrid sections={[4, 2, 4]}>
       <FaceSection span={4}>
         {#snippet head()}{@render sub('LFO 1')}{/snippet}
         <div class="face-span-all two-rows">
-          {@render picker(`${X} LFO 1 Wave`, LFO1_WAVES, `Engine ${X} LFO 1 wave`, 'Wave')}
+          {@render picker(`${X} LFO 1 Wave`, LFO1_WAVES, `Engine ${X} LFO 1 wave`, 'Wave', 2)}
           {@render sw(`${X} LFO 1 Sync`, 'Sync')}
           {@render sw(`${X} LFO 1 Retrig On`, 'Retrig')}
-          <div class="cell"></div>
-          {@render knob(rateParam(1), isOn(`${X} LFO 1 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 1 Sync`) ? 22 : undefined, size: 'm' })}
+          {@render knob(rateParam(1), isOn(`${X} LFO 1 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 1 Sync`) ? 22 : undefined })}
           {@render knob(`${X} LFO 1 Offset`, 'Offset')}
           {@render knob(`${X} LFO 1 Shape`, 'Shape')}
           {@render knob(`${X} LFO 1 Fold`, 'Fold')}
         </div>
       </FaceSection>
-      <FaceSeam ink={eInk.primary} />
+      <FaceSeam ink={ink.primary} />
       <FaceSection span={2}>
         {#snippet head()}{@render sub('LFO 1 FX')}{/snippet}
         <div class="face-span-all three-rows">
@@ -292,46 +296,52 @@
           {@render knob(`${X} LFO 1 FX 2 Ramp`, 'FX 2', { mark: '2' })}
         </div>
       </FaceSection>
-      <FaceSeam ink={eInk.primary} />
-      <FaceSection span={3}>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={4}>
         {#snippet head()}{@render sub('LFO 2')}{/snippet}
         <div class="face-span-all two-rows">
-          {@render picker(`${X} LFO 2 Wave`, LFO2_WAVES, `Engine ${X} LFO 2 wave`, 'Wave')}
+          {@render picker(`${X} LFO 2 Wave`, LFO2_WAVES, `Engine ${X} LFO 2 wave`, 'Wave', 2)}
           {@render sw(`${X} LFO 2 Sync`, 'Sync')}
           {@render sw(`${X} LFO 2 Retrig On`, 'Retrig')}
-          {@render knob(rateParam(2), isOn(`${X} LFO 2 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 2 Sync`) ? 22 : undefined, span: 2, size: 'm' })}
-          {@render knob(`${X} LFO 2 Offset`, 'Offset')}
+          {@render knob(rateParam(2), isOn(`${X} LFO 2 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 2 Sync`) ? 22 : undefined, span: 2 })}
+          {@render knob(`${X} LFO 2 Offset`, 'Offset', { span: 2 })}
         </div>
       </FaceSection>
     </FaceGrid>
   </BoardTile>
 {:else if section === 'global'}
-  <!-- What both engines share: each engine's mix in its colour, Meld's
-       own four, and how it plays. -->
+  <!-- What both engines share: each engine's mix, A over B, the letter in
+       the knob saying whose; Meld's own four, a column each (the tile is
+       wide enough that B Delay and Volume are whole); and how it plays,
+       four switches two by two. Every knob one size. -->
   <BoardTile title="Global" ink={ink.primary}>
-    <FaceGrid sections={[3, 4, 2]}>
+    <FaceGrid sections={[3, 4, 3]}>
       <FaceSection span={3}>
-        {#snippet head()}{@render heads([['Vol', 1], ['Pan', 1], ['Tone', 1]], ink.primary)}{/snippet}
+        {#snippet head()}{@render heads([['Vol', 1], ['Pan', 1], ['Tone', 1]])}{/snippet}
         {#each [['Volume', 'Vol'], ['Pan', 'Pan'], ['Tone Filter', 'Tone']] as [name, label] (name)}
-          <div class="stack">
-            {@render knob(`A ${name}`, `A ${label}`, { color: engineInks.A, mark: 'A' })}
-            {@render knob(`B ${name}`, `B ${label}`, { color: engineInks.B, mark: 'B' })}
+          <div class="pair">
+            {@render knob(`A ${name}`, `A ${label}`, { mark: 'A' })}
+            {@render knob(`B ${name}`, `B ${label}`, { mark: 'B' })}
           </div>
         {/each}
       </FaceSection>
       <FaceSeam ink={ink.primary} />
       <FaceSection span={4}>
-        {#snippet head()}{@render sub('Output', ink.primary)}{/snippet}
-        {@render knob('Drive', 'Drive', { color: ink })}
-        {@render knob('Voice Spread', 'Spread', { color: ink })}
-        {@render knob('Engine B Delay', 'B Delay', { color: ink })}
-        {@render knob('Volume', 'Volume', { color: ink })}
+        {#snippet head()}{@render sub('Output')}{/snippet}
+        {@render knob('Drive', 'Drive')}
+        {@render knob('Voice Spread', 'Spread')}
+        {@render knob('Engine B Delay', 'B Delay')}
+        {@render knob('Volume', 'Volume')}
       </FaceSection>
       <FaceSeam ink={ink.primary} />
-      <FaceSection span={2}>
-        {#snippet head()}{@render sub('Play', ink.primary)}{/snippet}
-        <div class="stack">{@render sw('Limiter On', 'Limiter', ink.primary)}{@render sw('Link Envelopes', 'Link Env', ink.primary)}</div>
-        <div class="stack">{@render sw('Scale Aware', 'Scale', ink.primary)}{@render sw('Mono Legato', 'Legato', ink.primary)}</div>
+      <FaceSection span={3}>
+        {#snippet head()}{@render sub('Play')}{/snippet}
+        <div class="face-span-all switch-grid">
+          {@render sw('Limiter On', 'Limiter')}
+          {@render sw('Scale Aware', 'Scale')}
+          {@render sw('Link Envelopes', 'Link Env')}
+          {@render sw('Mono Legato', 'Legato')}
+        </div>
       </FaceSection>
     </FaceGrid>
   </BoardTile>
@@ -361,13 +371,15 @@
     flex: 1 1 0;
     min-height: 0;
   }
-  /* In a shared column the higher rank takes the larger share (ADR-515). */
-  .stack > :global(.rank-l) { flex-grow: 1.6; }
-  .stack > :global(.rank-m) { flex-grow: 1.25; }
-  /* A switch or a field in a stack is one touch row. */
-  .stack > :global(.sw-cell) {
-    flex: none;
-    height: var(--height-touch);
+  /* Two controls to a column, on the tile's two lines: equal halves, so the
+     knobs of every column are one size (ADR-544) and a switch stands level
+     with the knob beside it. */
+  .pair {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: var(--spacing-sm);
+    min-height: 0;
+    min-width: 0;
   }
   .cell {
     min-width: 0;
@@ -376,6 +388,14 @@
   }
   .pad {
     min-height: 0;
+  }
+  /* The slopes' two lines, as tall as holds a knob the stages' size: the
+     stage knobs stand four across the picture's three columns, so they are
+     a little under a column wide, and a slope a full column wide would
+     draw larger than they do. */
+  .pair.slope {
+    grid-template-rows: 3.75rem 3.75rem;
+    align-content: center;
   }
   /* A selector row over a knob row (ADR-516): the picks and switches one
      touch row across the section's columns, the knobs on those columns
@@ -403,20 +423,14 @@
     min-width: 0;
     min-height: 0;
   }
-  /* An envelope's slopes two by two, the loop's field across both under them. */
-  .slopes {
+  /* Four switches two by two across a section, wide enough for their words. */
+  .switch-grid {
     display: grid;
-    grid-template-columns: subgrid;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) var(--height-touch);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--spacing-sm) var(--face-gutter);
     min-height: 0;
-  }
-  .slopes > :global(*) {
     min-width: 0;
-    min-height: 0;
-  }
-  .slopes > .span-2 {
-    grid-column: span 2;
   }
   /* A switch or a field is one touch row, centred in its cell. */
   .sw-cell {
@@ -446,7 +460,7 @@
     font-weight: 600;
     line-height: 1rem;
     white-space: nowrap;
-    opacity: 0.8;
+    color: var(--value);
   }
   /* The board's columns are narrow: a field keeps its padding small. */
   .meld-page :global(.picker-button) {

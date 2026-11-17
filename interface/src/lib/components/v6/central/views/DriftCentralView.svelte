@@ -3,9 +3,7 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
   import ChoicePicker from '../ChoicePicker.svelte';
@@ -37,54 +35,18 @@
   /** The pages behind the face's eyebrows, every parameter by Live's name (ADR-487). */
   const panelParams = usePanelParams(() => device);
 
-  const driftColor = {
-    primary: '#06b6d4',
-    secondary: 'rgba(6, 182, 212, 0.1)',
-    accent: '#22d3ee'
-  };
-
-  // GRATICULE (§5.5): normalize the per-section palette through trackInk at injection.
-  let trackScheme = $derived(selectedTrackScheme());
-  let driftInk = $derived(trackScheme ?? {
-    primary: trackInk(driftColor.primary, paintModeReactive()),
-    secondary: driftColor.secondary,
-    accent: trackInk(driftColor.accent, paintModeReactive())
-  });
-
   /**
-   * The three sound SOURCES are colour-coded (user's call, 2026-09-12):
-   * OSC 1 orange, OSC 2 blue, Noise red. This is a deliberate exception
-   * to ADR-402 — every other instrument view wears the focused track's
-   * ink, and the rest of THIS view still does (Filter, Time, Voicing,
-   * Drift). The sources are the one place a shared ink costs
-   * something: with one oscillator card switched between two
-   * oscillators, the colour is what says which one you are holding
-   * without reading the tab, and Noise is a third source that used to be
-   * indistinguishable from them.
-   *
-   * Orange and blue are the house `distortion` and `filter` family hexes,
-   * so they land in the palette the rest of the app already uses. There
-   * is no red family — `--act-rec` is the only house red and it means
-   * RECORDING, which is exactly the wrong thing for a slider to say — so
-   * Noise carries a literal, picked to sit in the same lightness and
-   * chroma band as the two family colours. All three go through
-   * `trackInk` at injection like every other palette here (§5.5).
+   * One ink, the selected track's (ADR-544): every arc, fill and curve.
+   * The three sources wore colours of their own from 2026-09-12 (Osc 1
+   * orange, Osc 2 blue, Noise red) so the card could say which oscillator
+   * it held; a second colour now has to mean a second owner. The sources
+   * are told apart by the mark in their level knob (1, 2, the noise glyph),
+   * and the oscillator the card shows is the chosen one of the two: its
+   * number stands on ON's block.
    */
-  const SOURCE_COLORS = {
-    osc1: { primary: '#ff8244', secondary: 'rgba(255, 130, 68, 0.1)', accent: '#ff9e60' },
-    osc2: { primary: '#12b2f4', secondary: 'rgba(18, 178, 244, 0.1)', accent: '#33cdff' },
-    noise: { primary: '#ff5d5d', secondary: 'rgba(255, 93, 93, 0.1)', accent: '#ff7d7d' }
-  } as const;
-
-  function sourceInk(source: keyof typeof SOURCE_COLORS) {
-    const raw = SOURCE_COLORS[source];
-    const mode = paintModeReactive();
-    return { primary: trackInk(raw.primary, mode), secondary: raw.secondary, accent: trackInk(raw.accent, mode) };
-  }
-
-  let osc1Ink = $derived(sourceInk('osc1'));
-  let osc2Ink = $derived(sourceInk('osc2'));
-  let noiseInk = $derived(sourceInk('noise'));
+  let driftInk = $derived(selectedAmountScheme());
+  /** A pick's value is a name in plain ink, never the amount's colour. */
+  const PICK_INK = 'var(--label)';
 
   /** Live's own value, a box's readout while it is dragged (ADR-477); sent only while the UI writes. */
   function display(index: number): string | undefined {
@@ -157,7 +119,8 @@
   // The octave strip and the waveform grid SCRUB (user, 2026-09-12: "can I
   // slide my finger to scrub octaves?"), through ScrubTabs. Which
   // oscillator they edit follows a touch on its level knob (the Osc 1/2
-  // badge left 2026-11-06).
+  // badge left 2026-11-06), whose number stands on ON's block while its
+  // oscillator is the one shown (ADR-544).
 
   // Display order is the mockup's — Mono then Poly on the top row. `value` is
   // the LOM `voice_mode_index` and travels with each entry, so reordering the
@@ -381,8 +344,10 @@
   /** The dot the LP Type row beside the pad belongs with: LP until HP is touched. */
   let filterDot = $state<0 | 1>(0);
   let filterDots = $derived([
-    { label: 'LP', x: cutoffValue, y: resonanceValue, color: driftInk.primary, on: true, filled: filterDot === 0 },
-    { label: 'HP', x: axisX(DRIFT_AXIS, hpHz(hpValue)), y: HP_DOT_Y, color: driftInk.primary, on: true, filled: filterDot === 1 }
+    // The dot the LP Type row belongs with is the chosen one: ON's block,
+    // no hue (ADR-544). The other is a ring in the track's ink.
+    { label: 'LP', x: cutoffValue, y: resonanceValue, color: filterDot === 0 ? 'var(--on-bg)' : driftInk.primary, on: true, filled: filterDot === 0 },
+    { label: 'HP', x: axisX(DRIFT_AXIS, hpHz(hpValue)), y: HP_DOT_Y, color: filterDot === 1 ? 'var(--on-bg)' : driftInk.primary, on: true, filled: filterDot === 1 }
   ]);
   let filterCurve = $derived(
     responsePath(
@@ -423,15 +388,18 @@
 
   /**
    * Full screen (ADR-512, re-laid by ADR-516): every page at once as a
-   * panel, in Live's signal order. The Oscillators (with the mixer) and the
-   * pitch modulation on the first row, taller, so the waveform and octave
-   * picks keep their touch height; Filter beside the Envelopes; the LFO,
-   * the Matrix and Global. The face's controls are all on these pages.
+   * panel, in Live's signal order. The Oscillators (with the mixer) and
+   * what modulates them (`pitch-mod`: both pitch modulations and the
+   * shape's) on the first row, taller, so the waveform and octave picks
+   * keep their touch height; Filter beside the Envelopes; the LFO, the
+   * Matrix and Global, as tall, so the LFO's knobs are medium under its
+   * wave and Global's stand two to a column (2026-11-17). The face's
+   * controls are all on these pages.
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'oscillators', cols: 9 }, { id: 'pitch-mod', cols: 2 }], weight: 1.1 },
-    { tiles: [{ id: 'filter', cols: 7 }, { id: 'envelopes', cols: 9 }], weight: 1.1 },
-    { tiles: [{ id: 'lfo', cols: 4 }, { id: 'matrix', cols: 3 }, { id: 'global', cols: 7 }] }
+    { tiles: [{ id: 'oscillators', cols: 9 }, { id: 'pitch-mod', cols: 3 }], weight: 1.1 },
+    { tiles: [{ id: 'filter', cols: 7 }, { id: 'envelopes', cols: 9 }], weight: 1 },
+    { tiles: [{ id: 'lfo', cols: 4 }, { id: 'matrix', cols: 3 }, { id: 'global', cols: 7 }], weight: 1.1 }
   ];
 
   let oscOn = $derived(oscTab === 1 ? osc1On : osc2On);
@@ -439,8 +407,6 @@
   let oscShape = $derived(oscTab === 1 ? osc1Shape : osc2Shape);
   let oscOctave = $derived(oscTab === 1 ? osc1Octave : osc2Octave);
   let oscWaveOptions = $derived(oscTab === 1 ? OSC1_WAVE_OPTIONS : OSC2_WAVE_OPTIONS);
-  /** The card takes the colour of the oscillator it is showing. */
-  let oscInk = $derived(oscTab === 1 ? osc1Ink : osc2Ink);
 
   /** Every oscillator write turns its oscillator on first — reaching for a control IS the request to hear it. */
   function writeOsc(osc: 1 | 2, param: number, value: number) {
@@ -496,7 +462,6 @@
       if (devicePath) selectedTrackStore.setPropertyValue(devicePath, 'voice_mode_index', o.value);
     }}
     {cols}
-    tint={driftInk.primary}
     label={(o) => o.label}
     class="h-full"
     style="--scrub-font-size: {cols === 4 ? '0.6875rem' : '0.8125rem'}; --scrub-font-weight: 500; --scrub-padding: 0 {cols === 4 ? '0.125rem' : '0.25rem'};"
@@ -525,7 +490,6 @@
           page={id}
           params={panelParams}
           ink={driftInk}
-          sourceInks={{ osc1: osc1Ink, osc2: osc2Ink, noise: noiseInk }}
           {filterPad}
           {waveGlyph}
           prop={deviceProp}
@@ -547,17 +511,17 @@
          Every column, gutter and seam is the same, so the face reads on
          one beat. -->
     <FaceGrid sections={[4, 1, 1, 2, 2]}>
-      <FaceSection span={4} style="--drift-ink: {oscInk.primary};">
+      <FaceSection span={4}>
         {#snippet head()}<PanelEyebrow title="Oscillators" color={driftInk.primary} />{/snippet}
           <!-- The three source levels, the grid's first column, left of the waveforms (user,
                2026-11-06): no names: 1, 2 and the noise glyph say which. -->
           <div class="osc-levels min-h-0 flex flex-col gap-(--spacing-sm)" data-osc={oscTab}>
             <!-- Touching either oscillator's level brings ITS card up on the
                  left (`onDown`, so the switch lands on the touch rather than
-                 on the first frame a finger has moved). The card is what says
-                 which oscillator that colour belongs to, and reaching for one
-                 of these is already a choice of oscillator. -->
-            <div class="mixer-slider min-h-0">
+                 on the first frame a finger has moved): reaching for one of
+                 these is already a choice of oscillator, and the one chosen
+                 has its number on ON's block (ADR-544). -->
+            <div class="mixer-slider min-h-0" class:chosen={oscTab === 1}>
               <DeviceSlider
                 value={osc1Gain}
                 title="Osc 1"
@@ -568,13 +532,13 @@
                 orientation="vertical"
                 labelSize="small"
                 isGhost={!osc1On}
-                color={osc1Ink}
+                color={driftInk}
                 readout={display(29)}
                 onDown={() => (oscTab = 1)}
                 onInteraction={(value) => writeOsc(1, 29, value)}
               />
             </div>
-            <div class="mixer-slider min-h-0">
+            <div class="mixer-slider min-h-0" class:chosen={oscTab === 2}>
               <DeviceSlider
                 value={osc2Gain}
                 title="Osc 2"
@@ -585,7 +549,7 @@
                 orientation="vertical"
                 labelSize="small"
                 isGhost={!osc2On}
-                color={osc2Ink}
+                color={driftInk}
                 readout={display(30)}
                 onDown={() => (oscTab = 2)}
                 onInteraction={(value) => writeOsc(2, 30, value)}
@@ -601,7 +565,7 @@
                 orientation="vertical"
                 labelSize="small"
                 isGhost={!noiseOn}
-                color={noiseInk}
+                color={driftInk}
                 readout={display(33)}
                 onInteraction={(value) => {
                   if (!device) return;
@@ -622,8 +586,6 @@
             selected={oscWaveOptions.findIndex((o) => o.value === oscWave)}
             onSelect={(_, o) => writeOsc(oscTab, oscTab === 1 ? 20 : 24, o.value)}
             cols={1}
-            tint={oscInk.primary}
-            inked
             label={(o) => `OSC ${oscTab} wave ${o.label}`}
             ghost={!oscOn}
             name="osc-wave"
@@ -638,8 +600,6 @@
             cols={1}
             selected={(oscTab === 1 ? OSC1_OCTAVES_UP : OSC2_OCTAVES_UP).findIndex((o) => o === oscOctave)}
             onSelect={(_, octave) => writeOsc(oscTab, oscTab === 1 ? 22 : 26, octave)}
-            tint={oscInk.primary}
-            inked
             label={(octave) => `OSC ${oscTab} octave ${octaveLabel(octave)}`}
             ghost={!oscOn}
           >
@@ -654,7 +614,7 @@
               orientation="vertical"
               labelSize="small"
               isGhost={!oscOn}
-              color={oscInk}
+              color={driftInk}
               onInteraction={(value) => writeOsc(oscTab, oscTab === 1 ? 21 : 25, value)}
             />
           </div>
@@ -671,8 +631,6 @@
             options={LP_TYPE_OPTIONS}
             selected={LP_TYPE_OPTIONS.findIndex((o) => o.value === lpType)}
             onSelect={(_, o) => writeLpType(o.value)}
-            tint={driftInk.primary}
-            inked
             label={(o) => `Filter type ${o.label}`}
             cols={1}
             style="height: calc(2 * var(--height-touch)); flex: none;"
@@ -750,7 +708,7 @@
               onSelect={(i) => panelParams.write('LFO Wave', i)}
               label="LFO wave"
               caption="Wave"
-              tint={driftInk.primary}
+              tint={PICK_INK}
               ghost={!panelParams.has('LFO Wave')}
             />
           </div>
@@ -761,7 +719,7 @@
               onSelect={(i) => panelParams.write('LFO Mode', i)}
               label="LFO rate mode"
               caption="Rate"
-              tint={driftInk.primary}
+              tint={PICK_INK}
               ghost={!panelParams.has('LFO Mode')}
             />
           </div>
@@ -909,9 +867,19 @@
     height: 100%;
     max-height: 22px;
   }
+  /* The oscillator the card shows is the chosen one of the two: its number
+     on ON's block (ADR-544), where it wore a colour of its own. */
+  .mixer-slider.chosen :global(.knob-mark) {
+    display: grid;
+    place-items: center;
+    width: 50cqw;
+    height: 50cqw;
+    border-radius: 999px;
+    background: var(--on-bg);
+    color: var(--on-fg);
+  }
 
-  /* ---- Live skin (flat grammar): the pads, sliders and tabs carry their
-     own flat forks (the tabs are ScrubTabs, `inked` where the colour is the
-     meaning: an oscillator's, or the view's on the filter type). */
+  /* The pads, sliders and tabs carry their own Ink rules (the tabs are
+     ScrubTabs: the chosen option ON's block, the rest labels). */
 
 </style>

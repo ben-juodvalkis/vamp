@@ -3,9 +3,12 @@
   /**
    * Wavetable's board tiles (ADR-512, ADR-513), each a `BoardTile` panel
    * (ADR-516) hand-laid on the face grid (ADR-510): a header bar naming
-   * the section in its ink with the section's switch at its right, then
-   * equal columns, every knob at its ADR-509 size, large wherever a knob
-   * has its column to itself.
+   * the section with the section's switch at its right, then equal
+   * columns. Since ADR-544 (2026-11-17) every amount is the track's one
+   * ink (the oscillators and their filters had their own), every knob of
+   * a tile is one size (a lead was larger than the knobs beside it), and
+   * a pick whose options would be under a touch row is a field or one
+   * touch row across.
    *
    * Every control binds a parameter by Live's name
    * (docs/reference/instruments/Wavetable.md) through `usePanelParams`, and
@@ -37,9 +40,8 @@
   interface Props {
     page: string;
     params: PanelParams;
+    /** The one ink every amount is drawn in: the selected track's (ADR-544). */
     ink: DeviceColorScheme;
-    /** Each oscillator's own colour, as on the face (Osc 1 orange, Osc 2 blue). */
-    oscInks: { 1: DeviceColorScheme; 2: DeviceColorScheme };
     /** The oscillator's pad: Effect 2 across, Wave Position up, its wave drawn under it. */
     oscPad: Snippet<[1 | 2]>;
     /** Effect 1's and Effect 2's names under the oscillator's effect mode. */
@@ -57,7 +59,7 @@
     routing?: { value: number; set: (index: number) => void };
   }
 
-  let { page, params, ink, oscInks, oscPad, effectTitles, tables, routing }: Props = $props();
+  let { page, params, ink, oscPad, effectTitles, tables, routing }: Props = $props();
 
   // Live's own lists (panel/wavetablePanel.ts, from the device dump).
   const FILTER_TYPES = ['LP', 'HP', 'BP', 'Notch', 'Morph'];
@@ -77,6 +79,8 @@
     Rect: 'M0 10 L0 2 L6 2 L6 10 L12 10 L12 2 L18 2 L18 10 L24 10',
     Noise: 'M0 7 L4 7 L4 3 L8 3 L8 9 L12 9 L12 5 L16 5 L16 10 L20 10 L20 4 L24 4'
   };
+  /** A pick's value is a name in plain ink, never the amount's colour (ADR-544). */
+  const PICK_INK = 'var(--label)';
   /** Controls whose zero is the middle of their range: draw from the top. */
   const BIPOLAR = /(Detune|Pan|Transp|Transpose|^Time)$/;
 
@@ -96,7 +100,6 @@
   let F = $derived(`Flt ${n}`);
   let E = $derived(page === 'amp' ? 'Amp' : `Env ${n}`);
   let L = $derived(`LFO ${n}`);
-  let oscInk = $derived(n === 2 ? oscInks[2] : oscInks[1]);
   let fx = $derived(effectTitles(n === 2 ? 2 : 1));
   /** The filter's circuit list follows its type: LP and HP have five, the rest two. */
   let lpHp = $derived(step(`${F} Type`) <= 1);
@@ -105,7 +108,7 @@
 
 <!-- A knob bound by name, at its size; `sw` is the section's switch, which
      a write turns on first and whose off state ghosts the knob. -->
-{#snippet knob(param: string, title: string, size: 's' | 'm' | 'l' | 'xl', opts: { sw?: string; color?: DeviceColorScheme; steps?: number; labels?: readonly string[] } = {})}
+{#snippet knob(param: string, title: string, size: 's' | 'm' | 'l' | 'xl', opts: { sw?: string; steps?: number; labels?: readonly string[] } = {})}
   {@const l = lo(param)}
   {@const h = hi(param)}
   {@const bipolar = BIPOLAR.test(param)}
@@ -125,7 +128,7 @@
       orientation="vertical"
       labelSize="small"
       isGhost={!params.has(param) || (opts.sw !== undefined && !params.isOn(opts.sw))}
-      color={opts.color ?? ink}
+      color={ink}
       readout={params.display(param)}
       onInteraction={(v) => params.write(param, opts.steps ? Math.round(v) : v, opts.sw)}
     />
@@ -140,15 +143,13 @@
 {/snippet}
 
 <!-- A pick of named values, scrubbed: `cols` across, filling its cell. -->
-{#snippet tab(param: string, labels: readonly string[], opts: { cols?: number; sw?: string; color?: string; glyph?: boolean; row?: boolean } = {})}
+{#snippet tab(param: string, labels: readonly string[], opts: { cols?: number; sw?: string; glyph?: boolean; row?: boolean } = {})}
   <div class="cell panel-choice" class:row={opts.row} class:dim={opts.sw !== undefined && !params.isOn(opts.sw)} data-param={param}>
   <ScrubTabs
     options={labels.map((_, i) => i)}
     selected={step(param)}
     onSelect={(i) => params.write(param, lo(param) + i, opts.sw)}
     cols={opts.cols ?? 1}
-    tint={opts.color ?? ink.primary}
-    inked
     ghost={!params.has(param)}
     label={(i) => labels[i]}
     groupLabel={param}
@@ -160,7 +161,7 @@
 {/snippet}
 
 <!-- An on/off parameter: one touch row, centred in its cell, lit while on. -->
-{#snippet sw(param: string, title: string, color: string = ink.primary)}
+{#snippet sw(param: string, title: string)}
   {@const on = isOn(param)}
   <div class="cell sw-cell">
   <button
@@ -168,7 +169,6 @@
     class:active={on}
     aria-pressed={on}
     disabled={!params.has(param)}
-    style="--btn-tint: {color};"
     data-param={param}
     use:press={{ onPress: () => flip(param), disabled: !params.has(param) }}
   >{title}</button>
@@ -177,24 +177,26 @@
 
 <!-- A pick as a field naming the value, its own name over it, opening the
      values over the view: a board tile's column is too narrow for its tab. -->
-{#snippet pick(param: string, labels: readonly string[], title: string, caption: string)}
-  <div class="cell sw-cell" data-param={param}>
-    <ChoicePicker options={labels} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i)} label={title} {caption} tint={ink.primary} ghost={!params.has(param)} />
+{#snippet pick(param: string, labels: readonly string[], title: string, caption: string, sw?: string)}
+  <div class="cell sw-cell" class:dim={sw !== undefined && !params.isOn(sw)} data-param={param}>
+    <ChoicePicker options={labels} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i, sw)} label={title} {caption} tint={PICK_INK} ghost={!params.has(param)} />
   </div>
 {/snippet}
 
 <!-- A section's header line: a name over each run of columns. -->
-{#snippet heads(items: readonly (readonly [string, number])[], color: string = ink.primary)}
+{#snippet heads(items: readonly (readonly [string, number])[])}
   <div class="col-heads" style="grid-template-columns: repeat({items.reduce((n, [, span]) => n + span, 0)}, minmax(0, 1fr));">
-    {#each items as [text, span], i (i)}<span class="sub" style="color: {color}; grid-column: span {span};">{text}</span>{/each}
+    {#each items as [text, span], i (i)}<span class="sub" style="grid-column: span {span};">{text}</span>{/each}
   </div>
 {/snippet}
 
 <!-- An envelope's tile (ADR-514): Live's picture over its small stage knobs,
-     the three slopes one column beside it (its loop mode is on the bar). -->
-{#snippet envelope(prefix: string, levels: boolean)}
-  <FaceGrid sections={[5, 1]} heads={false}>
-    <FaceSection span={5}>
+     and beside it the three slopes and the loop mode two by two, so the
+     slopes are the stage knobs' size (they were three to one column, about
+     28px, with the loop on the bar, until 2026-11-17). -->
+{#snippet envelope(prefix: string, levels: boolean, loopLabel: string)}
+  <FaceGrid sections={[4, 2]} heads={false}>
+    <FaceSection span={4}>
       <div class="face-span-all">
         <EnvelopeGraph
           {params}
@@ -206,8 +208,9 @@
       </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      <div class="stack">{@render knob(`${prefix} A Slope`, 'A Slope', 's')}{@render knob(`${prefix} D Slope`, 'D Slope', 's')}{@render knob(`${prefix} R Slope`, 'R Slope', 's')}</div>
+    <FaceSection span={2}>
+      <div class="pair">{@render knob(`${prefix} A Slope`, 'A Slope', 's')}{@render knob(`${prefix} R Slope`, 'R Slope', 's')}</div>
+      <div class="pair">{@render knob(`${prefix} D Slope`, 'D Slope', 's')}{@render pick(`${prefix} Loop Mode`, LOOP_MODES, loopLabel, 'Loop')}</div>
     </FaceSection>
   </FaceGrid>
 {/snippet}
@@ -217,79 +220,82 @@
   <!-- The oscillator (ADR-516): its wavetable's two picks on the bar, each
        naming itself, with its switch; under them the wave across the tile, as
        Live draws it (2026-11-08; three columns of seven until then), over one
-       row of knobs. Picking a category puts the oscillator on that category's
+       row of knobs, all one size (ADR-544). Picking a category puts the oscillator on that category's
        first table, as Live does. -->
   {@const osc = n === 2 ? 2 : 1}
   {@const t = tables.choice(osc)}
-  <BoardTile title="Osc {osc}" ink={oscInk.primary} on={isOn(`${O} On`)} onToggle={() => flip(`${O} On`)} switchParam="{O} On" switchDisabled={!params.has(`${O} On`)}>
+  <BoardTile title="Osc {osc}" ink={ink.primary} on={isOn(`${O} On`)} onToggle={() => flip(`${O} On`)} switchParam="{O} On" switchDisabled={!params.has(`${O} On`)}>
     {#snippet tools()}
       <div class="choosers" data-wavetable-choosers={osc}>
-        <ChoicePicker options={t.categories} selected={t.category} onSelect={(i) => tables.setCategory(osc, i)} label="Osc {osc} wavetable category" caption="Category" tint={oscInk.primary} ghost={t.categories.length === 0} />
-        <ChoicePicker options={t.tables} selected={t.table} onSelect={(i) => tables.setTable(osc, i)} label="Osc {osc} wavetable" caption="Table" tint={oscInk.primary} ghost={t.tables.length === 0} />
+        <ChoicePicker options={t.categories} selected={t.category} onSelect={(i) => tables.setCategory(osc, i)} label="Osc {osc} wavetable category" caption="Category" tint={PICK_INK} ghost={t.categories.length === 0} />
+        <ChoicePicker options={t.tables} selected={t.table} onSelect={(i) => tables.setTable(osc, i)} label="Osc {osc} wavetable" caption="Table" tint={PICK_INK} ghost={t.tables.length === 0} />
       </div>
     {/snippet}
     <FaceGrid sections={[7]} heads={false}>
       <FaceSection span={7}>
         <div class="face-span-all picture-over-knobs" style="--knob-cols: 5;">
           <div class="pad over" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
-          {@render knob(`${O} Effect 1`, fx[0], 'm', { sw: `${O} On`, color: oscInk })}
-          {@render knob(`${O} Detune`, 'Detune', 's', { sw: `${O} On`, color: oscInk })}
-          {@render knob(`${O} Transp`, 'Semi', 's', { sw: `${O} On`, color: oscInk })}
-          {@render knob(`${O} Gain`, 'Gain', 'm', { sw: `${O} On`, color: oscInk })}
-          {@render knob(`${O} Pan`, 'Pan', 's', { sw: `${O} On`, color: oscInk })}
+          {@render knob(`${O} Effect 1`, fx[0], 'm', { sw: `${O} On` })}
+          {@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On` })}
+          {@render knob(`${O} Transp`, 'Semi', 'm', { sw: `${O} On` })}
+          {@render knob(`${O} Gain`, 'Gain', 'm', { sw: `${O} On` })}
+          {@render knob(`${O} Pan`, 'Pan', 'm', { sw: `${O} On` })}
         </div>
       </FaceSection>
     </FaceGrid>
   </BoardTile>
 {:else if page === 'sub'}
   <!-- The sub oscillator, once (it was drawn on both oscillators' tiles):
-       its gain the lead, its tone over its octave. -->
+       its gain and its tone, one size, over its octave on a touch row. -->
   <BoardTile title="Sub" ink={ink.primary} on={isOn('Sub On')} onToggle={() => flip('Sub On')} switchParam="Sub On" switchDisabled={!params.has('Sub On')}>
     <FaceGrid sections={[2]} heads={false}>
       <FaceSection span={2}>
-        {@render knob('Sub Gain', 'Gain', 'l', { sw: 'Sub On' })}
-        <div class="stack">{@render knob('Sub Tone', 'Tone', 's', { sw: 'Sub On' })}{@render tab('Sub Transpose', ['0', '-1', '-2'], { cols: 3, sw: 'Sub On', row: true })}</div>
+        <div class="face-span-all knobs-over-row">
+          {@render knob('Sub Gain', 'Gain', 'm', { sw: 'Sub On' })}
+          {@render knob('Sub Tone', 'Tone', 'm', { sw: 'Sub On' })}
+          <div class="under">{@render tab('Sub Transpose', ['0', '-1', '-2'], { cols: 3, sw: 'Sub On' })}</div>
+        </div>
       </FaceSection>
     </FaceGrid>
   </BoardTile>
 {:else if page === 'filter1' || page === 'filter2'}
   <!-- The filter: its cutoff and resonance one pad, Freq across and Res up,
-       its curve drawn (user, 2026-11-07); Drive and Morph beside it; then
-       the type, its circuit and the slope, each a column named over it. -->
-  {@const fInk = n === 2 ? oscInks[2] : oscInks[1]}
+       its curve drawn (user, 2026-11-07), the tile's height. Beside it the
+       type, all five on one touch row; under that the circuit (a field: its
+       list is five long), the slope, and Drive and Morph, one size. (Until
+       2026-11-17 type and circuit were columns of five 20px rows.) -->
   {@const curve = liveFilterCurve(step(`${F} Type`), step(`${F} Slope`), params.unit(`${F} Morph`) ?? 0)}
-  <BoardTile title="Filter {n}" ink={fInk.primary} on={isOn(`${F} On`)} onToggle={() => flip(`${F} On`)} switchParam="{F} On" switchDisabled={!params.has(`${F} On`)}>
-    <FaceGrid sections={[4, 3]}>
-      <FaceSection span={4}>
-        <div class="face-span-3 pad" data-filter-pad={n}>
-          <DeviceXY
-            xValue={params.unit(`${F} Freq`) ?? 1}
-            yValue={params.unit(`${F} Res`) ?? 0}
-            title="Filter {n}"
-            titleAt="bottom"
-            showCurve={isOn(`${F} On`)}
-            curveType={curve.curveType}
-            curveOrder={curve.order}
-            curveFreqRange={FILTER_FREQ_RANGE.wavetable}
-            onInteraction={(x, y) => {
-              params.writeUnit(`${F} Freq`, x, `${F} On`);
-              params.writeUnit(`${F} Res`, y, `${F} On`);
-            }}
-            color={fInk}
-          />
+  <BoardTile title="Filter {n}" ink={ink.primary} on={isOn(`${F} On`)} onToggle={() => flip(`${F} On`)} switchParam="{F} On" switchDisabled={!params.has(`${F} On`)}>
+    <FaceGrid sections={[7]} heads={false}>
+      <FaceSection span={7}>
+        <div class="face-span-all filter-board">
+          <div class="pad" data-filter-pad={n}>
+            <DeviceXY
+              xValue={params.unit(`${F} Freq`) ?? 1}
+              yValue={params.unit(`${F} Res`) ?? 0}
+              title="Filter {n}"
+              titleClass="sr-only"
+              showCurve={isOn(`${F} On`)}
+              curveType={curve.curveType}
+              curveOrder={curve.order}
+              curveFreqRange={FILTER_FREQ_RANGE.wavetable}
+              onInteraction={(x, y) => {
+                params.writeUnit(`${F} Freq`, x, `${F} On`);
+                params.writeUnit(`${F} Res`, y, `${F} On`);
+              }}
+              color={ink}
+            />
+          </div>
+          <div class="types">{@render tab(`${F} Type`, FILTER_TYPES, { cols: 5, sw: `${F} On` })}</div>
+          {#if lpHp}
+            {@render pick(`${F} LP/HP`, LP_HP_CIRCUITS, `Filter ${n} circuit`, 'Circuit', `${F} On`)}
+          {:else}
+            {@render pick(`${F} BP/NO/MO`, BP_CIRCUITS, `Filter ${n} circuit`, 'Circuit', `${F} On`)}
+          {/if}
+          {@render tab(`${F} Slope`, ['12 dB', '24 dB'], { sw: `${F} On` })}
+          {@render knob(`${F} Drive`, 'Drive', 's', { sw: `${F} On` })}
+          {@render knob(`${F} Morph`, 'Morph', 's', { sw: `${F} On` })}
         </div>
-        <div class="stack">{@render knob(`${F} Drive`, 'Drive', 's', { sw: `${F} On` })}{@render knob(`${F} Morph`, 'Morph', 's', { sw: `${F} On` })}</div>
-      </FaceSection>
-      <FaceSeam ink={ink.primary} />
-      <FaceSection span={3}>
-        {#snippet head()}{@render heads([['Type', 1], ['Circuit', 1], ['Slope', 1]])}{/snippet}
-        {@render tab(`${F} Type`, FILTER_TYPES, { sw: `${F} On` })}
-        {#if lpHp}
-          {@render tab(`${F} LP/HP`, LP_HP_CIRCUITS, { sw: `${F} On` })}
-        {:else}
-          {@render tab(`${F} BP/NO/MO`, BP_CIRCUITS, { sw: `${F} On` })}
-        {/if}
-        {@render tab(`${F} Slope`, ['12 dB', '24 dB'], { sw: `${F} On` })}
       </FaceSection>
     </FaceGrid>
   </BoardTile>
@@ -305,8 +311,6 @@
             selected={routing.value}
             onSelect={(i) => routing.set(i)}
             cols={1}
-            tint={ink.primary}
-            inked
             label={(i) => `Filter routing ${FILTER_ROUTINGS[i]}`}
             groupLabel="Filter routing"
             style="height: 100%; --scrub-font-size: 0.75rem;"
@@ -319,15 +323,13 @@
   </BoardTile>
 {:else if page === 'amp'}
   <BoardTile title="Amp Envelope" ink={ink.primary}>
-    {#snippet tools()}{@render pick('Amp Loop Mode', LOOP_MODES, 'Amp loop', 'Loop')}{/snippet}
-    {@render envelope('Amp', false)}
+    {@render envelope('Amp', false, 'Amp loop')}
   </BoardTile>
 {:else if page === 'env2' || page === 'env3'}
   <!-- As Amp: the picture carries the times and all four levels (Initial,
        Peak, Sustain, Final). -->
   <BoardTile title="Envelope {n}" ink={ink.primary}>
-    {#snippet tools()}{@render pick(`${E} Loop Mode`, LOOP_MODES, `${E} loop`, 'Loop')}{/snippet}
-    {@render envelope(E, true)}
+    {@render envelope(E, true, `${E} loop`)}
   </BoardTile>
 {:else if page === 'lfo1' || page === 'lfo2'}
   <!-- The LFO (ADR-514): the shapes, the sync and Retrig on the bar, so the
@@ -352,23 +354,22 @@
             {@render knob(`${L} Freq`, 'Rate', 'm')}
           {/if}
           {@render knob(`${L} Amount`, 'Amount', 'm')}
-          {@render knob(`${L} Morph`, 'Morph', 's')}
-          {@render knob(`${L} Offset`, 'Offset', 's')}
-          {@render knob(`${L} Attack`, 'Attack', 's')}
+          {@render knob(`${L} Morph`, 'Morph', 'm')}
+          {@render knob(`${L} Offset`, 'Offset', 'm')}
+          {@render knob(`${L} Attack`, 'Attack', 'm')}
         </div>
       </FaceSection>
     </FaceGrid>
   </BoardTile>
 {:else if page === 'global'}
-  <!-- Volume, the lead, a column to itself; the rest two to a column,
-       alike in rank. -->
+  <!-- Global's six, three by two, one size. (Volume was large in a column
+       of its own, the rest medium and small, until 2026-11-17.) -->
   <BoardTile title="Global" ink={ink.primary}>
-    <FaceGrid sections={[4]} heads={false}>
-      <FaceSection span={4}>
-        {@render knob('Volume', 'Volume', 'l')}
-        <div class="stack">{@render knob('Unison Amount', 'Unison', 'm')}{@render knob('Glide', 'Glide', 'm')}</div>
-        <div class="stack">{@render knob('Transpose', 'Transp', 's')}{@render knob('Time', 'Time', 's')}</div>
-        {@render knob('Global Mod Amount', 'Mod Amt', 's')}
+    <FaceGrid sections={[3]} heads={false}>
+      <FaceSection span={3}>
+        <div class="pair">{@render knob('Volume', 'Volume', 's')}{@render knob('Transpose', 'Transp', 's')}</div>
+        <div class="pair">{@render knob('Unison Amount', 'Unison', 's')}{@render knob('Time', 'Time', 's')}</div>
+        <div class="pair">{@render knob('Glide', 'Glide', 's')}{@render knob('Global Mod Amount', 'Mod Amt', 's')}</div>
       </FaceSection>
     </FaceGrid>
   </BoardTile>
@@ -390,7 +391,8 @@
   .picture-over-knobs {
     display: grid;
     grid-template-columns: repeat(var(--knob-cols), minmax(0, 1fr));
-    grid-template-rows: minmax(0, 1fr) 5.875rem;
+    /* A medium knob and its name (70 + 32), so every knob of the row is one size. */
+    grid-template-rows: minmax(0, 1fr) 6.5rem;
     gap: var(--spacing-sm);
     min-width: 0;
     min-height: 0;
@@ -437,13 +439,47 @@
     flex: 1 1 0;
     min-height: 0;
   }
-  /* In a shared column the higher rank takes the larger share (ADR-515). */
-  .stack > :global(.rank-l) { flex-grow: 1.6; }
-  .stack > :global(.rank-m) { flex-grow: 1.25; }
-  /* A pick or a switch in a stack is one touch row. */
-  .stack > :global(.sw-cell) {
-    flex: none;
-    height: var(--height-touch);
+  /* Two controls to a column, on the tile's two lines: equal halves, so the
+     knobs of every column are one size (ADR-544; a higher rank took the
+     larger share before) and a field stands level with the knob beside it. */
+  .pair {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: var(--spacing-sm);
+    min-height: 0;
+    min-width: 0;
+  }
+  /* Knobs a column each over one touch row across them. */
+  .knobs-over-row {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr) var(--height-touch);
+    row-gap: var(--spacing-sm);
+    min-height: 0;
+    min-width: 0;
+  }
+  .knobs-over-row > .under {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  /* The filter: the pad three columns and the tile's height; the type's
+     touch row across the other four, and under it a column each for the
+     circuit, the slope and the two knobs. */
+  .filter-board {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: var(--height-touch) minmax(0, 1fr);
+    row-gap: var(--spacing-sm);
+    min-height: 0;
+    min-width: 0;
+  }
+  .filter-board > .pad {
+    grid-column: span 3;
+    grid-row: 1 / span 2;
+  }
+  .filter-board > .types {
+    grid-column: span 4;
+    min-width: 0;
   }
   .cell {
     min-width: 0;
@@ -508,6 +544,6 @@
     font-weight: 600;
     line-height: 1rem;
     white-space: nowrap;
-    opacity: 0.8;
+    color: var(--value);
   }
 </style>

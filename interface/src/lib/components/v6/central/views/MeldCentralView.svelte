@@ -15,14 +15,10 @@
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
   import { MELD_PANEL } from './panel/meldPanel';
-  import EnvelopeGroup from './EnvelopeGroup.svelte';
   import MeldOscIcon from './meld/MeldOscIcon.svelte';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { familyScheme } from '$lib/config/devicePresets';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import { meldFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
@@ -46,29 +42,19 @@
   let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
 
-  // Meld color scheme — timeSpace teal (the view's old teal on the gap
-  // wheel, ADR-400), now worn only by what both engines share.
-  const meldColor = familyScheme('timeSpace');
-
-  let trackScheme = $derived(selectedTrackScheme());
-  let meldInk = $derived(trackScheme ?? {
-    primary: trackInk(meldColor.primary, paintModeReactive()),
-    secondary: meldColor.secondary,
-    accent: trackInk(meldColor.accent, paintModeReactive())
-  });
-
   /**
-   * Engine A blue, Engine B amber (user, 2026-11-08). Analog's two voice
-   * colours, the other way round. The oscillator, the filter and the
-   * envelopes all wear the engine the switch is on.
+   * One ink, the selected track's (ADR-544): every arc, fill and curve.
+   * Engine A was blue and Engine B amber from 2026-11-08, and the
+   * oscillator, the filter and the envelopes wore the engine shown; a
+   * second colour now has to mean a second owner. The engines are told
+   * apart by the letter in their level knob, and the one the face shows is
+   * the chosen one of the two: its letter stands on ON's block, and the
+   * section names say it (Engine A, Filter A).
    */
-  const ENGINE_COLORS = {
-    A: { primary: '#12b2f4', secondary: 'rgba(18, 178, 244, 0.1)', accent: '#33cdff' },
-    B: { primary: '#ff8244', secondary: 'rgba(255, 130, 68, 0.1)', accent: '#ff9e60' }
-  } as const;
+  let meldInk = $derived(selectedAmountScheme());
 
   /**
-   * Which engine the view is showing, picked by touching its level box at
+   * Which engine the view is showing, picked by touching its level knob at
    * the view's left (2026-11-05; an A/B badge before). Shared with the
    * effect chain's Meld cell (`meldEngineStore`, 2026-11-06), whose pad
    * then drives this engine's oscillator. It writes nothing to Live (not
@@ -89,25 +75,23 @@
    * tile is a selector row over a knob row, so four rows hold what five
    * rows of two-high columns could not without cutting every caption
    * (Engine A over Engine B, 2026-11-07, until then). The face's controls
-   * are all on these pages (the engine levels are Global's Mix).
+   * are all on these pages (the engine levels are Global's Mix). The
+   * weights (2026-11-17) give the Global row two knobs' height, so each
+   * engine's mix draws at the other knobs' size, and the LFO row its
+   * effects' amounts likewise; the envelopes' loop modes are on their
+   * tile's bar, which is what the row gave up.
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'osc-a', cols: 7 }, { id: 'osc-b', cols: 7 }], weight: 0.85 },
-    { tiles: [{ id: 'filter-a', cols: 5 }, { id: 'global', cols: 9 }, { id: 'filter-b', cols: 5 }], weight: 0.78 },
-    { tiles: [{ id: 'env-a', cols: 10 }, { id: 'env-b', cols: 10 }], weight: 1.3 },
-    { tiles: [{ id: 'lfo-a', cols: 9 }, { id: 'lfo-b', cols: 9 }], weight: 1 }
+    { tiles: [{ id: 'osc-a', cols: 7 }, { id: 'osc-b', cols: 7 }], weight: 0.84 },
+    { tiles: [{ id: 'filter-a', cols: 5 }, { id: 'global', cols: 11 }, { id: 'filter-b', cols: 5 }], weight: 0.95 },
+    { tiles: [{ id: 'env-a', cols: 10 }, { id: 'env-b', cols: 10 }], weight: 1.11 },
+    { tiles: [{ id: 'lfo-a', cols: 10 }, { id: 'lfo-b', cols: 10 }], weight: 1.1 }
   ];
 
   /** The pages behind the face's eyebrows, the shown engine's, by Live's names (ADR-487). */
   const panelParams = usePanelParams(() => device);
   let pageEngine = $derived(engine === 'A' ? 'a' : 'b');
   let p = $derived(MELD_ENGINE[engine]);
-  function inkOf(e: MeldEngine) {
-    const raw = ENGINE_COLORS[e];
-    const mode = paintModeReactive();
-    return { primary: trackInk(raw.primary, mode), secondary: raw.secondary, accent: trackInk(raw.accent, mode) };
-  }
-  let engineInk = $derived(inkOf(engine));
 
   /** Every parameter the view drives is natively 0..1 or a raw step, so no rescaling. */
   function read(index: number, atRest: number): number {
@@ -179,13 +163,15 @@
    */
   let chooser = $state<'osc' | 'filter' | null>(null);
 
-  // ---- envelopes: Amp over Mod, both in view (ADR-477). The engine's
-  // volume is its level box at the view's left; the mod envelope's first
-  // box is its peak.
+  // ---- envelopes: Amp over Mod, both in view (ADR-477), a stage a
+  // column, so A stands over A and R over R. Each row opens with its name;
+  // the mod envelope's Peak, its one level the amp has no twin of on the
+  // face (the engine's volume is its level knob), stands under its name.
 
   let envelopes = $derived([
     {
-      title: 'Amp Envelope',
+      name: 'Amp',
+      lead: undefined,
       stages: [
         { index: p.ampAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
         { index: p.ampDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
@@ -194,9 +180,9 @@
       ]
     },
     {
-      title: 'Mod Envelope',
+      name: 'Mod',
+      lead: { index: p.modPeak, title: 'Peak', icon: 'depth' as const, atRest: 1 },
       stages: [
-        { index: p.modPeak, title: 'Peak', icon: 'depth' as const, atRest: 1 },
         { index: p.modAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
         { index: p.modDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
         { index: p.modSustain, title: 'S', icon: 'sustain' as const, atRest: 0 },
@@ -224,7 +210,6 @@
           page={id}
           params={panelParams}
           ink={meldInk}
-          engineInks={{ A: inkOf('A'), B: inkOf('B') }}
         />
       {/snippet}
     </InstrumentBoard>
@@ -239,11 +224,12 @@
          for them (user, 2026-11-06). -->
     <FaceGrid sections={[3, 2, 5, 2]} class="meld-face">
       <!-- THE ENGINE. Meld is two synths, Osc → Filter → Amp twice; the
-           levels, Engine A over Engine B in the first column, each in its
-           colour (user, 2026-11-05), pick which half is up: touching one
-           flips the oscillator, the filter and the envelopes together. -->
+           levels, Engine A over Engine B in the first column (user,
+           2026-11-05), pick which half is up: touching one flips the
+           oscillator, the filter and the envelopes together, and its
+           letter stands on ON's block while it is the one shown. -->
       <FaceSection span={3}>
-        {#snippet head()}<PanelEyebrow title="Engine {engine}" color={engineInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Engine {engine}" color={meldInk.primary} />{/snippet}
         <!-- The levels as knobs marked A and B (2026-11-08; two value boxes
              reading "Engine A" / "Engine B" until then): the one idiom the
              source levels share with Wavetable's 1 / 2 and Drift's, and
@@ -260,7 +246,7 @@
               orientation="vertical"
               labelSize="small"
               isGhost={!(e === 'A' ? aOn : bOn)}
-              color={inkOf(e)}
+              color={meldInk}
               readout={display(MELD_ENGINE[e].volume)}
               onDown={() => showEngine(e)}
               onInteraction={(v) => writeLevel(e, v)}
@@ -277,8 +263,6 @@
               selected={OCTAVES_DOWN.indexOf(octave as (typeof OCTAVES_DOWN)[number])}
               onSelect={(_, n) => writeOsc(p.octave, n)}
               cols={1}
-              tint={engineInk.primary}
-              inked
               label={(n) => `Engine ${engine} octave ${octaveLabel(n)}`}
               class="flex-1"
             >
@@ -291,27 +275,26 @@
             <button
               class="osc-tile"
               class:active={chooser === 'osc'}
-              style="--btn-tint: {engineInk.primary};"
               aria-expanded={chooser === 'osc'}
               aria-label="Choose oscillator type, now {MELD_OSC_TYPES[oscType] ?? 'unknown'}"
               use:press={{ onPress: () => (chooser = chooser === 'osc' ? null : 'osc') }}
             >
-              <span class="osc-mark"><MeldOscIcon type={oscType} color={engineInk.primary} /></span>
+              <span class="osc-mark"><MeldOscIcon type={oscType} color="var(--label)" /></span>
               <span class="osc-name">{MELD_OSC_TYPES[oscType] ?? '—'}</span>
             </button>
-            <div class="type-steps stepper" style="--btn-tint: {engineInk.primary};">
+            <div class="type-steps stepper">
               {@render typeStep('osc', (step) => writeOsc(p.oscType, stepOscType(oscType, step)))}
             </div>
           </div>
         </div>
       </FaceSection>
-      <FaceSeam ink={engineInk.primary} />
+      <FaceSeam ink={meldInk.primary} />
 
       <!-- The engine's filter: cutoff across, Q up, its second macro (a
            knob, named as Live names it under the type) and its type under
            it. -->
       <FaceSection span={2}>
-        {#snippet head()}<PanelEyebrow title="Filter {engine}" color={engineInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Filter {engine}" color={meldInk.primary} />{/snippet}
         <div class="face-span-all min-w-0 min-h-0 flex flex-col gap-(--spacing-sm)">
         <div class="flex-1 min-h-0 relative">
           <DeviceXY
@@ -323,7 +306,7 @@
             curveOrder={filterCurve.order}
             curveFreqRange={FILTER_FREQ_RANGE.meld}
             onInteraction={handleFilterXY}
-            color={engineInk}
+            color={meldInk}
           />
         </div>
         <div class="filter-extra flex-none">
@@ -335,12 +318,12 @@
             icon="morph"
             orientation="vertical"
             labelSize="small"
-            color={engineInk}
+            color={meldInk}
             readout={display(p.lbhn)}
             onInteraction={(v) => write(p.lbhn, v)}
           />
         </div>
-        <div class="filter-type type-chooser stepper" style="--btn-tint: {engineInk.primary};">
+        <div class="filter-type type-chooser stepper">
           <button class="chooser-step" aria-label="Previous filter type" use:press={{ onPress: () => stepFilter(-1) }}>‹</button>
           <button
             class="chooser-name"
@@ -353,17 +336,39 @@
         </div>
         </div>
       </FaceSection>
-      <FaceSeam ink={engineInk.primary} />
+      <FaceSeam ink={meldInk.primary} />
 
       <!-- The engine's two envelopes, Amp over Mod, as value boxes
-           (ADR-477), a stage a column: both in view, so there is no
-           Amp/Mod switch. A seam between them. -->
+           (ADR-477): both in view, so there is no Amp/Mod switch, a seam
+           between them. Each row is its name's column, then A D S R on the
+           same four columns in both (2026-11-17; until then Amp's four
+           stood a column left of Mod's, under a name line each, and left
+           the fifth column of its row empty). The mod envelope's Peak
+           stands under its name. -->
       <FaceSection span={5}>
-        {#snippet head()}<PanelEyebrow title="Envelopes" color={engineInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Envelopes" color={meldInk.primary} />{/snippet}
         <div class="env-stack face-span-all">
-          {#each envelopes as envelope, i (envelope.title)}
-            {#if i > 0}<div class="env-seam"><SectionDivider orientation="horizontal" ink={engineInk.primary} /></div>{/if}
-            <EnvelopeGroup ink={engineInk.primary} title={envelope.title} onGrid>
+          {#each envelopes as envelope, i (envelope.name)}
+            {#if i > 0}<div class="env-seam"><SectionDivider orientation="horizontal" ink={meldInk.primary} /></div>{/if}
+            <div class="env-row" data-envelope={envelope.name}>
+              <div class="env-lead">
+                <span class="env-name">{envelope.name}</span>
+                {#if envelope.lead}
+                  {@const lead = envelope.lead}
+                  <div class="flex-1 min-h-0">
+                    <DeviceSlider
+                      value={read(lead.index, lead.atRest)}
+                      title={lead.title}
+                      icon={lead.icon}
+                      orientation="vertical"
+                      labelSize="small"
+                      color={meldInk}
+                      readout={display(lead.index)}
+                      onInteraction={(v) => write(lead.index, v)}
+                    />
+                  </div>
+                {/if}
+              </div>
               {#each envelope.stages as stage (stage.index)}
                 <div class="min-h-0 h-full">
                   <DeviceSlider
@@ -372,13 +377,13 @@
                     icon={stage.icon}
                     orientation="vertical"
                     labelSize="small"
-                    color={engineInk}
+                    color={meldInk}
                     readout={display(stage.index)}
                     onInteraction={(v) => write(stage.index, v)}
                   />
                 </div>
               {/each}
-            </EnvelopeGroup>
+            </div>
           {/each}
         </div>
       </FaceSection>
@@ -422,8 +427,6 @@
             onSelect={(i) => writeOsc(p.oscType, i)}
             onDone={() => (chooser = null)}
             cols={5}
-            tint={engineInk.primary}
-            inked
             label={(l) => l}
             name="meld-osc-types"
             style="--scrub-padding: 2px 4px; --scrub-font-weight: var(--font-weight-medium);"
@@ -437,8 +440,6 @@
             onDone={() => (chooser = null)}
             cols={5}
             rows={4}
-            tint={engineInk.primary}
-            inked
             label={(l) => l}
             name="meld-filter-types"
             style="--scrub-padding: 2px 4px; --scrub-font-weight: var(--font-weight-medium);"
@@ -509,11 +510,18 @@
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-sm);
     background: var(--surface-well);
-    color: var(--btn-tint);
+    /* Its mark and its name are a name: plain ink (ADR-544). */
+    color: var(--label);
     cursor: pointer;
   }
+  /* Open: the chosen one, ON's block. */
   .osc-tile.active {
-    border-color: var(--btn-tint);
+    background: var(--on-bg);
+    border-color: var(--on-bg);
+    color: var(--on-fg);
+  }
+  .osc-tile.active :global(.meld-osc-icon) {
+    color: var(--on-fg) !important;
   }
   .osc-mark {
     position: relative;
@@ -546,6 +554,44 @@
   }
   .env-seam {
     grid-column: 1 / -1;
+  }
+  /* A row: its name's column, then A D S R on the face's columns. */
+  .env-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+  }
+  /* The row's name, and under it the level that is the envelope's alone. */
+  .env-lead {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    min-width: 0;
+    min-height: 0;
+  }
+  /* A section's name, as the eyebrows over the face are (PanelEyebrow). */
+  .env-name {
+    flex: none;
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1rem;
+    text-align: center;
+    color: var(--value);
+  }
+  /* The engine the face shows is the chosen one of the two: its letter on
+     ON's block (ADR-544), where it wore a colour of its own. */
+  .shown :global(.knob-mark) {
+    display: grid;
+    place-items: center;
+    width: 50cqw;
+    height: 50cqw;
+    border-radius: 999px;
+    background: var(--on-bg);
+    color: var(--on-fg);
   }
 
   /* ‹ name › — one `.stepper` (app.css): the arrows step, the name opens
