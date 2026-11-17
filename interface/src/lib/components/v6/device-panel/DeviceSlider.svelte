@@ -98,6 +98,12 @@
     knobCaptionBelow?: boolean;
     /** A knob among round buttons: as large as its cell, its mark over its name inside the ring (KnobFace `inside`). */
     knobInside?: boolean;
+    /**
+     * Whether the control's value is one of a few settings, shown under its
+     * name at rest, or a continuous amount, which shows no number at rest
+     * (ADR-544). Unset, `steps` or a value in words decides.
+     */
+    discrete?: boolean;
   }
 
   let {
@@ -135,7 +141,8 @@
     knobMark,
     knobFit = false,
     knobCaptionBelow = false,
-    knobInside = false
+    knobInside = false,
+    discrete
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
@@ -202,13 +209,14 @@
   // amount shows no number at rest, its arc or fill is the reading, and
   // says the number only while a finger moves it; a discrete one (steps,
   // or whole semitones about a centre) keeps its value under its name.
-  let discrete = $derived(
-    (steps !== undefined && steps >= 2) ||
-      // Whole numbers about a centre: semitones. Not a 0..1 amount with a
-      // centre (a pan, an offset), which is continuous.
-      (centerOrigin && Number.isInteger(min) && Number.isInteger(max) && max - min >= 2) ||
-      // Live's word for a setting with no number in it ("Off", "Triangle").
-      (valueText !== undefined && valueText !== '' && !/\d/.test(valueText))
+  // Discrete: the host says so (`discrete`, a transpose in semitones), it
+  // has `steps`, or Live's word for its value has no number in it ("Off",
+  // "Triangle"). A range of whole numbers is NOT a sign of it: a gain of
+  // +-15 dB is continuous.
+  let isDiscrete = $derived(
+    discrete ??
+      ((steps !== undefined && steps >= 2) ||
+        (valueText !== undefined && valueText !== '' && !/\d/.test(valueText)))
   );
   let liveValue = $derived.by(() => {
     if (valueText) return valueText;
@@ -221,7 +229,7 @@
     }
     return span >= 8 ? `${Math.round(localValue)}` : localValue.toFixed(2);
   });
-  let restValue = $derived(discrete ? liveValue : undefined);
+  let restValue = $derived(isDiscrete ? liveValue : undefined);
 
   // Center origin calculations (for bipolar controls)
   // Use provided centerValue, or default to midpoint of range
@@ -461,7 +469,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label || icon}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}" class:label-top={labelAt === 'top'} class:in-value-box={valueBox}>
-        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if liveValue && (discrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
+        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if liveValue && (isDiscrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
       </div>
       {#if showFill}
         <div
@@ -471,7 +479,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if liveValue && (discrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
+          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if liveValue && (isDiscrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
         </div>
       {/if}
     {/if}

@@ -420,7 +420,21 @@
       text-align: left;
     }
   }
+  /* Under the knob, the caption's box is the name's one line whether or
+     not a value hangs under it, so a knob with a value sits level with a
+     neighbour without one (ADR-544: knobs that sit together are one size,
+     and on one line). The value overflows into the room below. */
+  .knob:not(.inside) .knob-caption {
+    height: calc(var(--knob-title-fs) * 1.15);
+    overflow: visible;
+  }
+  @container (min-aspect-ratio: 6/5) and (min-width: 9rem) {
+    .knob:not(.caption-below):not(.inside) .knob-caption {
+      height: auto;
+    }
+  }
   .knob-title {
+    flex: none;
     max-width: 100%;
     /* Fixed by the size; a name too long for the cell ends in an ellipsis. */
     font-size: var(--knob-title-fs);

@@ -6,10 +6,10 @@ import { logger } from '$lib/utils/logger';
   import type { Snippet } from 'svelte';
   import type { PositionKey, DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { slotRegistry } from '$lib/stores/v6/slotRegistry.svelte';
-  import { DEVICE_PRESETS, schemeFromInk } from '$lib/config/devicePresets';
+  import { DEVICE_PRESETS } from '$lib/config/devicePresets';
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import { selectDevice } from '$lib/services/deviceMoveService';
   import { openDeviceView } from '$lib/services/deviceViewRouter.svelte';
   import { sendParam } from '$lib/services/deviceParams';
@@ -76,10 +76,9 @@ import { logger } from '$lib/utils/logger';
   // this — deviceInk-normalized so tiles match view interiors. trackTint
   // devices (utility/gain) wear the focused track's ink instead.
   let color = $derived.by(() => {
-    if (DEVICE_PRESETS[deviceType]?.trackTint && !noTrackTint) {
-      const ink = selectedTrackInk();
-      if (ink) return schemeFromInk(ink);
-    }
+    // Every scheme is the amount ink now (ADR-544); a trackTint device
+    // takes it directly, not the paler name-block ink.
+    if (DEVICE_PRESETS[deviceType]?.trackTint && !noTrackTint) return selectedAmountScheme();
     let raw;
     if (position) {
       raw = slotRegistry.getSlot(position).color;

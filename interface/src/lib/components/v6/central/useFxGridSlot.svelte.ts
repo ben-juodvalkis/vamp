@@ -22,10 +22,10 @@
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import type { SlotKey } from '$lib/stores/v6/selectedTrackStore.svelte';
 import type { FXGridSlot, FXGridCandidateDevice } from '$lib/stores/v6/fxGridStore.svelte';
-import { familyScheme, schemeFromInk, type DeviceColorScheme } from '$lib/config/devicePresets';
+import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
 import { deviceInk } from '$lib/utils/formatters/trackFormatters';
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
+import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
 import { readFxScope, type FxScope } from './fxScope';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 import { sendParam } from '$lib/services/deviceParams';
@@ -90,10 +90,9 @@ export function useFxGridSlot(
 	// agree. View-side trackInk twins become no-ops (family hexes are ink
 	// fixed points). trackTint devices wear the focused track's ink instead.
 	const color = $derived.by((): DeviceColorScheme => {
-		if (slot.config?.trackTint) {
-			const ink = selectedTrackInk();
-			if (ink) return schemeFromInk(ink);
-		}
+		// Every scheme is the amount ink now (ADR-544); a trackTint device
+		// takes it directly, not the paler name-block ink.
+		if (slot.config?.trackTint) return selectedAmountScheme();
 		const raw = slot.config?.color ?? fallbackColor;
 		const mode = paintModeReactive();
 		return {
