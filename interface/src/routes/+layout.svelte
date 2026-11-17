@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import '../pitch.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount, onDestroy } from 'svelte';
 	import { themeManager } from '$lib/stores/theme';

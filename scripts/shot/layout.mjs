@@ -95,7 +95,10 @@ export function measureLayout() {
 	// inset is measured from the board's own edge to its panels, in its
 	// `--board-gap`; the swap pill beside it is the frame's, not the board's.
 	const board = frame.querySelector('[data-instrument-board]');
-	const host = board ?? frame;
+	// The view sits in the frame's body, under the frame's title line when a
+	// look draws one: the inset is the body's, not the frame's.
+	const body = frame.querySelector('[data-central-body]') ?? frame;
+	const host = board ?? body;
 	const fr = host.getBoundingClientRect();
 	const inner = { l: fr.left + host.clientLeft, t: fr.top + host.clientTop };
 	inner.r = inner.l + host.clientWidth;
@@ -176,7 +179,7 @@ export function measureLayout() {
 			};
 		});
 
-	const root = frame.querySelector('[data-density]') ?? frame.firstElementChild?.firstElementChild ?? frame;
+	const root = frame.querySelector('[data-density]') ?? body.firstElementChild?.firstElementChild ?? frame;
 	const edge = {};
 	for (const { r, el } of inFrame) {
 		if (!edge.l || r.left < edge.l.v) edge.l = { v: r.left, el: desc(el) };

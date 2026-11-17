@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { pitchOn } from '$lib/utils/pitch';
   import { onDestroy, type Snippet } from 'svelte';
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
   import FilterCurve, { type CurveType } from './FilterCurve.svelte';
@@ -354,6 +355,15 @@
       </div>
     {/if}
 
+    <!-- Where the dot is, said twice: a hairline to each axis, and the
+         value on that axis where the hairline meets the pad's edge. -->
+    {#if pitchOn && !isGhost}
+      <div class="xy-cross xy-cross-x" style="left: calc(var(--dot-r) + {localX} * (100% - 2 * var(--dot-r)));"></div>
+      <div class="xy-cross xy-cross-y" style="bottom: calc(var(--dot-r) + {localY * yTop} * (100% - 2 * var(--dot-r)));"></div>
+      <span class="xy-val xy-val-x" style="left: calc(var(--dot-r) + {localX} * (100% - 2 * var(--dot-r)));">{Math.round(localX * 100)}</span>
+      <span class="xy-val xy-val-y" style="bottom: calc(var(--dot-r) + {localY * yTop} * (100% - 2 * var(--dot-r)));">{Math.round(localY * 100)}</span>
+    {/if}
+
     <!-- Control handle: its travel inset by the dot's radius, so at a rail
          (a filter shut, a Drum Buss at rest) the dot is whole, not half
          off the pad's edge. -->
@@ -367,6 +377,39 @@
 </div>
 
 <style>
+  .xy-cross {
+    position: absolute;
+    pointer-events: none;
+    background: var(--xy-cross, currentColor);
+    opacity: 0.35;
+  }
+  .xy-cross-x {
+    top: 0;
+    bottom: 0;
+    width: 1px;
+  }
+  .xy-cross-y {
+    left: 0;
+    right: 0;
+    height: 1px;
+  }
+  .xy-val {
+    position: absolute;
+    pointer-events: none;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--xy-val-ink, var(--muted-foreground));
+  }
+  .xy-val-x {
+    bottom: 4px;
+    transform: translateX(5px);
+  }
+  .xy-val-y {
+    left: 5px;
+    transform: translateY(-4px);
+  }
   .device-xy {
     display: flex;
     flex-direction: column;

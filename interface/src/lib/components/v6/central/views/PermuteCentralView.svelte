@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { pitchOn } from '$lib/utils/pitch';
 	import { sequencerStore, DIVISION_OPTIONS } from '$lib/stores/v6/sequencerStore.svelte';
 	import MuteSequencerControl from '$lib/components/v6/clips/MuteSequencerControl.svelte';
 	import PitchSequencerControl from '$lib/components/v6/clips/PitchSequencerControl.svelte';
@@ -214,6 +215,7 @@
 		title="Mute length: {muteLength} steps"
 		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={muteLength} tabindex="0"
 	>
+		{#if pitchOn}<span class="row-name">Mute</span>{/if}
 		<KnobFace position={(muteLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Length" centreValue={`${muteLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingMuteLength} ink={muteColor} size="xl" fit captionBelow />
 	</div>
 
@@ -255,6 +257,7 @@
 		title="Pitch length: {pitchLength} steps"
 		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={pitchLength} tabindex="0"
 	>
+		{#if pitchOn}<span class="row-name">Pitch</span>{/if}
 		<KnobFace position={(pitchLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Length" centreValue={`${pitchLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingPitchLength} ink={pitchColor} size="xl" fit captionBelow />
 	</div>
 

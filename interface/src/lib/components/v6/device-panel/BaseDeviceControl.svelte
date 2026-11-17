@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { pitchAmountScheme } from '$lib/utils/pitch';
 import { logger } from '$lib/utils/logger';
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -76,6 +77,8 @@ import { logger } from '$lib/utils/logger';
   // this — deviceInk-normalized so tiles match view interiors. trackTint
   // devices (utility/gain) wear the focused track's ink instead.
   let color = $derived.by(() => {
+    const pitched = pitchAmountScheme();
+    if (pitched) return pitched;
     if (DEVICE_PRESETS[deviceType]?.trackTint && !noTrackTint) {
       const ink = selectedTrackInk();
       if (ink) return schemeFromInk(ink);

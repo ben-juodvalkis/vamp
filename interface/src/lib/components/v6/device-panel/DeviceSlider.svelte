@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { pitchOn } from '$lib/utils/pitch';
   import { onDestroy, type Snippet } from 'svelte';
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
   import KnobFace from './KnobFace.svelte';
@@ -195,6 +196,21 @@
   // Computed for display (guard against division by zero if min >= max)
   let fillPercent = $derived(max > min ? ((localValue - min) / (max - min)) * 100 : 0);
 
+  // What the control reads at rest: Live's own words where the host has
+  // them, else the number itself.
+  let restValue = $derived.by(() => {
+    if (!pitchOn) return valueText;
+    if (valueText) return valueText;
+    const span = max - min;
+    if (!(span > 0)) return undefined;
+    if (min === 0 && max === 1) return `${Math.round(localValue * 100)} %`;
+    if (centerOrigin && Number.isInteger(min) && Number.isInteger(max)) {
+      const v = Math.round(localValue);
+      return v > 0 ? `+${v}` : `${v}`;
+    }
+    return span >= 8 ? `${Math.round(localValue)}` : localValue.toFixed(2);
+  });
+
   // Center origin calculations (for bipolar controls)
   // Use provided centerValue, or default to midpoint of range
   let effectiveCenterValue = $derived(centerValue ?? (min + max) / 2);
@@ -337,12 +353,12 @@
         position={max > min ? (localValue - min) / (max - min) : 0}
         {origin}
         {title}
-        {valueText}
+        valueText={restValue}
         {readout}
         {icon}
         {steps}
         size={knobSize}
-        caption={knobCaption}
+        caption={knobCaption || pitchOn}
         centreMark={knobMark}
         fit={knobFit}
         captionBelow={knobCaptionBelow}
@@ -432,7 +448,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label || icon}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}" class:label-top={labelAt === 'top'}>
-        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{/if}</span>
+        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if pitchOn && restValue && !isDragging}<span class="slider-value">{restValue}</span>{/if}{/if}</span>
       </div>
       {#if showFill}
         <div
@@ -441,7 +457,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{/if}</span>
+          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if pitchOn && restValue && !isDragging}<span class="slider-value">{restValue}</span>{/if}{/if}</span>
         </div>
       {/if}
     {/if}

@@ -663,6 +663,33 @@ export const TOURS = {
 		])
 	},
 
+	// PITCH (stop 1 of the visual redesign): the three candidate looks on the
+	// four pilot views, whole iPad layout. `--theme light` for the other half.
+	pitch: {
+		description: 'The three pitch directions on Clip, Permute, Drum Rack and Reverb, in the whole iPad layout.',
+		states: ['0', '1', '2', '3'].flatMap((n) =>
+			[
+				['clip', [selectTrack(2)]],
+				['permute', [openPermute(1)]],
+				['drumrack', [openInstrument(0)]],
+				['reverb', null]
+			].map(([view, steps]) => ({
+				name: `pitch-${n}-${view}`,
+				description: `Direction ${n}: ${view}`,
+				shell: 'pad',
+				layout: false,
+				// 0 is the shipped look, for the side-by-side.
+				prefs: n === '0' ? {} : { 'vamp.pitch': n },
+				...(steps
+					? { steps }
+					: {
+							scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Reverb']),
+							steps: [openInstrument(CHAIN_DEMO_TRACK), openCell('Reverb')]
+						})
+			}))
+		)
+	},
+
 	central: {
 		description: 'Every central view the default scene reaches, cropped to the central section.',
 		crop: '.central-frame',

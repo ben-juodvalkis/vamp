@@ -44,6 +44,10 @@
 				const isDark = theme === 'dark' || 
 					(theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 				document.documentElement.classList.add(isDark ? 'dark' : 'light');
+				// PITCH (stop 1 of the visual redesign): one of three candidate
+				// looks, picked per page load. Removed once a direction is chosen.
+				var pitch = localStorage.getItem('vamp.pitch');
+				if (pitch) document.documentElement.dataset.pitch = pitch;
 			})();
 		</script>
 		<div style="display: contents">%sveltekit.body%</div>

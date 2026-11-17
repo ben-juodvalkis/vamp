@@ -259,6 +259,20 @@ try {
 				{ prefs: { ...state.prefs, ...JSON.parse(process.env.SHOT_PREFS || '{}') }, theme: state.theme ?? theme }
 			);
 
+			// A state inside a native shell (`shell: 'pad'`, Vamp for iPad: the
+			// full screen with 16px margins) marks the page before its first
+			// paint, as `shot`'s `pad-app` view does.
+			if (state.shell) {
+				await context.addInitScript((shell) => {
+					const mark = () => {
+						const root = document.documentElement;
+						if (root) root.dataset.shell = shell;
+						return !!root;
+					};
+					if (!mark()) new MutationObserver((_, o) => mark() && o.disconnect()).observe(document, { childList: true });
+				}, state.shell);
+			}
+
 			const page = await context.newPage();
 			const consoleErrors = [];
 			page.on('console', (m) => {

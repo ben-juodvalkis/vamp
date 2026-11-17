@@ -18,6 +18,34 @@ import { logger } from '$lib/utils/logger';
 	import Maximize from '@lucide/svelte/icons/maximize';
 	import Minimize from '@lucide/svelte/icons/minimize';
 	import type { Component } from 'svelte';
+	import { session } from '$lib/stores/session.svelte';
+	import { v3Store } from '$lib/stores/v3/normalized.svelte';
+
+	// The view's title line: whose it is and what it is. Read from the same
+	// records the strips and the chain draw from, so it cannot disagree.
+	let headTrack = $derived.by(() => {
+		if (session.selectedTrackIndex < 0) return 'Main';
+		return v3Store.tracks.get('tracks/' + session.selectedTrackIndex)?.name ?? '';
+	});
+	let headDevice = $derived.by(() => {
+		const v = centralDisplayStore.view;
+		switch (v.type) {
+			case 'device':
+				return v.data?.device?.name ?? DEVICE_PRESETS[v.subType ?? '']?.defaultName ?? v.title ?? v.subType ?? '';
+			case 'instrument':
+				return v.data?.instrument?.name ?? v.subType ?? 'Instrument';
+			case 'clip':
+				return 'Clip';
+			case 'permute':
+				return 'Permute';
+			case 'groove':
+				return 'Groove';
+			case 'system':
+				return 'Set';
+			default:
+				return v.title ?? '';
+		}
+	});
 
 	// Component loading state
 	let isLoadingComponent = $state(false);
@@ -209,6 +237,11 @@ import { logger } from '$lib/utils/logger';
 		--zone-accent: {zoneAccent};
 	"
 >
+	<div class="cv-head" data-central-head>
+		<span class="cv-track">{headTrack}</span>
+		<span class="cv-device">{headDevice}</span>
+	</div>
+	<div class="cv-body" data-central-body>
 	{#if pill?.model && !swapHost.claimed}
 		<SwapControl
 			scopeLabel={pill.model.scopeLabel}
@@ -249,6 +282,7 @@ import { logger } from '$lib/utils/logger';
 		{:else if ViewComponent}
 			<ViewComponent {...viewProps} />
 		{/if}
+	</div>
 	</div>
 
 	{#if expandable}
@@ -305,6 +339,18 @@ import { logger } from '$lib/utils/logger';
 	.central-expand[aria-pressed='true'] {
 		color: var(--foreground);
 		opacity: 1;
+	}
+
+	/* The title line and the body under it. Off until a look turns it on
+	   (pitch.css); the body is then the frame's row, as the frame itself was. */
+	.cv-head {
+		display: none;
+	}
+	.cv-body {
+		display: flex;
+		flex: 1 1 0;
+		min-width: 0;
+		min-height: 0;
 	}
 
 	/* Zone frame (§5.4): 2px ring in the zone accent — device colour, else
