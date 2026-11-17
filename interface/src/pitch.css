@@ -448,17 +448,19 @@ html[data-pitch='2'] .chain-cell.appointed .cell-head .name {
 	color: var(--sel-track-fg, var(--foreground));
 }
 
-/* The selected strip is shaded, not only framed (Ben, stop 1). Two ways to
-   try: a neutral lift (the default), or a shade of the track's own colour
-   (localStorage 'vamp.pitch.strip' = tint). */
-html[data-pitch='2'] .track-selected {
-	background: var(--secondary) !important;
-}
-html.dark[data-pitch='2'][data-strip='tint'] .track-selected {
+/* The selected strip is shaded in its track's colour inside its frame
+   (Ben, stop 1): the fill says selected. */
+html.dark[data-pitch='2'] .track-selected {
 	background: oklch(from var(--sel-track, #8a8f98) 0.3 calc(c * 0.55) h) !important;
 }
-html.light[data-pitch='2'][data-strip='tint'] .track-selected {
+html.light[data-pitch='2'] .track-selected {
 	background: oklch(from var(--sel-track, #8a8f98) 0.86 calc(c * 0.7) h) !important;
+}
+/* Recording is the frame, in red, and nothing in the fill: a strip is
+   usually recording AND selected, and the two must stack. */
+html[data-pitch='2'] .rec-tint {
+	background: transparent;
+	box-shadow: inset 0 0 0 4px var(--act-rec);
 }
 
 /* ---------- 3 · Dye ------------------------------------------------------ */

@@ -687,6 +687,20 @@ export const TOURS = {
 							steps: [openInstrument(CHAIN_DEMO_TRACK), openCell('Reverb')]
 						})
 			}))
+		).concat(
+			// Recording against selection: the recording Guitar selected, and a
+			// red track (Drums) recording while selected, today and under Ink.
+			['0', '2'].flatMap((n) => [
+				{ name: `pitch-${n}-rec-selected`, description: 'Guitar selected while it records', steps: [selectTrack(3)] },
+				{
+					name: `pitch-${n}-rec-red`,
+					description: 'Drums (red) recording while selected',
+					scenePatch: (scene) => {
+						scene.playing.find((p) => p.trackPath === 'tracks/0').status = 2;
+					},
+					steps: [openInstrument(0)]
+				}
+			].map((state) => ({ ...state, shell: 'pad', layout: false, prefs: n === '0' ? {} : { 'vamp.pitch': n } })))
 		)
 	},
 
