@@ -68,9 +68,15 @@
     fit?: boolean;
     /** The caption stays under the knob however wide the cell (a row's wide lead knob among captions under theirs). */
     captionBelow?: boolean;
+    /**
+     * A knob among round buttons (ADR-544): its ring is the circle a button
+     * beside it draws, as large as the cell, and it carries its mark over
+     * its name INSIDE the ring, as a button does. `size` is not read.
+     */
+    inside?: boolean;
   }
 
-  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark, centreValue, fit = false, captionBelow = false }: Props = $props();
+  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark, centreValue, fit = false, captionBelow = false, inside = false }: Props = $props();
 
   let cell = $state<HTMLDivElement>();
   let box = $state({ w: 0, h: 0 });
@@ -85,6 +91,13 @@
   let drawn = $derived<'s' | 'm' | 'l' | 'xl'>(fit && box.w > 0 ? knobSizeFits(size, box.w, box.h, caption) : size);
 
   const MAX_DETENTS = 24;
+
+  // An `inside` knob's ring fills its box: the view is cut to the ring's
+  // outer edge (radius 38 plus half its 7-unit stroke), so the ring is the
+  // circle a round button in the next cell draws and nothing of the knob
+  // lies outside its cell but the zero mark, which overflows into the
+  // corner the circle leaves.
+  const INSIDE_VIEW_BOX = '8.5 8.5 83 83';
 
   const START = 135; // degrees in SVG's frame: 0 = right, clockwise
   const SWEEP = 270;
@@ -120,10 +133,10 @@
   });
 </script>
 
-<div class="knob size-{drawn}" bind:this={cell} class:dragging class:no-caption={!caption} class:caption-below={captionBelow} data-knob-size={drawn} style="--knob-ink: {ink};">
+<div class="knob size-{drawn}" bind:this={cell} class:dragging class:no-caption={!caption} class:caption-below={captionBelow} class:inside data-knob-size={drawn} style="--knob-ink: {ink};">
   <div class="knob-body">
   <div class="knob-face">
-    <svg class="knob-svg" viewBox="0 0 100 100" aria-hidden="true">
+    <svg class="knob-svg" viewBox={inside ? INSIDE_VIEW_BOX : '0 0 100 100'} aria-hidden="true">
       <path class="knob-track" d={arc(START, START + SWEEP)} />
       {#if detents.length}
         {#each detents as d, i (i)}
@@ -166,26 +179,29 @@
     --knob-want: 70px;
     --knob-title-fs: 15px;
     --knob-value-fs: 12px;
-    --knob-caption-h: 3.125rem;
+    /* One caption line, the name's (ADR-544): a continuous knob shows no
+       value at rest, and a discrete one's value sits under its name in the
+       room its cell has left, so the knobs of a group are one size. */
+    --knob-caption-h: 2rem;
   }
   .knob.size-s {
     --knob-want: 48px;
     --knob-title-fs: 12px;
     --knob-value-fs: 10px;
-    --knob-caption-h: 2.75rem;
+    --knob-caption-h: 1.75rem;
   }
   .knob.size-l {
     --knob-want: 96px;
     --knob-title-fs: 17px;
     --knob-value-fs: 14px;
-    --knob-caption-h: 3.375rem;
+    --knob-caption-h: 2.25rem;
   }
   /* A full-screen board's lead controls (ADR-515). */
   .knob.size-xl {
     --knob-want: 128px;
     --knob-title-fs: 18px;
     --knob-value-fs: 15px;
-    --knob-caption-h: 3.625rem;
+    --knob-caption-h: 2.25rem;
   }
   .knob-body {
     width: 100%;
@@ -242,6 +258,64 @@
   .knob.no-caption .knob-face {
     --knob-d: min(100cqw - 0.5rem, max(28px, min(var(--knob-want), 100cqw - 0.5rem, 100cqh - 0.75rem)));
   }
+  /* ---- Inside (ADR-544): a knob among round buttons. Its ring fills its
+     box (the SVG's view is cut to the ring), so it is the circle a button
+     in the next cell draws; the mark sits over the name inside it, where
+     a button holds its mark and word. While a finger turns it the value
+     takes the mark's place (`.knob-readout`). */
+  .knob.inside .knob-body {
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    place-items: center;
+    padding: 0;
+    gap: 0;
+  }
+  .knob.inside .knob-face {
+    grid-area: 1 / 1;
+    --knob-d: min(100cqw, 100cqh);
+  }
+  .knob.inside .knob-caption {
+    grid-area: 1 / 1;
+    align-items: center;
+    text-align: center;
+    padding-top: 2.5rem;
+    z-index: 1;
+  }
+  .knob.inside .knob-title {
+    font-size: 14px;
+  }
+  .knob.inside .knob-icon {
+    display: flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    top: calc(50% - 0.875rem);
+    opacity: 1;
+  }
+  /* The name first, the mark where there is room. */
+  @container (width < 84px) {
+    .knob.inside .knob-icon {
+      display: none;
+    }
+    .knob.inside .knob-caption {
+      padding-top: 0;
+    }
+    .knob.inside .knob-title {
+      font-size: 12px;
+    }
+  }
+  .knob.inside .knob-readout {
+    top: calc(50% - 0.875rem);
+    font-size: 20px;
+  }
+  .knob.inside .knob-value-text {
+    display: none;
+  }
+  .knob.inside .knob-track,
+  .knob.inside .knob-value {
+    stroke-width: 7;
+  }
+  .knob.inside.dragging .knob-value {
+    stroke-width: 8;
+  }
   .knob-mark {
     font-size: clamp(12px, 34cqw, 30px);
     font-weight: 700;
@@ -274,18 +348,18 @@
   .knob-track,
   .knob-value {
     fill: none;
-    stroke-width: 12;
+    stroke-width: 14;
     stroke-linecap: butt;
     transition: stroke-width 0.1s ease-out;
   }
   .knob-track {
-    stroke: var(--surface-well);
+    stroke: var(--knob-track, var(--surface-well));
   }
   .knob-value {
     stroke: var(--knob-ink);
   }
   .dragging .knob-value {
-    stroke-width: 14;
+    stroke-width: 16;
   }
   .knob-zero,
   .knob-detent {
@@ -303,12 +377,14 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    color: var(--knob-ink);
+    /* The arc is the amount's colour; what is written inside it is a label. */
+    color: var(--label, var(--foreground));
   }
   .knob-icon {
     display: flex;
     width: 40%;
     height: 40%;
+    opacity: 0.8;
   }
   .knob-icon :global(svg) {
     width: 100%;
@@ -348,8 +424,8 @@
     max-width: 100%;
     /* Fixed by the size; a name too long for the cell ends in an ellipsis. */
     font-size: var(--knob-title-fs);
-    font-weight: 500;
-    color: var(--knob-ink);
+    font-weight: 600;
+    color: var(--label, var(--foreground));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -357,19 +433,8 @@
   .knob-value-text {
     font-size: var(--knob-value-fs);
     font-variant-numeric: tabular-nums;
-    color: var(--signal-dim);
+    font-weight: 600;
+    color: var(--value, var(--signal-dim));
     white-space: nowrap;
-  }
-
-  /* Light: the ink's fill envelope is too pale for text on paper. */
-  /* Light: the well is near white on paper, so the empty ring would vanish. */
-  :global(.light) .knob-track {
-    stroke: color-mix(in oklab, var(--foreground) 14%, var(--surface-well));
-  }
-  :global(.light) .knob-title,
-  :global(.light) .knob-readout,
-  :global(.light) .knob-big,
-  :global(.light) .knob-icon {
-    color: color-mix(in oklab, var(--knob-ink) 55%, var(--foreground));
   }
 </style>

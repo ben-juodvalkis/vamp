@@ -165,7 +165,45 @@ export type DeviceFamily = keyof typeof DEVICE_FAMILY_INKS;
  *  table, secondary as the standard 10% wash. */
 export function familyScheme(family: DeviceFamily): DeviceColorScheme {
   const { primary, accent } = DEVICE_FAMILY_INKS[family];
-  return { primary, secondary: rgbaFromHex(primary, 0.1), accent };
+  return liveScheme(primary, accent);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INK (ADR-544): a device family has no colour of its own in the interface.
+//
+// Colour is whose it is: every amount a view or a tile draws is in the
+// SELECTED TRACK's ink. The ~50 call sites that hold a scheme from this
+// module (a preset's `color`, a view's sub-palette, the macro wheel) are not
+// rewritten: a scheme's `primary` and `accent` are read when they are used,
+// and answer with the ink `setAmountInkSource` names. `selectedTrackInk.ts`
+// registers it, and it reads rune-backed stores, so a read in a template or a
+// `$derived` follows the selection and the theme.
+//
+// With no source registered (a unit test of this module alone) a scheme
+// answers with its family's hex above, which is all the table is still for.
+// Do not spread a scheme or copy its fields at module scope: the copy keeps
+// whatever the ink was at that moment.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let amountInkSource: (() => string) | null = null;
+
+/** Name the ink every device scheme answers with (ADR-544). */
+export function setAmountInkSource(source: (() => string) | null): void {
+  amountInkSource = source;
+}
+
+function liveScheme(primary: string, accent: string): DeviceColorScheme {
+  return {
+    get primary() {
+      return amountInkSource ? amountInkSource() : primary;
+    },
+    get secondary() {
+      return rgbaFromHex(amountInkSource ? amountInkSource() : primary, 0.1);
+    },
+    get accent() {
+      return amountInkSource ? amountInkSource() : accent;
+    }
+  };
 }
 
 export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
@@ -611,11 +649,7 @@ export const MOD_COLOR: DeviceColorScheme = familyScheme('modulation');
  *  the gap wheel. Fills the 8th macro slot so no macro wears the
  *  disabled-looking utility grey, and gives sub-device palettes (drum-rack
  *  modes, reverb algorithms) a green that stays off the loop-signal hue. */
-export const CHARTREUSE_SCHEME: DeviceColorScheme = {
-  primary: '#89ce5f',
-  secondary: 'rgba(137, 206, 95, 0.1)',
-  accent: '#96d273'
-};
+export const CHARTREUSE_SCHEME: DeviceColorScheme = liveScheme('#89ce5f', '#96d273');
 
 /** Per-macro control palette (instrument-rack macro grids) — the full 8-hue
  *  gap wheel, ordered for adjacent contrast; index 0 = the rack theme.

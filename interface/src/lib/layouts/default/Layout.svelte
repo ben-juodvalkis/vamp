@@ -21,31 +21,6 @@
 	import InputTuner from '$lib/components/v6/controls/InputTuner.svelte';
 	import SettingsPage from '$lib/components/v6/settings/SettingsPage.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
-	import { v3Store } from '$lib/stores/v3/normalized.svelte';
-	import { session } from '$lib/stores/session.svelte';
-	import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-	import { padTextCss } from '$lib/services/drumVirtualMacros/padLabels';
-
-	// The selected track's colour on the root, for anything that wears it:
-	// `--sel-track` is Live's colour as given (a fill behind dark or light
-	// text), `--sel-ink` the same hue brought into the range a line or a
-	// label can be drawn in on either theme.
-	$effect(() => {
-		const rec = v3Store.tracks.get('tracks/' + session.selectedTrackIndex);
-		const root = document.documentElement;
-		if (rec) {
-			// The strip's own name-block colour, so a band in it is that block.
-			const ink = trackInk(rgbToHex(rec.color), paintModeReactive());
-			root.style.setProperty('--sel-track', ink);
-			root.style.setProperty('--sel-ink', ink);
-			root.style.setProperty('--sel-track-fg', padTextCss(parseInt(ink.slice(1), 16)));
-		} else {
-			root.style.removeProperty('--sel-track');
-			root.style.removeProperty('--sel-ink');
-			root.style.removeProperty('--sel-track-fg');
-		}
-	});
 
 	// Initialize on mount
 	onMount(async () => {

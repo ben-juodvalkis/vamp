@@ -29,11 +29,14 @@
 	let {
 		source,
 		meterLevel = undefined,
-		shape = 'circle'
+		shape = 'circle',
+		word = undefined
 	}: {
 		source: 'track' | 'input';
 		meterLevel?: number;
 		shape?: 'circle' | 'rect';
+		/** A word under the dot (ADR-544: a control carries its mark over its word), where the cell has room for one. */
+		word?: string;
 	} = $props();
 
 	const HOLD_DURATION = 300;
@@ -180,7 +183,7 @@
 	     glyph carries the whole state. -->
 	<span class="button-label">
 			<span class="rec-glyph" class:blink={showRecording}>{showRecording ? '●' : '○'}</span>
-			{#if recorderReason}<span class="rec-reason">{recorderReason}</span>{/if}
+			{#if recorderReason}<span class="rec-reason">{recorderReason}</span>{:else if word}<span class="rec-word">{word}</span>{/if}
 		</span>
 	</button>
 </div>
@@ -245,15 +248,14 @@
 		border-radius: 2px;
 		width: 100%;
 		height: 100%;
-		/* A button is framed bright in its own glyph colour (as the clip
-		   view's buttons are), which a slider never is. */
-		border: 1px solid var(--button-frame);
+		/* Record keeps a frame in its own red (ADR-544): the one button
+		   whose colour is a state's, where every other is a plain well. */
+		border: 1px solid color-mix(in oklab, var(--act-rec) 70%, transparent);
 		background: var(--surface-well);
 		color: var(--act-rec);
 	}
 	:global([data-grammar="flat"]) .record-button:hover {
 		background: var(--secondary);
-		border-color: var(--button-frame);
 	}
 	:global([data-grammar="flat"]) .record-button.recording {
 		background: var(--act-rec);
@@ -313,6 +315,14 @@
 		display: inline-flex;
 		flex-direction: column;
 		align-items: center;
+	}
+
+	.rec-word {
+		margin-top: 6px;
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1;
+		color: var(--label, var(--foreground));
 	}
 
 	/* Nothing to record: greyed and inert, with the reason under the

@@ -135,7 +135,7 @@
 {:else if tabs}
 	<!-- A pick of few values: a tab scrubbed across them, as Echo's LFO wave
 	     (ADR-509); a stepper with few named values draws the same way. -->
-	{@const cols = choiceColumns(tabs.length, pageRows)}
+	{@const cols = control.kind === 'choice' && control.maxRows ? Math.ceil(tabs.length / control.maxRows) : choiceColumns(tabs.length, pageRows)}
 	{@const rows = Math.ceil(tabs.length / cols)}
 	<div class="panel-choice" class:ghost class:compact data-param={control.param}>
 		<ScrubTabs

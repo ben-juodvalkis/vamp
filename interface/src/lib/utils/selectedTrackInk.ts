@@ -10,9 +10,9 @@
 
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import { session } from '$lib/stores/session.svelte';
-import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
+import { amountInk, rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-import { schemeFromInk, type DeviceColorScheme } from '$lib/config/devicePresets';
+import { schemeFromInk, setAmountInkSource, type DeviceColorScheme } from '$lib/config/devicePresets';
 
 export function selectedTrackInk(): string | null {
 	const rec = v3Store.tracks.get('tracks/' + session.selectedTrackIndex);
@@ -36,6 +36,31 @@ export function selectedTrackInk(): string | null {
  * and theme changes propagate.
  */
 export function selectedTrackScheme(): DeviceColorScheme | null {
-	const ink = selectedTrackInk();
-	return ink ? schemeFromInk(ink) : null;
+	const rec = v3Store.tracks.get('tracks/' + session.selectedTrackIndex);
+	return rec ? schemeFromInk(amountInk(rgbToHex(rec.color), paintModeReactive())) : null;
 }
+
+/** The ink an amount takes with no track selected (the master): a mid grey, clear of ON's white and black. */
+const NO_TRACK_AMOUNT = { dark: '#a8a8a4', light: '#55554f' } as const;
+
+/**
+ * The ink every amount is drawn in (ADR-544): the selected track's, a
+ * deeper one of its hue on the light theme, a mid grey with no track
+ * selected. A hex, so a canvas can take it.
+ *
+ * Reads rune-backed stores; call it inside a `$derived` or a template.
+ */
+export function selectedAmountInk(): string {
+	const mode = paintModeReactive();
+	const rec = v3Store.tracks.get('tracks/' + session.selectedTrackIndex);
+	return rec ? amountInk(rgbToHex(rec.color), mode) : NO_TRACK_AMOUNT[mode];
+}
+
+/** `selectedAmountInk` as a scheme, for the controls that take one. */
+export function selectedAmountScheme(): DeviceColorScheme {
+	return schemeFromInk(selectedAmountInk());
+}
+
+// Every device scheme in `devicePresets` answers with this ink from here on:
+// a device family has no colour of its own in the interface (ADR-544).
+setAmountInkSource(selectedAmountInk);

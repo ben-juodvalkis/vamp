@@ -492,9 +492,11 @@
         color: var(--act-master);
         border-radius: 0;
     }
+    /* Ink (ADR-544): the key is information, not a state, so it is a
+       plain block, not ON's. */
     :global([data-grammar="flat"]) .key-band {
-        background: var(--act-master);
-        color: var(--flat-clip-text);
+        background: var(--secondary);
+        color: var(--foreground);
         border-radius: 0;
     }
     :global([data-grammar="flat"]) .key-root {

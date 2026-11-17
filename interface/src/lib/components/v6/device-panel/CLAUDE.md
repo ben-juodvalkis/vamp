@@ -69,7 +69,7 @@ never in a central view; a control's
 **The FX grid is gone (2026-10-26, the user's call).** The FX section is
 `ChainOverview` alone: the selected track's chain (or a scoped pad's), one
 cell per device, each drawing its tile, across the whole width; above it the palette bar (ADR-523), a fixed set of
-effect chips in family blocks, the same on every track
+effect chips in family blocks (grouped by family, not coloured by it, ADR-544), the same on every track
 (`services/effectPalette`, `chain/PaletteChip`), closed by a column of its
 own: the + (the browser on Effect) over the Gain chip, the Utility's Gain
 lying flat over the track's meter and ridden up and down, whose first drag
@@ -173,7 +173,8 @@ ink (an `outline` drawn INSIDE the box — the FX section scrolls, so
 anything outside it is clipped) and a **scope chip** naming the pad,
 absolutely placed so it takes no cell from the tiles (a pad Live left
 uncoloured would otherwise leave the grid looking unchanged while
-meaning something else). Tiles keep their family inks (ADR-400).
+meaning something else). A tile's amounts are the selected track's ink
+(ADR-544): a device family has no colour of its own.
 
 **Every tile's `device` prop is resolved against the scope too**
 (`getFxGridSlot(position, scopeKey)`, 2026-09-11): a tile derives the

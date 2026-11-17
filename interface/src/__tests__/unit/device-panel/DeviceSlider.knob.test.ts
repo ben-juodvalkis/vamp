@@ -66,10 +66,14 @@ describe('DeviceSlider face="knob"', () => {
 		if (released !== undefined) expect(released).toBeCloseTo(0.5, 9);
 	});
 
-	it('names itself at rest with its value under it, and shows Live’s value in the middle while dragged', async () => {
+	// ADR-544: a continuous knob's arc is its reading. It draws no number at
+	// rest; the value is in its accessible name, and in the middle while a
+	// finger turns it.
+	it('names itself at rest with no number, and shows Live’s value in the middle while dragged', async () => {
 		const { container, el } = await knob({ value: 0.5, title: 'Decay', valueText: '1.2 s', readout: '1.25 s' });
 		expect(el.textContent).toContain('Decay');
-		expect(el.textContent).toContain('1.2 s');
+		expect(el.textContent).not.toContain('1.2 s');
+		expect(el.getAttribute('aria-label')).toContain('Decay 1.2 s');
 		expect(container.querySelector('.knob-readout')).toBeNull();
 		pointer(el, 'pointerdown', 50, 100);
 		await tick();
@@ -77,6 +81,22 @@ describe('DeviceSlider face="knob"', () => {
 		pointer(el, 'pointerup', 50, 100);
 		await tick();
 		expect(container.querySelector('.knob-readout')).toBeNull();
+	});
+
+	it('shows the value while dragged even when the host passes no readout', async () => {
+		const { container, el } = await knob({ value: 0.5, title: 'Mix' });
+		expect(container.querySelector('.knob-readout')).toBeNull();
+		pointer(el, 'pointerdown', 50, 100);
+		await tick();
+		expect(container.querySelector('.knob-readout')?.textContent).toBe('50 %');
+		pointer(el, 'pointerup', 50, 100);
+	});
+
+	it('keeps a discrete control’s value under its name: steps, or a word with no number in it', async () => {
+		const stepped = await knob({ value: 3, min: 0, max: 7, steps: 8, title: 'Voices', valueText: '4' });
+		expect(stepped.container.querySelector('.knob-value-text')?.textContent).toBe('4');
+		const named = await knob({ value: 0, min: 0, max: 4, title: 'Vintage', valueText: 'Off' });
+		expect(named.container.querySelector('.knob-value-text')?.textContent).toBe('Off');
 	});
 
 	it('marks zero at the top of a bipolar arc, and fills nothing there', async () => {

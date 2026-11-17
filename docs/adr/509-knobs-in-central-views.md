@@ -1,7 +1,7 @@
 # ADR-509: Knobs in central views
 
 ## Status
-**Accepted** (2026-11-06)
+**Accepted** (2026-11-06). Amended by [ADR-544](544-ink-one-visual-system.md) (2026-11-17): a continuous knob shows its name and no value at rest, a caption is one line, and a knob among round buttons is their size.
 
 ## Context
 

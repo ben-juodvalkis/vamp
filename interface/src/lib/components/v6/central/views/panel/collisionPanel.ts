@@ -36,7 +36,9 @@ function resonatorGroup(n: 1 | 2): PanelGroup {
 		columns: 6,
 		controls: [
 			// The object first: what is struck is the resonator's first choice.
-			{ kind: 'choice', param: `${r} Type`, title: 'Type', options: RES_TYPES },
+			// Three rows: the list sits under the frame's tab strip, and under
+			// the view's title band four rows of the touch floor no longer fit.
+			{ kind: 'choice', param: `${r} Type`, title: 'Type', options: RES_TYPES, maxRows: 3 },
 			{ kind: 'box', param: `${r} Decay`, title: 'Decay' },
 			{ kind: 'box', param: `${r} Material`, title: 'Material' },
 			{ kind: 'box', param: `${r} Brightness`, title: 'Bright' },

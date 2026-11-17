@@ -369,7 +369,6 @@
       face={knob ? 'knob' : 'slider'}
       knobSize="l"
       knobFit
-      knobCaption={!knob}
       color={controlInk}
       isGhost={gainState === 'none'}
       onInteraction={(value) => vm.write('gain', value)}

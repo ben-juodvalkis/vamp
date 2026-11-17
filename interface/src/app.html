@@ -16,8 +16,8 @@
 		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
 		<!-- PWA Meta Tags -->
-		<meta name="theme-color" content="#1f2126" />
-		<meta name="background-color" content="#1f2126" />
+		<meta name="theme-color" content="#0b0b0b" />
+		<meta name="background-color" content="#0b0b0b" />
 		<meta name="display" content="fullscreen" />
 
 		<!-- PWA Mobile Support -->
@@ -44,15 +44,6 @@
 				const isDark = theme === 'dark' || 
 					(theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 				document.documentElement.classList.add(isDark ? 'dark' : 'light');
-				// PITCH (stop 1 of the visual redesign): one of three candidate
-				// looks, picked per page load. Removed once a direction is chosen.
-				// `?pitch=2` in the address picks one and remembers it (the iPad
-				// has no console); `?pitch=0` goes back to the shipped look.
-				var asked = new URLSearchParams(location.search).get('pitch');
-				if (asked === '0') localStorage.removeItem('vamp.pitch');
-				else if (asked === '1' || asked === '2' || asked === '3') localStorage.setItem('vamp.pitch', asked);
-				var pitch = localStorage.getItem('vamp.pitch');
-				if (pitch) document.documentElement.dataset.pitch = pitch;
 			})();
 		</script>
 		<div style="display: contents">%sveltekit.body%</div>

@@ -90,7 +90,7 @@ class ThemeManager {
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (!metaThemeColor) return;
 		// Hybrid canvas — mirrors `--canvas` in app.css's `.dark/.light[data-skin="hybrid"]`.
-		const hex = get(resolvedTheme) === 'dark' ? '#1f2126' : '#d5d8dd';
+		const hex = get(resolvedTheme) === 'dark' ? '#0b0b0b' : '#d6d6d2';
 		metaThemeColor.setAttribute('content', hex);
 	}
 

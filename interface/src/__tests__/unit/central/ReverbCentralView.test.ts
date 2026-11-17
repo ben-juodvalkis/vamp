@@ -93,7 +93,10 @@ describe('ReverbCentralView, an algorithm', () => {
 		const c = await mount({ 6: 0 });
 		expect(c.querySelector('[data-reverb-portrait]')).toBeNull();
 		expect(c.textContent).toContain('Dark Hall');
-		expect(c.textContent).toContain('3.50 s');
+		// A continuous knob draws no number at rest (ADR-544): Live's words
+		// are its accessible name.
+		expect(c.textContent).not.toContain('3.50 s');
+		expect(c.querySelector('[role="slider"][aria-label^="Decay 3.50 s"]')).not.toBeNull();
 		expect(labels(c.querySelector('[data-reverb-own]'))).toEqual([
 			'Shape 50.0', 'Bass Mult 100 %', 'Bass X 440 Hz', 'Damping 50 %', 'Mod 50 %'
 		]);
@@ -103,8 +106,12 @@ describe('ReverbCentralView, an algorithm', () => {
 	it('draws what every algorithm shares, in Live’s words', async () => {
 		const c = await mount({ 6: 1 });
 		expect(labels(c.querySelector('[data-reverb-shared]'))).toEqual([
-			'Decay 3.50 s', 'Size 50 %', 'Predelay 10.0 ms', 'Feedback 0.0 %', 'Delay 0.00 ms', 'Stereo 100 %', 'Vintage Off'
+			'Decay 3.50 s', 'Size 50 %', 'Predelay 10.0 ms', 'Feedback 0.0 %', 'Delay 0.00 ms', 'Stereo 100 %'
 		]);
+		// Vintage is five named settings: a tab, the chosen one lit (ADR-544).
+		const vintage = [...c.querySelectorAll('[data-reverb-vintage] .scrub-option')];
+		expect(vintage.map((o) => o.textContent?.trim())).toEqual(['Off', 'Subtle', 'Old', 'Older', 'Extreme']);
+		expect(vintage.map((o) => o.classList.contains('active'))).toEqual([true, false, false, false, false]);
 		// Dry/Wet stands apart at the right edge, a box among knobs (ADR-509).
 		expect(labels(c.querySelector('[data-reverb-wet]'))).toEqual(['Dry/Wet 50 %']);
 		const switches = [...c.querySelectorAll('[data-reverb-shared] [data-reverb-switch]')].map((b) => b.textContent?.trim());
@@ -220,10 +227,11 @@ describe('ReverbCentralView, convolution', () => {
 		const c = await mount({ 48: 3 }, SPRING);
 		expect(labels(c.querySelector('[data-reverb-own]'))).toEqual(['Attack 0.00 ms', 'Decay 20.0 s', 'Size 100 %']);
 		expect(labels(c.querySelector('[data-reverb-shared]'))).toEqual([
-			// Stereo starts a column so its Mono sits under it; Vintage fills the
-			// cell ahead of it (ADR-509).
-			'Predelay 10.0 ms', 'Feedback 0.0 %', 'Vintage Off', 'Stereo 100 %'
+			// Stereo starts a column so its Mono sits under it; Vintage's tab
+			// is the column ahead of it (ADR-509, ADR-544).
+			'Predelay 10.0 ms', 'Feedback 0.0 %', 'Stereo 100 %'
 		]);
+		expect(c.querySelector('[data-reverb-shared] [data-reverb-vintage]')).not.toBeNull();
 		// Freeze, Size and Delay are the algorithm's.
 		expect(c.querySelector('[data-reverb-switch="8"]')).toBeNull();
 		await pressTap(c.querySelector('[data-reverb-tab="eq"]')!);

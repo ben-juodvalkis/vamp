@@ -138,7 +138,6 @@
         face="knob"
         knobSize="l"
         knobFit
-        knobCaption={false}
         icon="start"
         {color}
         isGhost={startState === 'none'}
@@ -290,18 +289,14 @@
     line-height: 1.1;
     overflow: hidden;
   }
-  /* ---- Live skin (flat grammar): the FX-type buttons wear the focused
-     track's ink (ADR-402) as label and, when active, solid fill with Live's
-     ClipText — never the GRATICULE wash/glow. Live never bolds a pad. */
+  /* Ink (ADR-544): an FX type's word is a label, the chosen one ON's
+     block; the track's ink (`--btn-tint`) colours neither. */
   :global([data-grammar="flat"]) .fx-type-option {
     font-weight: var(--font-weight-medium);
-    color: var(--btn-tint, var(--foreground));
+    color: var(--label);
   }
   :global([data-grammar="flat"]) .fx-type-option.active {
-    background: var(--btn-tint, var(--phosphor));
-    color: var(--flat-clip-text);
-  }
-  :global(.light[data-grammar="flat"]) .fx-type-option:not(.active) {
-    color: color-mix(in oklab, var(--btn-tint, var(--foreground)) 55%, var(--foreground));
+    background: var(--on-bg);
+    color: var(--on-fg);
   }
 </style>

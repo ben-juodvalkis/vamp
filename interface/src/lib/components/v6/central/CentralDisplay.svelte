@@ -122,7 +122,9 @@ import { logger } from '$lib/utils/logger';
 					// when there is no track (or clip) to open the browser onto, so
 					// the name is only a button while there is a door behind it.
 					open: pill.canOpen ? () => pill?.open() : null,
-					ink: trackAccent
+					// The pill names a preset or a clip: a label, in plain ink
+					// (ADR-544).
+					ink: null
 				}
 			: null
 	);
@@ -250,7 +252,7 @@ import { logger } from '$lib/utils/logger';
 			working={pill.model.working}
 			disabled={pill.model.disabled}
 			error={pill.model.error}
-			ink={trackAccent}
+			ink={null}
 			density={viewDensity}
 			onPrev={() => pill?.act('prev')}
 			onNext={() => pill?.act('next')}
@@ -313,38 +315,63 @@ import { logger } from '$lib/utils/logger';
 />
 
 <style>
-	/* The full-screen switch (ADR-511): a quiet 16px glyph pushed into the
-	   corner of a 44px touch box, so the mark sits in the view's inset,
-	   clear of a header line's last name, while the box keeps the touch
-	   floor. Over the view (z-index) so a view's own corner content never
-	   swallows it. */
+	/* The full-screen switch (ADR-511): a 16px glyph at the title band's
+	   right end, in the band's own text colour, in a 44px-wide touch box
+	   the band's height. Over the view (z-index). */
 	.central-expand {
 		position: absolute;
 		top: 0;
 		right: 0;
 		width: var(--height-touch, 44px);
+		/* The touch floor's height: 4px past the band, into the view's
+		   inset, where no control sits. The glyph is centred on the band. */
 		height: var(--height-touch, 44px);
-		padding: 5px;
+		padding: calc((var(--title-band-h, 40px) - 16px) / 2) 10px 0 0;
 		display: inline-flex;
 		align-items: flex-start;
 		justify-content: flex-end;
-		color: var(--muted-foreground);
-		opacity: 0.7;
+		color: var(--sel-track-fg, var(--foreground));
+		opacity: 1;
 		border: none;
 		background: transparent;
 		cursor: pointer;
 		z-index: 30;
 	}
-	.central-expand:hover,
-	.central-expand[aria-pressed='true'] {
-		color: var(--foreground);
-		opacity: 1;
-	}
 
-	/* The title line and the body under it. Off until a look turns it on
-	   (pitch.css); the body is then the frame's row, as the frame itself was. */
+
+	/* The title band (ADR-544): whose view this is and what it is, in the
+	   selected track's own name-block colour, so the band and the strip's
+	   name read as one object. The body under it is the frame's row, as the
+	   frame itself was before the band. */
+	.central-frame {
+		flex-direction: column;
+	}
 	.cv-head {
-		display: none;
+		display: flex;
+		flex: none;
+		align-items: center;
+		gap: 0;
+		height: var(--title-band-h, 40px);
+		background: var(--sel-track, var(--secondary));
+		color: var(--sel-track-fg, var(--foreground));
+		font-size: 19px;
+		line-height: 1;
+		white-space: nowrap;
+	}
+	.cv-track,
+	.cv-device {
+		padding: 0 0 0 12px;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.cv-track {
+		flex: 0 1 auto;
+		font-weight: 800;
+	}
+	.cv-device {
+		flex: 0 1 auto;
+		font-weight: 500;
 	}
 	.cv-body {
 		display: flex;
@@ -365,7 +392,7 @@ import { logger } from '$lib/utils/logger';
 	   colour in the title chip, not the frame). Outranks the .rounded-lg
 	   utility and app.css's flat .glass-panel by specificity. */
 	:global([data-grammar="flat"]) .central-frame {
-		border: 1px solid var(--line-strong);
+		border: 1px solid transparent;
 		border-radius: 2px;
 	}
 </style>

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { pitchOn } from '$lib/utils/pitch';
   import { onDestroy, type Snippet } from 'svelte';
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
   import KnobFace from './KnobFace.svelte';
@@ -97,6 +96,8 @@
     knobFit?: boolean;
     /** The caption stays under the knob however wide the cell (KnobFace `captionBelow`). */
     knobCaptionBelow?: boolean;
+    /** A knob among round buttons: as large as its cell, its mark over its name inside the ring (KnobFace `inside`). */
+    knobInside?: boolean;
   }
 
   let {
@@ -133,7 +134,8 @@
     knobCaption = true,
     knobMark,
     knobFit = false,
-    knobCaptionBelow = false
+    knobCaptionBelow = false,
+    knobInside = false
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
@@ -196,13 +198,15 @@
   // Computed for display (guard against division by zero if min >= max)
   let fillPercent = $derived(max > min ? ((localValue - min) / (max - min)) * 100 : 0);
 
-  // What a control says about its value (Ben, stop 1): a continuous
+  // What a control says about its value (ADR-544): a continuous
   // amount shows no number at rest, its arc or fill is the reading, and
   // says the number only while a finger moves it; a discrete one (steps,
   // or whole semitones about a centre) keeps its value under its name.
   let discrete = $derived(
     (steps !== undefined && steps >= 2) ||
-      (centerOrigin && Number.isInteger(min) && Number.isInteger(max)) ||
+      // Whole numbers about a centre: semitones. Not a 0..1 amount with a
+      // centre (a pan, an offset), which is continuous.
+      (centerOrigin && Number.isInteger(min) && Number.isInteger(max) && max - min >= 2) ||
       // Live's word for a setting with no number in it ("Off", "Triangle").
       (valueText !== undefined && valueText !== '' && !/\d/.test(valueText))
   );
@@ -217,7 +221,7 @@
     }
     return span >= 8 ? `${Math.round(localValue)}` : localValue.toFixed(2);
   });
-  let restValue = $derived(pitchOn ? (discrete ? liveValue : undefined) : valueText);
+  let restValue = $derived(discrete ? liveValue : undefined);
 
   // Center origin calculations (for bipolar controls)
   // Use provided centerValue, or default to midpoint of range
@@ -362,14 +366,15 @@
         {origin}
         {title}
         valueText={restValue}
-        readout={readout ?? (pitchOn ? liveValue : undefined)}
+        readout={readout ?? liveValue}
         {icon}
         {steps}
         size={knobSize}
-        caption={knobCaption || pitchOn}
+        caption={knobCaption}
         centreMark={knobMark}
         fit={knobFit}
         captionBelow={knobCaptionBelow}
+        inside={knobInside}
         dragging={isDragging}
         ink={color.primary}
       />
@@ -455,17 +460,18 @@
          filled region (inline clip-path) and uses an on-fill ink so letters stay
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label || icon}
-      <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}" class:label-top={labelAt === 'top'}>
-        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if pitchOn && liveValue && (discrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
+      <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}" class:label-top={labelAt === 'top'} class:in-value-box={valueBox}>
+        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if liveValue && (discrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
       </div>
       {#if showFill}
         <div
           class="slider-label slider-label--inverse label-{effectiveLabelOrientation} label-{labelSize}"
           class:label-top={labelAt === 'top'}
+          class:in-value-box={valueBox}
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if pitchOn && liveValue && (discrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
+          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if liveValue && (discrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
         </div>
       {/if}
     {/if}
@@ -774,25 +780,54 @@
     background-color: var(--flat-handle);
   }
 
-  /* Hybrid skin: Live's grammar, but the device family keeps its voice —
-     label in the device ink (its fill already is), on the flat grey module. */
+  /* ---- Ink (ADR-544). A name is a label, in plain ink, never the
+     amount's colour; the copy of it over the fill is the ink that reads on
+     the amount. */
   :global([data-skin="hybrid"]) .slider-label-text,
   :global([data-skin="hybrid"]) .slider-icon {
-    color: var(--slider-tint, var(--foreground));
-  }
-  /* Light: the fill envelope (L .66–.80) is too pale for TEXT on paper —
-     pull the label toward the foreground, hue kept. */
-  :global(.light[data-skin="hybrid"]) .slider-label-text,
-  :global(.light[data-skin="hybrid"]) .slider-icon {
-    color: color-mix(in oklab, var(--slider-tint, var(--foreground)) 55%, var(--foreground));
+    color: var(--label);
   }
   :global([data-skin="hybrid"]) .slider-label--inverse .slider-label-text,
   :global([data-skin="hybrid"]) .slider-label--inverse .slider-icon {
-    color: var(--flat-on-fg);
+    color: var(--amount-fg);
   }
   :global([data-skin="hybrid"]) .slider-container.ghost .slider-label-text,
   :global([data-skin="hybrid"]) .slider-container.ghost .slider-icon {
-    color: color-mix(in srgb, var(--slider-tint, var(--foreground)) 70%, var(--signal-dim));
+    color: var(--signal-dim);
+  }
+  /* The label is its name over, for a discrete control or while a finger
+     moves a continuous one, its value. */
+  .slider-label-text {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .slider-value {
+    font-size: 0.72em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.8;
+    white-space: nowrap;
+  }
+  /* A value box in a central view (ADR-477): its mark, name and value at
+     its head, at a knob caption's size, the fill under them. A chain
+     cell's slider keeps its centred, cell-sized name. */
+  :global([data-skin="hybrid"]) .slider-label.in-value-box {
+    justify-content: flex-start;
+    padding-top: 10px;
+    gap: 6px;
+  }
+  :global([data-skin="hybrid"]) .slider-container .slider-label.in-value-box.label-small .slider-label-text,
+  :global([data-skin="hybrid"]) .slider-container .slider-label.in-value-box.label-large .slider-label-text {
+    font-size: clamp(13px, 16cqw, 19px);
+    font-weight: 600;
+    line-height: 1.15;
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+  :global([data-skin="hybrid"]) .slider-label.in-value-box .slider-icon {
+    width: min(44cqw, 30cqh, 40px);
   }
 
   /* Vertical orientation: horizontal line segments (left and right of label) */

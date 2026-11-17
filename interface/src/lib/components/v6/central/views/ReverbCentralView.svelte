@@ -89,7 +89,6 @@
   } from '$lib/components/v6/device-panel/hybridReverbParams';
 
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
-  import { pitchOn } from '$lib/utils/pitch';
 
   const fx = useFxGridSlot('reverb');
 
@@ -594,7 +593,7 @@
      both of the slider's label layers, so it flips on the fill. -->
 {#snippet boxLabel(name: string, value: string)}
   {@const glyph = ROW_GLYPHS[name]}
-  <span class="box-label">{#if glyph}<span class="box-glyph"><ControlGlyph name={glyph} /></span>{/if}<span class="box-name">{name}</span><span class="box-value">{value}</span></span>
+  <span class="box-label">{#if glyph}<span class="box-glyph"><ControlGlyph name={glyph} /></span>{/if}<span class="box-name">{name}</span></span>
 {/snippet}
 
 {#snippet typeChip(end: string, index: number)}
@@ -614,9 +613,9 @@
      shared knobs, ADR-509), not inside it. -->
 {#snippet sliderBox(row: Row, ownCellChip = false, size: 's' | 'm' | 'l' = knobSize)}
   {#snippet label()}{@render boxLabel(row.name, row.label)}{/snippet}
-  {#if pitchOn && row.key === 'vintage'}
-    <!-- PITCH (Ben, stop 1): Vintage is five named settings, so it is a
-         tab, not a knob: its column's two rows, the name over it. It
+  {#if row.key === 'vintage'}
+    <!-- Vintage is five named settings, so it is a tab, not a stepped
+         knob (ADR-544): its column's two rows, the name over it. It
          writes through the row's own write, as the knob did. -->
     <div class="cell vintage-tab" data-reverb-vintage>
       <span class="vintage-name">{row.name}</span>
@@ -900,7 +899,7 @@
     min-height: 0;
     min-width: 0;
   }
-  /* PITCH: Vintage as a tab down its column's two rows. */
+  /* Vintage as a tab down its column's two rows (ADR-544). */
   .vintage-tab {
     grid-row: span 2;
     gap: 4px;
@@ -1070,21 +1069,18 @@
     font-weight: var(--font-weight-medium);
     letter-spacing: 0;
   }
-  /* The type tab lights its choice in the house --phosphor, the per-type
-     ink stepping aside as it did on the buttons it replaced. */
-  :global([data-grammar="flat"]) .type-tab .device-segment.active {
-    background: var(--phosphor);
-  }
-  /* One ink for the algorithm: a lit switch wears its colour rather than
-     the house --phosphor, as the Echo view's Sync does. */
+  /* Ink (ADR-544): a lit switch and the chosen picture are ON's block,
+     and a switch's word is a label; the algorithm's `--btn-tint` colours
+     neither. */
+  :global([data-grammar="flat"]) .type-tab .device-segment.active,
   :global([data-grammar="flat"]) .reverb-chip.active,
   :global([data-grammar="flat"]) .picture-tab.active {
-    background: var(--btn-tint);
-    border-color: var(--btn-tint);
-    color: var(--flat-on-fg);
+    background: var(--on-bg);
+    border-color: var(--on-bg);
+    color: var(--on-fg);
   }
   :global([data-grammar="flat"]) .reverb-chip:not(.active),
   :global([data-grammar="flat"]) .picture-tab:not(.active) {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
+    color: var(--label);
   }
 </style>

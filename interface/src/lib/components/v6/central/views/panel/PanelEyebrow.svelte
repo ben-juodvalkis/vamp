@@ -50,7 +50,12 @@
 		text-underline-offset: 3px;
 		cursor: pointer;
 	}
+	/* Ink (ADR-544): a section's name is a label, never a colour. `color`
+	   is still passed by every host and no longer drawn (!important over the
+	   inline style until the hosts stop passing it). */
 	:global([data-grammar='flat']) .panel-eyebrow {
 		font-weight: var(--font-weight-medium);
+		font-size: 0.8125rem;
+		color: var(--value) !important;
 	}
 </style>

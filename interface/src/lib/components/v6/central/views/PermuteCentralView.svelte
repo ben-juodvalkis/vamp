@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { pitchOn } from '$lib/utils/pitch';
 	import { sequencerStore, DIVISION_OPTIONS } from '$lib/stores/v6/sequencerStore.svelte';
 	import MuteSequencerControl from '$lib/components/v6/clips/MuteSequencerControl.svelte';
 	import PitchSequencerControl from '$lib/components/v6/clips/PitchSequencerControl.svelte';
@@ -206,7 +205,7 @@
 <div class="h-full w-full p-(--central-inset) grid-layout" data-permute-scope={scope?.note ?? undefined}>
 	<!-- Mute length — col 1, row 1 -->
 	<div
-		class="ctrl-cell cursor-ns-resize select-none"
+		class="ctrl-cell cursor-ns-resize select-none" data-layout-box
 		style="--cell-ink: {muteColor}; grid-column: 1; grid-row: 1;"
 		onpointerdown={onMuteLengthDown}
 		onpointermove={onMuteLengthMove}
@@ -215,12 +214,12 @@
 		title="Mute length: {muteLength} steps"
 		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={muteLength} tabindex="0"
 	>
-		<KnobFace position={(muteLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title={pitchOn ? 'Mute length' : 'Length'} centreValue={`${muteLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingMuteLength} ink={muteColor} size="xl" fit captionBelow />
+		<KnobFace position={(muteLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Mute length" centreValue={`${muteLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingMuteLength} ink={muteColor} size="xl" fit captionBelow />
 	</div>
 
 	<!-- Mute rate — col 10, row 1 -->
 	<div
-		class="ctrl-cell cursor-ns-resize select-none"
+		class="ctrl-cell cursor-ns-resize select-none" data-layout-box
 		style="--cell-ink: {muteColor}; grid-column: 10; grid-row: 1;"
 		onpointerdown={onMuteRateDown}
 		onpointermove={onMuteRateMove}
@@ -229,7 +228,7 @@
 		title="Mute rate"
 		role="slider" aria-valuemin={0} aria-valuemax={RATE_COUNT - 1} aria-valuenow={muteRateIndex} tabindex="0"
 	>
-		<KnobFace position={Math.max(0, muteRateIndex) / (RATE_COUNT - 1)} title={pitchOn ? 'Mute rate' : 'Rate'} centreValue={muteRateDisplay} steps={RATE_COUNT} dragging={isDraggingMuteRate} ink={muteColor} size="xl" fit captionBelow />
+		<KnobFace position={Math.max(0, muteRateIndex) / (RATE_COUNT - 1)} title="Mute rate" centreValue={muteRateDisplay} steps={RATE_COUNT} dragging={isDraggingMuteRate} ink={muteColor} size="xl" fit captionBelow />
 	</div>
 
 	<!-- Mute steps — cols 2-9, row 1 -->
@@ -247,7 +246,7 @@
 
 	<!-- Pitch length — col 1, row 3 -->
 	<div
-		class="ctrl-cell cursor-ns-resize select-none"
+		class="ctrl-cell cursor-ns-resize select-none" data-layout-box
 		style="--cell-ink: {pitchColor}; grid-column: 1; grid-row: 3;"
 		onpointerdown={onPitchLengthDown}
 		onpointermove={onPitchLengthMove}
@@ -256,12 +255,12 @@
 		title="Pitch length: {pitchLength} steps"
 		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={pitchLength} tabindex="0"
 	>
-		<KnobFace position={(pitchLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title={pitchOn ? 'Pitch length' : 'Length'} centreValue={`${pitchLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingPitchLength} ink={pitchColor} size="xl" fit captionBelow />
+		<KnobFace position={(pitchLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Pitch length" centreValue={`${pitchLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingPitchLength} ink={pitchColor} size="xl" fit captionBelow />
 	</div>
 
 	<!-- Pitch rate — col 10, row 3 -->
 	<div
-		class="ctrl-cell cursor-ns-resize select-none"
+		class="ctrl-cell cursor-ns-resize select-none" data-layout-box
 		style="--cell-ink: {pitchColor}; grid-column: 10; grid-row: 3;"
 		onpointerdown={onPitchRateDown}
 		onpointermove={onPitchRateMove}
@@ -270,7 +269,7 @@
 		title="Pitch rate"
 		role="slider" aria-valuemin={0} aria-valuemax={RATE_COUNT - 1} aria-valuenow={pitchRateIndex} tabindex="0"
 	>
-		<KnobFace position={Math.max(0, pitchRateIndex) / (RATE_COUNT - 1)} title={pitchOn ? 'Pitch rate' : 'Rate'} centreValue={pitchRateDisplay} steps={RATE_COUNT} dragging={isDraggingPitchRate} ink={pitchColor} size="xl" fit captionBelow />
+		<KnobFace position={Math.max(0, pitchRateIndex) / (RATE_COUNT - 1)} title="Pitch rate" centreValue={pitchRateDisplay} steps={RATE_COUNT} dragging={isDraggingPitchRate} ink={pitchColor} size="xl" fit captionBelow />
 	</div>
 
 	<!-- Pitch steps — cols 2-9, row 2 -->
@@ -312,6 +311,13 @@
 		border-radius: 999px;
 		color: var(--chip-ink);
 		white-space: nowrap;
+	}
+
+	/* Each knob names its row with what it sets (ADR-544): Mute length,
+	   Pitch rate. Long for a one-column cell at the knob's own type size,
+	   so the caption is set a step smaller here. */
+	.ctrl-cell :global(.knob-title) {
+		font-size: 14px;
 	}
 
 	/* col 1=length, 2-9=steps, 10=rate */

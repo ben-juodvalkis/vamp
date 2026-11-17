@@ -556,14 +556,14 @@
   :global([data-grammar="flat"]) .xy-container.ghost .center-title {
     color: var(--signal-dim);
   }
-  :global([data-skin="hybrid"]) .center-title {
-    color: var(--xy-tint, var(--foreground));
+  /* Ink (ADR-544): a pad's name and mark are labels, in plain ink. */
+  :global([data-skin="hybrid"]) .center-title,
+  :global([data-skin="hybrid"]) .title-icon {
+    color: var(--label);
   }
-  :global(.light[data-skin="hybrid"]) .center-title {
-    color: color-mix(in oklab, var(--xy-tint, var(--foreground)) 55%, var(--foreground));
-  }
-  :global([data-skin="hybrid"]) .xy-container.ghost .center-title {
-    color: color-mix(in srgb, var(--xy-tint, var(--foreground)) 70%, var(--signal-dim));
+  :global([data-skin="hybrid"]) .xy-container.ghost .center-title,
+  :global([data-skin="hybrid"]) .xy-container.ghost .title-icon {
+    color: var(--signal-dim);
   }
   :global([data-grammar="flat"]) .rate-label-centered {
     font-size: 16px;

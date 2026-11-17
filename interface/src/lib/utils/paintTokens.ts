@@ -42,26 +42,26 @@ export interface PaintTokens {
 	SIMPLER_LOOP_OUT: string;
 }
 
-/** Dark performance theme (Hybrid). */
+/** Dark performance theme (Ink, ADR-544). */
 const DARK: PaintTokens = {
 	RECORDING_RED: '#ff5559',
-	DIM_GREY: '#7f848d',
-	DIM_GREY_45: 'rgba(127,132,141,0.45)',
-	EDITOR_ACCENT: '#ffad56',
-	EDITOR_ACCENT_40: 'rgba(255,173,86,0.4)',
-	MIDI_NOTE_FALLBACK: '#d3d6db',
-	SIMPLER_LOOP_OUT: 'rgba(127,132,141,0.5)'
+	DIM_GREY: '#8b8b87',
+	DIM_GREY_45: 'rgba(139,139,135,0.45)',
+	EDITOR_ACCENT: '#f4f4f1',
+	EDITOR_ACCENT_40: 'rgba(244,244,241,0.4)',
+	MIDI_NOTE_FALLBACK: '#f4f4f1',
+	SIMPLER_LOOP_OUT: 'rgba(139,139,135,0.5)'
 };
 
-/** Light "paper instrument" theme (Hybrid). */
+/** Light theme (Ink, ADR-544). */
 const LIGHT: PaintTokens = {
 	RECORDING_RED: '#ff4d55',
-	DIM_GREY: '#5c616a',
-	DIM_GREY_45: 'rgba(92,97,106,0.45)',
-	EDITOR_ACCENT: '#f5a524',
-	EDITOR_ACCENT_40: 'rgba(245,165,36,0.4)',
-	MIDI_NOTE_FALLBACK: '#14161a',
-	SIMPLER_LOOP_OUT: 'rgba(92,97,106,0.5)'
+	DIM_GREY: '#6a6a64',
+	DIM_GREY_45: 'rgba(106,106,100,0.45)',
+	EDITOR_ACCENT: '#111110',
+	EDITOR_ACCENT_40: 'rgba(17,17,16,0.4)',
+	MIDI_NOTE_FALLBACK: '#111110',
+	SIMPLER_LOOP_OUT: 'rgba(106,106,100,0.5)'
 };
 
 const SETS: Record<'dark' | 'light', PaintTokens> = { dark: DARK, light: LIGHT };

@@ -663,45 +663,33 @@ export const TOURS = {
 		])
 	},
 
-	// PITCH (stop 1 of the visual redesign): the three candidate looks on the
-	// four pilot views, whole iPad layout. `--theme light` for the other half.
-	pitch: {
-		description: 'The three pitch directions on Clip, Permute, Drum Rack and Reverb, in the whole iPad layout.',
-		states: ['0', '1', '2', '3'].flatMap((n) =>
-			[
-				['clip', [selectTrack(2)]],
-				['permute', [openPermute(1)]],
-				['drumrack', [openInstrument(0)]],
-				['reverb', null]
-			].map(([view, steps]) => ({
-				name: `pitch-${n}-${view}`,
-				description: `Direction ${n}: ${view}`,
-				shell: 'pad',
-				layout: false,
-				// 0 is the shipped look, for the side-by-side.
-				prefs: n === '0' ? {} : { 'vamp.pitch': n },
-				...(steps
-					? { steps }
-					: {
-							scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Reverb']),
-							steps: [openInstrument(CHAIN_DEMO_TRACK), openCell('Reverb')]
-						})
-			}))
-		).concat(
-			// Recording against selection: the recording Guitar selected, and a
-			// red track (Drums) recording while selected, today and under Ink.
-			['0', '2'].flatMap((n) => [
-				{ name: `pitch-${n}-rec-selected`, description: 'Guitar selected while it records', steps: [selectTrack(3)] },
-				{
-					name: `pitch-${n}-rec-red`,
-					description: 'Drums (red) recording while selected',
-					scenePatch: (scene) => {
-						scene.playing.find((p) => p.trackPath === 'tracks/0').status = 2;
-					},
-					steps: [openInstrument(0)]
-				}
-			].map((state) => ({ ...state, shell: 'pad', layout: false, prefs: n === '0' ? {} : { 'vamp.pitch': n } })))
-		)
+	// The whole iPad layout (Vamp for iPad's shell), one state a pilot view,
+	// for judging the shell and a view together (ADR-544), and the cases that
+	// test a strip's selection against recording. `--full` for the whole
+	// screen; `--theme light` for the other theme.
+	ipad: {
+		description: 'The whole iPad layout on the four pilot views (Clip, Permute, Drum Rack, Reverb), and recording against selection.',
+		states: [
+			{ name: 'ipad-clip', description: 'Clip view on Keys', steps: [selectTrack(2)] },
+			{ name: 'ipad-permute', description: 'Permute on Bass', steps: [openPermute(1)] },
+			{ name: 'ipad-drumrack', description: 'Drum Rack on Drums', steps: [openInstrument(0)] },
+			{
+				name: 'ipad-reverb',
+				description: 'Reverb on Lead',
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Reverb']),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), openCell('Reverb')]
+			},
+			{ name: 'ipad-rec-selected', description: 'Guitar selected while it records: its fill, a red frame', steps: [selectTrack(3)] },
+			{
+				name: 'ipad-rec-red',
+				description: 'Drums (red) recording while selected: red frame on a red shade',
+				scenePatch: (scene) => {
+					scene.playing.find((p) => p.trackPath === 'tracks/0').status = 2;
+				},
+				steps: [openInstrument(0)]
+			},
+			{ name: 'ipad-master', description: 'The master selected: no track colour, the System view', steps: [{ click: '[data-debug="master-card"]' }] }
+		].map((state) => ({ ...state, shell: 'pad', layout: false }))
 	},
 
 	central: {

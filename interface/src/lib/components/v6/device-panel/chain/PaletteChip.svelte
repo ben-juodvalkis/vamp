@@ -31,10 +31,13 @@
 		align-items: center;
 		justify-content: center;
 		padding: 2px 4px;
-		border: 1px solid color-mix(in oklab, var(--chip-ink) 38%, transparent);
+		/* Ink (ADR-544): not on the chain yet, so an outline where a device
+		   on it is a slab. No family colour: a chip is found by its place and
+		   its name. */
+		border: 1px solid var(--line);
 		border-radius: var(--ghost-radius, 4px);
 		background: transparent;
-		color: color-mix(in oklab, var(--chip-ink) 75%, var(--fg-tertiary));
+		color: var(--muted-foreground);
 		font: inherit;
 		text-align: center;
 		cursor: pointer;
@@ -43,8 +46,8 @@
 		transition: background-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise);
 	}
 	.palette-chip:active {
-		border-color: var(--chip-ink);
-		background: color-mix(in oklab, var(--chip-ink) 24%, transparent);
+		border-color: var(--foreground);
+		background: var(--secondary);
 		color: var(--foreground);
 	}
 	/* A long name (Drum Buss, Pitch Hack) wraps to two lines, between words. */
@@ -52,7 +55,7 @@
 		max-width: 100%;
 		min-width: 0;
 		font-size: 0.8125rem;
-		font-weight: 500;
+		font-weight: 600;
 		letter-spacing: 0.005em;
 		line-height: 1.1;
 		white-space: normal;

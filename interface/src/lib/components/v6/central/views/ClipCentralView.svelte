@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { pitchOn } from '$lib/utils/pitch';
 import { logger } from '$lib/utils/logger';
 	import { clipPropertiesStore } from '$lib/stores/v6/clipPropertiesStore.svelte';
 	import { clipReverseStore } from '$lib/stores/clipReverse.svelte';
@@ -157,10 +156,6 @@ import { logger } from '$lib/utils/logger';
 	// clamped to the slider's −24..+24 semitone range for display. The
 	// setter rounds to whole semitones and optimistically updates the store.
 	let pitchCoarseDisplay = $derived(Math.max(-AUDIO_CLIP_PITCH_RANGE, Math.min(AUDIO_CLIP_PITCH_RANGE, clipPropertiesStore.pitchCoarse)));
-	let pitchLabel = $derived.by(() => {
-		const n = Math.round(pitchCoarseDisplay);
-		return n === 0 ? 'Pitch 0' : `Pitch ${n > 0 ? '+' : ''}${n}`;
-	});
 
 	// Audio-clip GAIN fader, beside Pitch: Live's normalized 0..1, labelled
 	// with Live's own dB text rounded to whole dB (the curve is not linear,
@@ -394,8 +389,8 @@ import { logger } from '$lib/utils/logger';
 				<DeviceSlider
 					value={chance}
 					title="Chance"
-					face={pitchOn ? 'knob' : 'slider'}
-					knobSize="l"
+					face="knob"
+					knobInside
 					icon="chance"
 					color={trackScheme}
 					onInteraction={(val) => permuteDevice
@@ -427,8 +422,8 @@ import { logger } from '$lib/utils/logger';
 				<DeviceSlider
 					value={temperature}
 					title="Temp"
-					face={pitchOn ? 'knob' : 'slider'}
-					knobSize="l"
+					face="knob"
+					knobInside
 					icon="temperature"
 					color={trackScheme}
 					onInteraction={(val) => {
@@ -461,7 +456,7 @@ import { logger } from '$lib/utils/logger';
 					<button
 						use:press={{ onPress: () => handleDeleteClip(), disabled: !hasClip }}
 						disabled={!hasClip}
-						data-word="Delete" class="btn btn-well btn-action fam-del"
+						class="btn btn-well btn-action fam-del"
 					>
 						<span class="flex items-center justify-center btn-caps" aria-label="Delete clip">
 								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
@@ -474,14 +469,14 @@ import { logger } from '$lib/utils/logger';
 									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
 									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
 								</svg>
-						</span>
+						</span><span class="btn-word">Delete</span>
 					</button>
 				</div>
 				<div class="btn-cell">
 					<button
 						use:press={{ onPress: () => handleDupTrack(), disabled: isDuplicatingTrack }}
 						disabled={isDuplicatingTrack}
-						data-word="Dup track" class="btn btn-well btn-action fam-monitor dup-trk-btn font-bold text-base {isDuplicatingTrack ? 'cursor-wait' : ''}"
+						class="btn btn-well btn-action fam-monitor dup-trk-btn font-bold text-base {isDuplicatingTrack ? 'cursor-wait' : ''}"
 					>
 						<span class="flex items-center justify-center btn-caps" aria-label="Duplicate track">
 							{#if isDuplicatingTrack}
@@ -504,7 +499,7 @@ import { logger } from '$lib/utils/logger';
 									<rect x="20" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
 								</svg>
 							{/if}
-						</span>
+						</span><span class="btn-word">Dup track</span>
 					</button>
 				</div>
 			</div>
@@ -560,7 +555,7 @@ import { logger } from '$lib/utils/logger';
 			<div class="col col-pitch transition-opacity duration-200 {!hasClip ? 'opacity-30' : 'opacity-100'}">
 				<DeviceSlider
 					value={pitchCoarseDisplay}
-					title={pitchLabel}
+					title="Pitch"
 					icon="transpose"
 					orientation="vertical"
 					labelOrientation="horizontal"
@@ -585,20 +580,20 @@ import { logger } from '$lib/utils/logger';
 					<button
 						use:press={{ onPress: () => halveLoopFromStart(), disabled: !hasClip }}
 						disabled={!hasClip}
-						data-word="2nd half" class="btn btn-well btn-action fam-quant"
+						class="btn btn-well btn-action fam-quant"
 						aria-label="Clip left"
 					>
-						<!-- The clip, with the loop bar over the half that keeps looping and an arrow the way its start moves --><svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><path d="M4 3.5h11M12 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="20" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
+						<!-- The clip, with the loop bar over the half that keeps looping and an arrow the way its start moves --><svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><path d="M4 3.5h11M12 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="20" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg><span class="btn-word">2nd half</span>
 					</button>
 				</div>
 				<div class="btn-cell">
 					<button
 						use:press={{ onPress: () => halveLoopFromEnd(), disabled: !hasClip }}
 						disabled={!hasClip}
-						data-word="1st half" class="btn btn-well btn-action fam-quant"
+						class="btn btn-well btn-action fam-quant"
 						aria-label="Clip right"
 					>
-						<!-- The clip, with the loop bar over the half that keeps looping and an arrow the way its end moves --><svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="14" height="3" rx="1" fill="currentColor" /><path d="M32 3.5H21M24 1l-3 2.5 3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
+						<!-- The clip, with the loop bar over the half that keeps looping and an arrow the way its end moves --><svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="14" height="3" rx="1" fill="currentColor" /><path d="M32 3.5H21M24 1l-3 2.5 3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg><span class="btn-word">1st half</span>
 					</button>
 				</div>
 			</div>
@@ -620,9 +615,9 @@ import { logger } from '$lib/utils/logger';
 						<button
 							use:press={{ onPress: () => handleDuplicateLoop(), disabled: !hasClip || isDuplicatingLoop }}
 							disabled={!hasClip || isDuplicatingLoop}
-							data-word="Double" class="btn btn-well btn-action fam-monitor {isDuplicatingLoop ? 'cursor-wait' : ''}"
+							class="btn btn-well btn-action fam-monitor {isDuplicatingLoop ? 'cursor-wait' : ''}"
 							aria-label="Duplicate loop"
-						><!-- The loop and its copy appended after it, the loop bar over the loop and an arrow over the copy: the loop end moves right -->{#if isDuplicatingLoop}...{:else}<svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="14" height="3" rx="1" fill="currentColor" /><path d="M20 3.5h11M28 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg>{/if}</button>
+						><!-- The loop and its copy appended after it, the loop bar over the loop and an arrow over the copy: the loop end moves right -->{#if isDuplicatingLoop}...{:else}<svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="14" height="3" rx="1" fill="currentColor" /><path d="M20 3.5h11M28 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg>{/if}<span class="btn-word">Double</span></button>
 					{:else if trackType === 'audio'}
 							<button
 								use:press={{ onPress: () => handleReverseClip(), disabled: !hasClip || isReversing || !!axReason }}
@@ -639,9 +634,9 @@ import { logger } from '$lib/utils/logger';
 						<button
 							use:press={{ onPress: () => handleDuplicateClip(), disabled: !hasClip || !nextSlotEmpty }}
 							disabled={!hasClip || !nextSlotEmpty}
-							data-word="Dup clip" class="btn btn-well btn-action fam-monitor"
+							class="btn btn-well btn-action fam-monitor"
 							aria-label="Duplicate clip to the next slot"
-						><!-- Dup Trk's mark at slot scale and upright: the clip copied into the slot below --><svg class="w-12 h-12" fill="none" viewBox="0 0 32 28"><rect x="5" y="1.5" width="22" height="9" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="8" y="4.5" width="5" height="3" rx="0.75" fill="currentColor" /><rect x="14.5" y="4.5" width="3.5" height="3" rx="0.75" fill="currentColor" /><rect x="19.5" y="4.5" width="4.5" height="3" rx="0.75" fill="currentColor" /><path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /><path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="5" y="19.5" width="22" height="7" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="8" y="21.5" width="5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="14.5" y="21.5" width="3.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="19.5" y="21.5" width="4.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg></button>
+						><!-- Dup Trk's mark at slot scale and upright: the clip copied into the slot below --><svg class="w-12 h-12" fill="none" viewBox="0 0 32 28"><rect x="5" y="1.5" width="22" height="9" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="8" y="4.5" width="5" height="3" rx="0.75" fill="currentColor" /><rect x="14.5" y="4.5" width="3.5" height="3" rx="0.75" fill="currentColor" /><rect x="19.5" y="4.5" width="4.5" height="3" rx="0.75" fill="currentColor" /><path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /><path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="5" y="19.5" width="22" height="7" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="8" y="21.5" width="5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="14.5" y="21.5" width="3.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="19.5" y="21.5" width="4.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg><span class="btn-word">Dup clip</span></button>
 					</div>
 				{/if}
 				{#if trackType === 'audio'}
@@ -677,7 +672,7 @@ import { logger } from '$lib/utils/logger';
 			     column's whole height. -->
 			<div class="stacked-btns" class:single={!axOn}>
 				<div class="btn-cell">
-					<RecordButton source="track" />
+					<RecordButton source="track" word="Rec" />
 				</div>
 				{#if axOn}
 				<div class="btn-cell">
@@ -685,7 +680,7 @@ import { logger } from '$lib/utils/logger';
 						use:press={{ onDown: handleGroupDown, onRelease: handleGroupRelease, touchAction: 'none', disabled: isCommitting || !!axReason }}
 						disabled={isCommitting || !!axReason}
 						title={axReason || undefined}
-						data-word="Group" class="btn btn-switch btn-toggle dup-trk-btn clip-switch group-btn relative overflow-hidden font-bold text-base {groupGestureStore.active ? 'active' : ''} {isCommitting ? 'cursor-wait' : ''}"
+						class="btn btn-switch btn-toggle dup-trk-btn clip-switch group-btn relative overflow-hidden font-bold text-base {groupGestureStore.active ? 'active' : ''} {isCommitting ? 'cursor-wait' : ''}"
 					>
 						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label={groupGestureStore.latched ? 'Group tracks — tap tracks, then tap here to finish' : 'Group tracks — hold, tap other tracks, release (or tap once to keep tapping with one finger)'}>
 							{#if isCommitting}
@@ -704,7 +699,7 @@ import { logger } from '$lib/utils/logger';
 									<rect x="16" y="18.5" width="5" height="2" rx="0.5" fill="currentColor" />
 								</svg>
 							{/if}
-						</span>
+						</span><span class="btn-word">Group</span>
 					</button>
 				</div>
 				{/if}
@@ -1046,5 +1041,89 @@ import { logger } from '$lib/utils/logger';
 		/* Never taller than wide: a tall cell gets a circle, a wide one a
 		   pill. A tall capsule read as a slot, not a button. */
 		height: min(100cqh, 100cqw);
+	}
+
+	/* A control carries its mark over its word (ADR-544). */
+	.btn {
+		flex-direction: column;
+		gap: 2px;
+	}
+	.btn-word {
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.1;
+		color: var(--label);
+	}
+	.btn:disabled .btn-word {
+		color: inherit;
+	}
+	.btn.btn-toggle {
+		gap: 6px;
+	}
+	.btn.btn-toggle .btn-word {
+		color: inherit;
+	}
+	/* The word first, the mark where there is room (ADR-544): with all four
+	   sections on screen a cell is too short for both, and the word stays. */
+	@container (height < 84px) {
+		.btn :global(svg.w-12),
+		.btn :global(svg.w-16) {
+			display: none;
+		}
+	}
+	/* The marks, a step smaller than they were alone, to share the cell
+	   with their word. */
+	.btn :global(svg.w-12),
+	.btn :global(svg.w-16) {
+		width: 2.25rem;
+		height: 2.25rem;
+	}
+	/* In the band a one-shot DRAWS a circle, the largest its cell holds,
+	   and ANSWERS to its whole cell as it always has: the button keeps the
+	   cell's width (the rule above), and the circle is its `::before`, so
+	   the target is no smaller than the pill it was and the grid still
+	   spaces cell against cell. The ring of a knob beside it is the same
+	   circle. In the full screen's one-row strip, whose cells are wide and
+	   short, it stays the pill. */
+	.outer:not(.one-row) .btn-action,
+	:global([data-grammar="flat"]) .outer:not(.one-row) .btn-action {
+		position: relative;
+		/* Its own stacking context, so the circle sits under the button's
+		   text and marks (a bare "+12" included) and over nothing else. */
+		isolation: isolate;
+		background: transparent;
+		border-color: transparent;
+	}
+	.outer:not(.one-row) .btn-action::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 50%;
+		height: 100%;
+		aspect-ratio: 1;
+		transform: translateX(-50%);
+		border-radius: 50%;
+		background: var(--surface-well);
+		z-index: -1;
+	}
+	.outer:not(.one-row) .btn-action:hover:not(:disabled)::before {
+		background: var(--secondary);
+	}
+
+
+	/* Temp and Chance are set once, so they are knobs (ADR-509's rule), the
+	   size of the round buttons beside them, sharing one column (two
+	   full-height boxes until ADR-544). MIDI only: audio's Gain is ridden,
+	   and keeps its box, as do Pitch and the warp modes. */
+	.outer:not(.audio):not(.one-row) {
+		grid-template-columns: repeat(3, 1fr) auto repeat(3, 1fr);
+	}
+	.outer:not(.audio):not(.one-row) .col-2 {
+		grid-column: 7;
+		grid-row: 1;
+	}
+	.outer:not(.audio):not(.one-row) .col-1 {
+		grid-column: 7;
+		grid-row: 2;
 	}
 </style>

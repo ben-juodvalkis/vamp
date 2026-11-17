@@ -52,13 +52,11 @@
   const CHANNEL_MODES = ['Left', 'Stereo', 'Right', 'Swap'];
   const channelMode = $derived(Math.round(value(UTIL.channelMode)));
 
-  /** Rows of switches; the two phase inverts share one, so five rows fit the band at the touch floor. */
+  /** Rows of switches, two a row: three rows keep well over the touch floor under the view's title band (five rows, one a switch, until ADR-544 took 40px for the band). */
   const SWITCH_ROWS = [
-    [{ index: UTIL.mono, label: 'Mono' }],
-    [{ index: UTIL.bassMono, label: 'Bass Mono' }],
+    [{ index: UTIL.mono, label: 'Mono' }, { index: UTIL.bassMono, label: 'Bass Mono' }],
     [{ index: UTIL.leftInv, label: 'Invert L' }, { index: UTIL.rightInv, label: 'Invert R' }],
-    [{ index: UTIL.dcFilter, label: 'DC Filter' }],
-    [{ index: UTIL.mute, label: 'Mute' }]
+    [{ index: UTIL.dcFilter, label: 'DC Filter' }, { index: UTIL.mute, label: 'Mute' }]
   ];
 </script>
 
@@ -160,7 +158,8 @@
 <style>
   /* The face is the FaceGrid (ADR-510): five equal columns, three knobs,
      the channel picker, the switches. A column's rows are a gutter apart,
-     so five switch rows keep the touch floor in the band (5 x 44 + 4 x 8). */
+     so three switch rows and the picker's four keep the touch floor
+     under the title band. */
   .utility-layout {
     height: 100%;
     width: 100%;
@@ -191,21 +190,13 @@
 
   .utility-switch {
     min-height: var(--height-touch);
-    font-size: 1rem;
+    font-size: 0.9375rem;
     font-weight: 600;
   }
 
-  /* Flat grammar: medium weight, and the device's own ink when on (as
-     Redux's switches), not the house ON color beside its faders. */
+  /* Flat grammar: medium weight. ON and the label's colour are app.css's
+     (ADR-544). */
   :global([data-grammar="flat"]) .utility-switch {
     font-weight: var(--font-weight-medium);
-  }
-  :global([data-grammar="flat"]) .utility-switch.active {
-    background: var(--btn-tint);
-    border-color: var(--btn-tint);
-    color: var(--flat-on-fg);
-  }
-  :global([data-grammar="flat"]) .utility-switch:not(.active) {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
 </style>

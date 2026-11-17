@@ -2,7 +2,7 @@
 
 ## Status
 **Accepted** — implements the color audit's R5 (`documentation/color-audit.md`);
-companion to ADR-399 (track role palette). Amended by [ADR-524](524-device-families-mean-what-they-say.md): Glitch and Guitar families, MIDI alone in violet.
+companion to ADR-399 (track role palette). Amended by [ADR-524](524-device-families-mean-what-they-say.md): Glitch and Guitar families, MIDI alone in violet. **§1 and §3 superseded by [ADR-544](544-ink-one-visual-system.md)** (2026-11-17): a device family has no colour of its own in the interface; every amount is drawn in the selected track's ink.
 
 ## Context
 

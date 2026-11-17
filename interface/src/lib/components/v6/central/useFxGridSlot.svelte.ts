@@ -29,7 +29,6 @@ import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
 import { readFxScope, type FxScope } from './fxScope';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 import { sendParam } from '$lib/services/deviceParams';
-import { pitchAmountScheme } from '$lib/utils/pitch';
 
 // Every SlotKey has a DEVICE_PRESETS config, so this is a should-never-happen
 // guard, not a per-view styling hook (views must not pass their own copies).
@@ -91,8 +90,6 @@ export function useFxGridSlot(
 	// agree. View-side trackInk twins become no-ops (family hexes are ink
 	// fixed points). trackTint devices wear the focused track's ink instead.
 	const color = $derived.by((): DeviceColorScheme => {
-		const pitched = pitchAmountScheme();
-		if (pitched) return pitched;
 		if (slot.config?.trackTint) {
 			const ink = selectedTrackInk();
 			if (ink) return schemeFromInk(ink);

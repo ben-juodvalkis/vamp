@@ -160,9 +160,11 @@ describe('a knob’s size, by how many its column stacks', () => {
 describe('a grid of knobs laid out so each draws at its size (ADR-509 addendum)', () => {
 	it('mirrors KnobFace: caption under in an upright cell, beside in a wide one', () => {
 		expect(knobDiameter('l', 104, 150)).toBe(96);
-		expect(knobDiameter('l', 81, 123)).toBe(69);
+		// A caption is one line, the name's (ADR-544): 36px under a large
+		// knob, 28 under a small one, so the cell's width is what binds here.
+		expect(knobDiameter('l', 81, 123)).toBe(73);
 		expect(knobDiameter('l', 200, 108)).toBe(96);
-		expect(knobDiameter('s', 60, 79)).toBe(35);
+		expect(knobDiameter('s', 60, 79)).toBe(48);
 		expect(knobDiameter('m', 60, 40, false)).toBe(28);
 	});
 	it('steps a size down only to the largest the cell holds', () => {

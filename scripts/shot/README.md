@@ -312,6 +312,7 @@ npm run shot:tour -- --list             # tours and their states
 npm run shot:tour -- central --only drumrack --only fx-pedal
 npm run shot:tour -- central --full     # whole viewport instead of the crop
 npm run shot:tour -- settings           # the full-page Settings behind the System view's gear, the first-run checklist included → screenshots/tour/settings/
+npm run shot:tour -- ipad --full        # the whole iPad layout (Vamp for iPad's shell) on Clip, Permute, Drum Rack and Reverb, a recording strip against a selected one, and the master (ADR-544)
 ```
 
 `npm run shot` stands the whole stack up for ONE picture — preview server,
@@ -324,6 +325,10 @@ click / drag / hold steps `shot` performs, shared through
 `screenshot-page.mjs`) and an optional crop. The run ends with
 `contact.png` — every state in a labelled grid — and the `contact.html` it
 was rendered from.
+
+A state can name `shell: 'pad'` to be shot inside Vamp for iPad (the full
+screen, 16px margins), as `shot`'s `pad-app` view is: the `ipad` tour's
+states do.
 
 A tour always serves the committed catalog fixtures (`--real-data` to opt
 out): it is a comparison set, so two runs of the same code should agree.

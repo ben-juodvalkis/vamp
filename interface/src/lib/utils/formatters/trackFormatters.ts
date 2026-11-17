@@ -198,6 +198,33 @@ export function trackInk(hex: string, _mode: 'dark' | 'light' = 'dark'): string 
     return trackInkClamp(hex);
 }
 
+/**
+ * A track colour moved to a given OKLCH lightness, its chroma scaled, its
+ * hue kept (ADR-544). Two uses, both JS-side so no browser needs CSS
+ * relative colour and a canvas can take the result:
+ * - the ink an AMOUNT is drawn in on the light theme, where the name-block
+ *   envelope (L 0.66..0.80) is too pale for a line on paper;
+ * - the shade the selected strip is filled with.
+ * Junk passes through, as with trackInk.
+ */
+export const inkShade = memoize(
+    (hex: string, lightness: number, chromaScale = 1): string => {
+        const p = parseInkInput(hex);
+        if (!p) return hex;
+        return emitInkHex(lightness, p.C * chromaScale, p.H);
+    },
+    { maxSize: 400 }
+);
+
+/** The lightness an amount's ink takes on the light theme. */
+export const AMOUNT_INK_LIGHT_L = 0.5;
+
+/** The ink an amount is drawn in for a track colour: the track ink in dark, a deeper one of the same hue in light. */
+export function amountInk(hex: string, mode: 'dark' | 'light' = 'dark'): string {
+    const ink = trackInkClamp(hex);
+    return mode === 'light' ? inkShade(ink, AMOUNT_INK_LIGHT_L) : ink;
+}
+
 /* ============================================================================
  * deviceInk() — device-scheme ink (ADR-400): like trackInk, but
  * NEUTRAL-PRESERVING.

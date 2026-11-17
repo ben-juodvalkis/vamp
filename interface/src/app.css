@@ -957,143 +957,178 @@ html, body {
    a second flat-grammar palette is one more token block.
    ======================================================================== */
 .dark[data-skin="hybrid"] {
-  --surface-well: #171a1e;
-  --canvas: #1f2126;
-  --background: #1f2126;
-  --card: #2a2d33;
-  --secondary: #383c44;
-  --muted: #383c44;
-  --muted-foreground: #a6aab2;
-  --accent: #383c44;
-  --popover: #30343b;
-  --central-display-default-bg: #30343b;
-  --central-display-default-border: 1px solid var(--line-strong);
+  /* INK, dark (ADR-544): a true-neutral ladder with no cast, so every track
+     colour Live hands us reads as itself. Panels are slabs on a black
+     canvas, wells are the canvas showing through; edges are a step of the
+     ladder, not a drawn line. */
+  --surface-well: #0b0b0b;
+  --canvas: #0b0b0b;
+  --background: #0b0b0b;
+  --card: #1c1c1c;
+  --secondary: #2b2b2b;
+  --muted: #2b2b2b;
+  --muted-foreground: #b6b6b2;
+  --accent: #2b2b2b;
+  --popover: #1c1c1c;
+  --central-display-default-bg: #1c1c1c;
+  --central-display-default-border: 1px solid transparent;
 
-  --foreground: #d3d6db;
-  --fg-tertiary: #7f848d;
-  --signal-dim: #7f848d;
+  --foreground: #f4f4f1;
+  --fg-tertiary: #8b8b87;
+  --signal-dim: #8b8b87;
 
-  --line-faint: #262930;
-  --line: #1a1c21;
-  --line-strong: #0f1013;
+  --line-faint: #1c1c1c;
+  --line: #2b2b2b;
+  --line-strong: #3a3a3a;
   --border: var(--line);
   --input: var(--surface-well);
 
-  --primary: #d3d6db;
-  --primary-foreground: #0f1013;
+  --primary: #f4f4f1;
+  --primary-foreground: #0b0b0b;
 
-  --phosphor-100: #ffc98a;
-  --phosphor: #ffad56;
-  --phosphor-dim: #c98540;
-  --phosphor-deep: #6b4722;
+  /* ON has no hue: paper on black. The phosphor family is that white, so
+     every rule written against it lights the same way. */
+  --phosphor-100: #ffffff;
+  --phosphor: #f4f4f1;
+  --phosphor-dim: #b6b6b2;
+  --phosphor-deep: #55554f;
 
-  --act-loop-handle: #ffad56;
+  --act-loop-handle: #f4f4f1;
   --act-play: #00d38d;
   --act-quant: #03c3d5;
   --act-quant-fill: #03c3d573;
   --act-rec: #ff5559;
   --act-rec-bright: #ff7276;
-  --act-master: #ffad56;
+  --act-master: #f4f4f1;
   --act-monitor: #03c3d5;
   --act-solo: #4a7fd0;
   --act-pitch: #4391e6;
   --act-warn: #e76942;
   --destructive: var(--act-rec);
-  --ring: #b0ddeb;
+  --ring: #f4f4f1;
 
-  --browser-bg-primary: #2a2d33;
-  --browser-bg-secondary: #1f2126;
-  --browser-bg-tertiary: #383c44;
-  --browser-text-primary: #d3d6db;
-  --browser-text-secondary: #a6aab2;
-  --browser-text-tertiary: #7f848d;
-  --browser-border: #1a1c21;
+  --browser-bg-primary: #1c1c1c;
+  --browser-bg-secondary: #0b0b0b;
+  --browser-bg-tertiary: #2b2b2b;
+  --browser-text-primary: #f4f4f1;
+  --browser-text-secondary: #b6b6b2;
+  --browser-text-tertiary: #8b8b87;
+  --browser-border: #2b2b2b;
 
-  --flat-selection: #b0ddeb;
-  --flat-selection-fg: #070707;
-  --flat-on-fg: #070707;
+  --flat-selection: #f4f4f1;
+  --flat-selection-fg: #0b0b0b;
+  --flat-on-fg: #0b0b0b;
   --flat-clip-text: #000000;
-  --flat-clip-border: #1a1c21;
-  --flat-slot-empty: #171a1e;
-  --flat-slot-glyph: #7f848d;
-  --flat-handle: #d3d6db;
+  --flat-clip-border: #0b0b0b;
+  --flat-slot-empty: #141414;
+  --flat-slot-glyph: #8b8b87;
+  --flat-handle: #d9d9d6;
   --flat-solo-fg: #f1f1f1;
-  --flat-deactivated: #5a5e66;
-  --flat-deactivated-fg: #1f2126;
-  --flat-disabled-fg: #6b7078;
-  --flat-meter-bg: #131519;
-  --flat-transport-off: #2a2d33;
+  --flat-deactivated: #55554f;
+  --flat-deactivated-fg: #1c1c1c;
+  --flat-disabled-fg: #6f6f6a;
+  --flat-meter-bg: #0b0b0b;
+  --flat-transport-off: #1c1c1c;
+
+  --knob-track: #343434;
+  --amount-fallback: #a8a8a4;
+  --amount-fg: #0b0b0b;
 }
 
 .light[data-skin="hybrid"] {
-  /* Cool-neutral paper — lighter and cleaner than Live's mid-grey; wells
-     lighter than panels (Live's rule) so fields read as fields. */
-  --surface-well: #f6f7f9;
-  --canvas: #d5d8dd;
-  --background: #d5d8dd;
-  --card: #e6e8eb;
-  --secondary: #c8ccd2;
-  --muted: #c8ccd2;
-  --muted-foreground: #3f434a;
-  --accent: #c8ccd2;
-  --popover: #edeef1;
-  --central-display-default-bg: #edeef1;
-  --central-display-default-border: 1px solid var(--line-strong);
+  /* INK, light: the same ladder on paper. Wells are lighter than panels
+     (Live's rule) so a field reads as a field; ON is ink black. */
+  --surface-well: #fbfbf9;
+  --canvas: #d6d6d2;
+  --background: #d6d6d2;
+  --card: #e9e9e6;
+  --secondary: #c9c9c5;
+  --muted: #c9c9c5;
+  --muted-foreground: #45453f;
+  --accent: #c9c9c5;
+  --popover: #e9e9e6;
+  --central-display-default-bg: #e9e9e6;
+  --central-display-default-border: 1px solid transparent;
 
-  --foreground: #14161a;
-  --fg-tertiary: #5c616a;
-  --signal-dim: #5c616a;
+  --foreground: #111110;
+  --fg-tertiary: #6a6a64;
+  --signal-dim: #6a6a64;
 
-  --line-faint: #bfc3c9;
-  --line: #a9aeb6;
-  --line-strong: #7d838c;
+  --line-faint: #dcdcd8;
+  --line: #c1c1bc;
+  --line-strong: #a3a39d;
   --border: var(--line);
   --input: var(--surface-well);
 
-  --primary: #14161a;
-  --primary-foreground: #f6f7f9;
+  --primary: #111110;
+  --primary-foreground: #fbfbf9;
 
-  --phosphor-100: #ffc76a;
-  --phosphor: #f5a524;
-  --phosphor-dim: #c98214;
-  --phosphor-deep: #7a4f0a;
+  --phosphor-100: #45453f;
+  --phosphor: #111110;
+  --phosphor-dim: #45453f;
+  --phosphor-deep: #8b8b87;
 
-  --act-loop-handle: #f5a524;
+  --act-loop-handle: #111110;
   --act-play: #00c98a;
   --act-quant: #00a9b8;
   --act-quant-fill: #00a9b873;
   --act-rec: #ff4d55;
   --act-rec-bright: #ff6f75;
-  --act-master: #f5a524;
+  --act-master: #111110;
   --act-monitor: #00a9b8;
   --act-solo: #1a7df1;
   --act-pitch: #2f7fd6;
   --act-warn: #e8632f;
   --destructive: var(--act-rec);
-  --ring: #9fd6ea;
+  --ring: #111110;
 
-  --browser-bg-primary: #e6e8eb;
-  --browser-bg-secondary: #d5d8dd;
-  --browser-bg-tertiary: #c8ccd2;
-  --browser-text-primary: #14161a;
-  --browser-text-secondary: #3f434a;
-  --browser-text-tertiary: #5c616a;
-  --browser-border: #a9aeb6;
+  --browser-bg-primary: #e9e9e6;
+  --browser-bg-secondary: #d6d6d2;
+  --browser-bg-tertiary: #c9c9c5;
+  --browser-text-primary: #111110;
+  --browser-text-secondary: #45453f;
+  --browser-text-tertiary: #6a6a64;
+  --browser-border: #c1c1bc;
 
-  --flat-selection: #9fd6ea;
-  --flat-selection-fg: #121212;
-  --flat-on-fg: #121212;
+  --flat-selection: #111110;
+  --flat-selection-fg: #fbfbf9;
+  --flat-on-fg: #fbfbf9;
   --flat-clip-text: #000000;
-  --flat-clip-border: #7d838c;
-  --flat-slot-empty: #7d838c;
-  --flat-slot-glyph: #5c616a;
-  --flat-handle: #3a3e45;
+  --flat-clip-border: #a3a39d;
+  --flat-slot-empty: #a3a39d;
+  --flat-slot-glyph: #6a6a64;
+  --flat-handle: #3a3a36;
   --flat-solo-fg: #121212;
-  --flat-deactivated: #a3a7ae;
-  --flat-deactivated-fg: #3f434a;
-  --flat-disabled-fg: #7d838c;
-  --flat-meter-bg: #b4b8bf;
-  --flat-transport-off: #e6e8eb;
+  --flat-deactivated: #a8a8a3;
+  --flat-deactivated-fg: #45453f;
+  --flat-disabled-fg: #8b8b85;
+  --flat-meter-bg: #b9b9b4;
+  --flat-transport-off: #e9e9e6;
+
+  --knob-track: #c9c9c5;
+  --amount-fallback: #55554f;
+  --amount-fg: #ffffff;
+}
+
+/* INK role tokens (ADR-544). What a colour is FOR, said once:
+     --amount   how much: every arc, fill and step that draws a value, in
+                the selected track's ink (--sel-ink, written on the root by
+                the layout; a mid grey with no track selected).
+     --on-bg    this is on, or the chosen one of a set: paper white in dark,
+                ink black in light. Never a hue.
+     --label    a name. Plain foreground, never the amount's colour.
+     --value    a discrete control's value under its name.
+     --sel-track / --sel-track-fg   the selected track's name-block colour
+                and the text that reads on it: the view's title band.
+     --sel-shade  a deep (dark) or pale (light) shade of that colour: the
+                selected strip's fill. */
+:root {
+  --amount: var(--sel-ink, var(--amount-fallback));
+  --on-bg: var(--phosphor);
+  --on-fg: var(--flat-on-fg);
+  --label: var(--foreground);
+  --value: var(--muted-foreground);
+  --title-band-h: 40px;
 }
 
 /* ---- Flat grammar (both polarities) --------------------------------------- */
@@ -1140,7 +1175,9 @@ html, body {
 [data-grammar="flat"] .glass-panel-medium,
 [data-grammar="flat"] .glass-panel-heavy {
   background: var(--card);
-  border: 1px solid var(--line-strong);
+  /* Ink (ADR-544): a panel is a slab on the canvas; its edge is the step
+     of the ladder, not a line. The 1px stays, transparent, so nothing moves. */
+  border: 1px solid transparent;
   box-shadow: none;
 }
 
@@ -1148,7 +1185,7 @@ html, body {
    block (see the TrackHeader override), not washed over the strip. */
 [data-grammar="flat"] .glass-card {
   background: var(--card);
-  border: 1px solid var(--line-strong);
+  border: 1px solid transparent;
   box-shadow: none;
 }
 /* !important kept: this overrides TrackStrip.svelte's Graticule
@@ -1157,7 +1194,9 @@ html, body {
 [data-grammar="flat"] .track-selected {
   border-width: 2px !important;
   border-color: var(--flat-selection) !important;
-  background: var(--popover) !important;
+  /* Ink (ADR-544): the fill says selected, a shade of the strip's own
+     track colour (--sel-shade, written on the root by the layout). */
+  background: var(--sel-shade, var(--secondary)) !important;
   /* A second, dimmer line just outside the border. Not a Graticule-style
      glow — it has a hard edge and no blur, so the strip still reads as a
      flat mixer channel — but the pair is ~3px of selection ink where a
@@ -1182,18 +1221,20 @@ html, body {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--flat-selection) 45%, black) !important;
 }
 
-/* FX slots: a device is a grey module; the family ink stays as text/arc. */
-[data-grammar="flat"] .glass-colored {
-  background: var(--popover);
-  border: 1px solid var(--line-strong);
-  box-shadow: none;
-}
-/* Hybrid: the device family keeps a whisper of its ink in the module frame
-   (label + value fill carry the rest). */
-[data-skin="hybrid"] .glass-colored {
-  border-color: color-mix(in srgb, var(--accent-primary, var(--line-strong)) 40%, var(--line-strong));
+/* While it records, a selected strip's frame is red, not the selection's
+   (ADR-544): the fill still says selected. `is-active` is the strip's
+   recording class (TrackStrip). */
+[data-grammar="flat"] .track-selected.is-active {
+  border-color: var(--act-rec) !important;
+  box-shadow: 0 0 0 1px var(--act-rec) !important;
 }
 
+/* FX slots: a device is a slab; its amounts carry the colour. */
+[data-grammar="flat"] .glass-colored {
+  background: var(--popover);
+  border: 1px solid transparent;
+  box-shadow: none;
+}
 [data-grammar="flat"] .glass-topbar {
   background: var(--card);
   border-bottom: 1px solid var(--line-strong);
@@ -1214,7 +1255,7 @@ html, body {
    Resolved where it is used, so currentColor is the button's. Disabled
    dims it with the glyph; ON keeps its solid fill. */
 [data-grammar="flat"] {
-  --button-frame: color-mix(in oklab, currentColor 70%, transparent);
+  --button-frame: transparent;
 }
 
 /* Toggles: OFF = control field, ON = ChosenDefault fill with dark text —
@@ -1237,8 +1278,27 @@ html, body {
 }
 /* Light: an ON fill sits at ~1:1 luminance against the light ladder, so
    the frame has to stay dark for the control's boundary to survive. */
+/* ---- The two laws (ADR-544), over a view's own rule. ---------------------
+   Until the rollout has been through every view, a view may still colour a
+   switch's word or a lit switch with a `--btn-tint` it passes (a family's,
+   a track's). These two win over any such rule, so "this is on" is one
+   block everywhere and can never be the amount's colour. !important is
+   deliberate and is these two rules' alone; a view's own copy is dead code
+   for the rollout to delete, never something to fight. */
+[data-skin="hybrid"] .physical-button.active,
+[data-skin="hybrid"] .device-segment.active {
+  background: var(--on-bg) !important;
+  border-color: var(--on-bg) !important;
+  color: var(--on-fg) !important;
+}
+[data-skin="hybrid"] .physical-button:not(.active):not(:disabled),
+[data-skin="hybrid"] .device-segment:not(.active):not(:disabled) {
+  color: var(--label) !important;
+}
+
+/* Light: ON is an ink-black block, its own edge. */
 .light[data-grammar="flat"] .physical-button.active {
-  border-color: var(--line-strong);
+  border-color: var(--on-bg);
 }
 
 /* Button roles (2026-11-07, from the clip view's 2026-11-06 pass). Add one
@@ -1330,9 +1390,11 @@ html, body {
 [data-grammar="flat"] .seg-grid .device-segment:hover:not(.active) {
   background: var(--secondary);
 }
+/* The chosen one of a set is ON's block, never a tint a view passes
+   (ADR-544). */
 [data-grammar="flat"] .seg-grid .device-segment.active {
-  background: var(--btn-tint, var(--phosphor));
-  color: var(--flat-on-fg);
+  background: var(--on-bg);
+  color: var(--on-fg);
 }
 
 /* A stepper — ‹ name › — is ONE control: a single frame in the control's
@@ -1347,7 +1409,7 @@ html, body {
   border: 1px solid var(--button-frame, var(--line-strong));
   border-radius: var(--radius-sm);
   background: var(--surface-well);
-  color: color-mix(in srgb, var(--btn-tint, var(--foreground)) 72%, var(--foreground));
+  color: var(--label);
 }
 .stepper > button,
 .stepper > span {
@@ -1369,8 +1431,8 @@ html, body {
   background: var(--secondary);
 }
 .stepper > button.active {
-  background: var(--btn-tint, var(--phosphor));
-  color: var(--flat-on-fg);
+  background: var(--on-bg);
+  color: var(--on-fg);
 }
 
 /* No HUD brackets, no capless playhead glow. */

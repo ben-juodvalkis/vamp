@@ -159,7 +159,6 @@
       {icon}
       face={knob ? 'knob' : 'slider'}
       knobSize="m"
-      knobCaption={!knob}
       orientation="vertical"
       labelOrientation="horizontal"
       {color}

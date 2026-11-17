@@ -1,6 +1,5 @@
 <script lang="ts">
 	import '../app.css';
-	import '../pitch.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount, onDestroy } from 'svelte';
 	import { themeManager } from '$lib/stores/theme';
@@ -24,7 +23,13 @@
 	import PairingScreen from '$lib/components/v6/pairing/PairingScreen.svelte';
 	import PairingBanner from '$lib/components/v6/pairing/PairingBanner.svelte';
 
+	import { useSelectedTrackVars } from '$lib/utils/selectedTrackVars.svelte';
+
 	let { children } = $props();
+
+	// The selected track's colours on the root, for the iPad and the phone
+	// layouts alike (ADR-544).
+	useSelectedTrackVars();
 
 	// ?perf=1 toggles a small floating overlay showing connection status
 	// and JS heap. Off by default; opt-in via query param so production

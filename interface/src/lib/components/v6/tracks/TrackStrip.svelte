@@ -1111,16 +1111,18 @@
         box-shadow: inset 0 0 0 2px var(--act-solo);
     }
 
-    /* Recording strip: the same recipe in act-rec red, after .solo-tint in
-       the DOM so a soloed strip that records reads as recording. */
+    /* Recording strip (ADR-544): the frame, in red, and nothing in the
+       fill. A strip is usually recording AND selected, and the two must
+       stack: the fill says selected (app.css `.track-selected`), the frame
+       says recording. After .solo-tint in the DOM so a soloed strip that
+       records reads as recording. */
     .rec-tint {
         position: absolute;
         inset: 0;
         pointer-events: none;
         z-index: 2;
         border-radius: inherit;
-        background: color-mix(in oklab, var(--act-rec) 32%, transparent);
-        box-shadow: inset 0 0 0 2px var(--act-rec);
+        box-shadow: inset 0 0 0 4px var(--act-rec);
     }
 
     .header-name.is-soloed::after {

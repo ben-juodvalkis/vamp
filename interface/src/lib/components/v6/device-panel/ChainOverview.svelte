@@ -1735,8 +1735,35 @@
      fills. What the tokens cannot say sits here. */
   /* On the light ladder the inks are too pale for text: pull a name
      toward the foreground, hue kept, as the sliders' labels are. */
-  :global(.light[data-skin='hybrid']) .name {
-    color: color-mix(in oklab, var(--cell-ink) 55%, var(--foreground));
+  /* ---- Ink (ADR-544). A cell is a slab with no drawn edge; its head is
+     plain, the device's name in plain ink. The one cell whose view is open
+     below (`appointed`) wears the selected track's band, the same band the
+     central view's title is: one colour says "this is what you are
+     looking at". The family ink (`--cell-ink`) colours nothing here. */
+  :global([data-skin='hybrid']) .chain-cell {
+    border-color: transparent;
+  }
+  :global([data-skin='hybrid']) .chain-cell .cell-head {
+    background: transparent;
+    border-bottom-color: transparent;
+  }
+  :global([data-skin='hybrid']) .chain-cell .cell-head .name {
+    color: var(--foreground);
+    font-weight: 700;
+  }
+  :global([data-skin='hybrid']) .chain-cell.off .name,
+  :global([data-skin='hybrid']) .chain-cell.landing .name {
+    color: var(--muted-foreground);
+  }
+  :global([data-skin='hybrid']) .chain-cell.appointed {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  :global([data-skin='hybrid']) .chain-cell.appointed .cell-head {
+    background: var(--sel-track, var(--secondary));
+  }
+  :global([data-skin='hybrid']) .chain-cell.appointed .cell-head .name {
+    color: var(--sel-track-fg, var(--foreground));
   }
   /* One frame round a tile's field: the tile's, in its ink; the control's
      own hairline inside it goes. */

@@ -4,7 +4,7 @@
 **Accepted** (2026-10-25) for every central view, on the `smaller-ipads`
 branch. The Analog view was the prototype the same day; the user liked it
 and asked for the wheels at half height and the full set. No Live restart
-(interface only).
+(interface only). Amended by [ADR-544](544-ink-one-visual-system.md) (2026-11-17): a box's name sits at its head, in plain ink, and a continuous box shows no number at rest.
 
 ## Context
 A `DeviceSlider` sweeps its whole range over its own length, so its

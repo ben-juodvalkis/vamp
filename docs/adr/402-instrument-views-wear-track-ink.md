@@ -2,7 +2,7 @@
 
 ## Status
 **Accepted** — extends ADR-400 §4 (`trackTint`) from the utility device to the
-whole instrument layer; companion to ADR-399 (track role palette).
+whole instrument layer; companion to ADR-399 (track role palette). Extended by [ADR-544](544-ink-one-visual-system.md) (2026-11-17): insert effects wear the track's ink too, so "insert-FX family inks are unchanged" below no longer holds.
 
 ## Context
 

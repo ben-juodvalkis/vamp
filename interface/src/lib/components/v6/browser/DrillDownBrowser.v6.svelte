@@ -3599,8 +3599,14 @@
 		text-transform: none;
 		letter-spacing: 0;
 	}
+	/* Ink (ADR-544): the chosen mode is ON's block, and a mode's mark is a
+	   label; the per-mode `--seg-ink` colours neither. */
 	:global([data-grammar="flat"]) .seg-switch .seg.on {
-		color: var(--flat-clip-text);
+		background: var(--on-bg);
+		color: var(--on-fg);
+	}
+	:global([data-grammar="flat"]) .seg-switch .seg:not(.on) .seg-icon {
+		color: var(--label);
 	}
 	/* Wide segments on one flat field read as a single slab; the edge line
 	   between them says where one choice ends. */

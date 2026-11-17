@@ -27,7 +27,9 @@ export type PanelControl =
 	 * A quantized parameter with few values: one cell a value, its labels
 	 * Live's own. `title` names it over a page's picker (else Live's name).
 	 */
-	| { kind: 'choice'; param: string; options: readonly string[]; title?: string }
+	// `maxRows`: the most touch rows its cell holds, where that is fewer than
+	// `choiceColumns` assumes (a list under a tab strip, ADR-544).
+	| { kind: 'choice'; param: string; options: readonly string[]; title?: string; maxRows?: number }
 	/** A quantized parameter with many values: a value box that steps, naming the value. */
 	| { kind: 'step'; param: string; title: string; labels?: readonly string[]; knobSize?: KnobSize; units?: number }
 	/** An on/off parameter: one cell, lit while on. */
