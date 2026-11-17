@@ -103,7 +103,9 @@
      dim is applied to the filter-curve body, not the label (matches
      XY/slider). */
   .eq-title {
-    font-size: clamp(max(var(--type-min), calc(26 * var(--fluid-px))), 10cqw, 64px);
+    /* A pad's name is a label at the size the XY pad's is (ADR-544); it
+       was up to 64px, in the amount's colour, across the curve. */
+    font-size: clamp(max(var(--type-min), calc(20 * var(--fluid-px))), 8cqw, 28px);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -145,7 +147,7 @@
        Full brightness in ghost mode; only the curve body below dims. -->
   <div
     class="eq-title absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none select-none"
-    style="color: {isGhost ? color.primary : `color-mix(in oklab, ${color.primary} 70%, transparent)`};"
+    style="color: var(--label);"
   >{title}</div>
 
   <!-- Background: Filter curve visualization (full screen) -->

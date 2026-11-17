@@ -48,6 +48,7 @@
   import FaceSeam from '../../FaceSeam.svelte';
   import BoardTile from '../../BoardTile.svelte';
   import ChoicePicker from '../../ChoicePicker.svelte';
+  import PanelEyebrow from '../panel/PanelEyebrow.svelte';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import {
@@ -80,6 +81,12 @@
   }
 
   let { page, params, ink, routing, setRouting }: Props = $props();
+
+  /**
+   * What a pick names is a value, in the value's ink, never the amount's
+   * (ADR-544). `ChoicePicker` draws its value in the tint it is handed.
+   */
+  const VALUE_INK = 'var(--value)';
 
   /** Rails that are 0..1 with their zero in the middle (the dump's labels). */
   const BIPOLAR = /^(Drive|Tone Amt|Shaper \d (Bias|Level)|Flt \d Peak|LFO \d Morph)$/;
@@ -141,7 +148,6 @@
       class:active={on}
       aria-pressed={on}
       disabled={!params.has(param)}
-      style="--btn-tint: {ink.primary};"
       data-param={param}
       use:press={{ onPress: () => params.write(param, on ? lo(param) : hi(param)), disabled: !params.has(param) }}
     >{title}</button>
@@ -151,29 +157,28 @@
 <!-- A pick of named values: a button naming the value, the list opening over the view. -->
 {#snippet pick(param: string, labels: readonly string[], title: string, caption?: string)}
   <div class="cell sw-cell" data-param={param}>
-    <ChoicePicker options={labels} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i)} label={title} {caption} tint={ink.primary} ghost={!params.has(param)} />
+    <ChoicePicker options={labels} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i)} label={title} {caption} tint={VALUE_INK} ghost={!params.has(param)} />
   </div>
 {/snippet}
 
 {#snippet routingPick(caption?: string)}
   <div class="cell sw-cell" data-roar-routing>
-    <ChoicePicker options={ROAR_ROUTINGS} selected={routing} onSelect={setRouting} label="Routing" {caption} tint={ink.primary} ghost={routing === undefined} />
+    <ChoicePicker options={ROAR_ROUTINGS} selected={routing} onSelect={setRouting} label="Routing" {caption} tint={VALUE_INK} ghost={routing === undefined} />
   </div>
 {/snippet}
 
-{#snippet title(text: string)}<span class="sub" style="color: {ink.primary};">{text}</span>{/snippet}
-
 <!-- The routing on the band: its pick, one touch row across the section,
-     over what the mode adds: Blend between two stages, large across both
-     columns, or Multi Band's two crossovers, a column each. -->
+     over what the mode adds: Blend between two stages, across both
+     columns, or Multi Band's two crossovers, a column each. All the size
+     of the stage's knobs beside them, so a mode never resizes one. -->
 {#snippet routingTile()}
-  <div class="face-span-all routing-face">
+  <div class="face-span-all band-rows">
     <div class="span-2-cell">{@render routingPick()}</div>
     {#if multiBand}
       {@render knob('Low Mid X-Over', 'Low', 'm')}
       {@render knob('Mid High X-Over', 'High', 'm')}
     {:else}
-      <div class="span-2-cell tall">{@render knob('Blend', 'Blend', 'l', !blend)}</div>
+      <div class="span-2-cell tall">{@render knob('Blend', 'Blend', 'm', !blend)}</div>
     {/if}
   </div>
 {/snippet}
@@ -275,38 +280,47 @@
 <div class="roar-page" data-roar-page={page}>
 {#if page === 'face'}
   <!-- The band (ADR-513: one face): Input's tone, the routing, the first
-       stage, the feedback and the compressor. Eleven columns (2026-11-08;
-       fifteen until then, 57px each, which cut "Amount" to "Am…"): a
-       column holds a medium knob with its whole name, so Input, Feedback
-       and Global stack their two in one column each and the stage's six
-       knobs stand one a column. -->
-  <FaceGrid sections={[1, 2, 6, 1, 1]}>
-    <FaceSection span={1}>
-      {#snippet head()}{@render title('Input')}{/snippet}
-      <div class="stack">{@render knob('Tone Amt', 'Tone', 's')}{@render knob('Tone Freq', 'Freq', 's')}{@render sw('Color On', 'Color')}</div>
+       stage, the feedback and the compressor. Twelve columns, on two rows
+       (ADR-544): one touch row along the top, a section's switch or pick
+       (Color, the routing, the stage's two types and their switches), and
+       its knobs under it on one line, every knob the one size (medium; the
+       columns hold it at about 65px with its whole name). Feedback and
+       Global have no touch row on the band, so each stacks its two knobs
+       over the whole height. Eleven columns until then, Input's two knobs
+       small over Color at the foot and Blend large: three sizes on one
+       face. On an iPad mini the twelve columns are about 57px, which cuts
+       "Amount" (eleven held it); the 12.9-inch's 73px hold every name. -->
+  <FaceGrid sections={[2, 2, 6, 1, 1]}>
+    <FaceSection span={2}>
+      {#snippet head()}<PanelEyebrow title="Input" color={ink.primary} />{/snippet}
+      <div class="face-span-all band-rows">
+        <div class="span-2-cell">{@render sw('Color On', 'Color')}</div>
+        {@render knob('Tone Amt', 'Tone', 'm')}
+        {@render knob('Tone Freq', 'Freq', 'm')}
+      </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={2}>
-      {#snippet head()}{@render title('Routing')}{/snippet}
+      {#snippet head()}<PanelEyebrow title="Routing" color={ink.primary} />{/snippet}
       {@render routingTile()}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={6}>
-      {#snippet head()}{@render title(names[0])}{/snippet}
+      {#snippet head()}<PanelEyebrow title={names[0]} color={ink.primary} />{/snippet}
       {@render stage(1)}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={1}>
-      {#snippet head()}{@render title('Feedback')}{/snippet}
+      {#snippet head()}<PanelEyebrow title="Feedback" color={ink.primary} />{/snippet}
       <div class="stack">
-        {@render knob('Feedback', 'Amount')}
-        {@render knob(roarFeedbackTimeParam(step('FB Time Mode')), step('FB Time Mode') === 4 ? 'Note' : 'Time')}
+        {@render knob('Feedback', 'Amount', 'm')}
+        {@render knob(roarFeedbackTimeParam(step('FB Time Mode')), step('FB Time Mode') === 4 ? 'Note' : 'Time', 'm')}
       </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={1}>
-      {#snippet head()}{@render title('Global')}{/snippet}
-      <div class="stack">{@render knob('Comp Amt', 'Comp')}{@render knob('Output', 'Output')}</div>
+      {#snippet head()}<PanelEyebrow title="Global" color={ink.primary} />{/snippet}
+      <div class="stack">{@render knob('Comp Amt', 'Comp', 'm')}{@render knob('Output', 'Output', 'm')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'input'}
@@ -453,22 +467,28 @@
     row-gap: var(--spacing-sm);
     min-height: 0;
   }
-  /* The routing on the band: its pick over Blend, or the crossovers. */
-  .routing-face {
+  /* Input and the routing on the band, on the stage's two rows: a touch
+     row (Color, the routing's pick) over the knobs. */
+  .band-rows {
     display: grid;
     grid-template-columns: subgrid;
     grid-template-rows: var(--height-touch) minmax(0, 1fr);
     row-gap: var(--spacing-sm);
     min-height: 0;
   }
-  .routing-face > :global(*) {
+  .band-rows > :global(*) {
     min-width: 0;
     min-height: 0;
   }
+  /* Blend, alone across the routing's two columns: one column's worth of
+     cell in their middle, so it draws the size the knobs on single
+     columns beside it do. */
   .span-2-cell.tall {
     align-items: stretch;
+    justify-content: center;
   }
   .span-2-cell.tall > :global(*) {
+    flex: 0 0 calc((100% - var(--face-gutter)) / 2);
     height: 100%;
   }
   .stage-grid > :global(*) {
@@ -569,12 +589,5 @@
   }
   .span-2-cell > :global(.sw-cell) {
     height: var(--height-touch);
-  }
-
-  .sub {
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1rem;
-    white-space: nowrap;
   }
 </style>

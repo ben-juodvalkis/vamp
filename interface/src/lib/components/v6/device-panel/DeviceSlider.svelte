@@ -822,6 +822,10 @@
      its head, at a knob caption's size, the fill under them. A chain
      cell's slider keeps its centred, cell-sized name. */
   :global([data-skin="hybrid"]) .slider-label.in-value-box {
+    /* Always a column at the head, centred, however wide the box: the
+       wide-box row put it at the left edge at mid-height. */
+    flex-direction: column;
+    align-items: center;
     justify-content: flex-start;
     padding-top: 10px;
     gap: 6px;

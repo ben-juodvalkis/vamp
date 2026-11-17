@@ -146,7 +146,8 @@
     left: 6px;
     top: 4px;
     font-size: 0.6875rem;
-    color: var(--ink);
+    /* A number is a value, never the amount's colour (ADR-544). */
+    color: var(--value);
     pointer-events: none;
     font-variant-numeric: tabular-nums;
   }

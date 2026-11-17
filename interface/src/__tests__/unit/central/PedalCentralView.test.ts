@@ -281,6 +281,10 @@ describe('WahCentralView', () => {
 		await tick();
 		expect(slider(container, 'Volume')).toBeDefined();
 		expect(slider(container, 'Wah')).toBeUndefined();
+		// The box's head lists the rack's chains, the selected one marked.
+		const chains = Array.from(container.querySelectorAll('[data-wah-chains]')[0].querySelectorAll('.wah-chain'));
+		expect(chains.map((c) => c.textContent)).toEqual(['Wah', 'Volume', 'Ring']);
+		expect(chains.map((c) => c.classList.contains('on'))).toEqual([false, true, false]);
 	});
 
 	it('names the first and last chains at the ends of Macro 2', async () => {
@@ -317,10 +321,14 @@ describe('WahCentralView', () => {
 });
 
 describe('BassCentralView', () => {
-	it("draws the Bass Amp's one control", async () => {
+	it("draws the Bass Amp's one control, wearing its picture as its chain cell does", async () => {
 		seed([], true);
 		const { container } = render(BassCentralView);
 		await tick();
-		expect(slider(container, 'Bass')).toBeDefined();
+		// The picture takes the name's place on the box (`FaceControl`), so the
+		// group around it carries the name.
+		const group = container.querySelector('[data-view="bass"] [role="group"][aria-label="Bass Amp mix"]');
+		expect(group?.querySelectorAll('[role="slider"]').length).toBe(1);
+		expect(group?.querySelector('.device-picture')).not.toBeNull();
 	});
 });

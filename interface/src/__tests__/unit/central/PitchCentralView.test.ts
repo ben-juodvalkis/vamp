@@ -102,13 +102,13 @@ describe('Reverse view: Pitch Hack', () => {
 		expect(written(2)).toEqual([]);
 	});
 
-	it('draws Reverse and Mix as boxes, then every other parameter as a knob (ADR-509)', async () => {
+	it('draws Reverse and Mix as boxes and every other parameter as a knob (ADR-509), Mix last at the right edge', async () => {
 		seed(pitchHack(13));
 		const { container } = render(ReverseCentralView);
 		await tick();
-		expect(sliderTitles(container)).toEqual(['Reverse', 'Mix', 'Level', 'Recycle', 'Int Var', 'Coarse', 'Cents']);
+		expect(sliderTitles(container)).toEqual(['Reverse', 'Level', 'Recycle', 'Int Var', 'Coarse', 'Cents', 'Mix']);
 		const faces = [...container.querySelectorAll('[role="slider"]')].map((el) => (el as HTMLElement).dataset.face ?? 'slider');
-		expect(faces).toEqual(['slider', 'slider', 'knob', 'knob', 'knob', 'knob', 'knob']);
+		expect(faces).toEqual(['slider', 'knob', 'knob', 'knob', 'knob', 'knob', 'slider']);
 	});
 });
 

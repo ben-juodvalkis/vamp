@@ -3,21 +3,22 @@
   /**
    * DrumBussCentralView — what the Drum tile opens (2026-09-10).
    *
-   * Seven EQUAL columns (user's layout, 2026-09-12), in Live's own signal
-   * order, with a seam before Boom — Live's separate low-end section and the
-   * only pad here (2026-09-13):
+   * Seven EQUAL columns (user's layout, 2026-09-12) on the face grid
+   * (ADR-510), in Live's own signal order, three sections [1, 4, 2]:
    *
-   *   [Trim over Comp] [Soft/Medium/Hard] [Drive over Crunch over Damp]
-   *   | [Boom  Boom  Boom  Boom]
+   *   Input [Trim over Comp] | Drive [Soft/Medium/Hard] [Drive] [Crunch]
+   *   [Damp] | Boom [Boom  Boom]
    *
-   * Drive, Crunch and Damp are value boxes (ADR-477), three in one column:
-   * each sweeps over a fixed finger travel at least, so a third of a fader's
-   * height is as fine as the fader was. Boom took the two columns they
-   * spread over (it was two columns wide).
+   * Input has its own seam since the Ink rollout (ADR-544): Trim stands
+   * over its Comp switch, so it sits higher than the three distortion
+   * knobs, and inside one section that read as a knob out of line. The
+   * drive type is a tab beside the Drive knob it belongs to; Drive, Crunch
+   * and Damp are one row of large knobs, the size Trim draws. Boom is
+   * Live's separate low-end section and the only pad here (2026-09-13).
    *
-   * On the face grid (ADR-510) since 2026-11-06, sections [5, 2]: Drive
-   * (Trim over Comp, the drive type, Drive, Crunch, Damp) and Boom, seven
-   * columns of about 137px. One knob a column, large.
+   * One ink (ADR-544): the amounts are the selected track's (the slot's
+   * scheme), a lit Comp and the chosen drive type are on's block, every
+   * name a label.
    *
    * The Drum XY (transients x dry/wet) is the chain cell's control (the
    * `drum` control, deviceControls, ADR-479), drawn above this view, so the
@@ -35,17 +36,12 @@
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
 
   const drum = useFxGridSlot('drum');
 
-  let drumInk = $derived({
-    primary: trackInk(drum.color.primary, paintModeReactive()),
-    secondary: drum.color.secondary,
-    accent: trackInk(drum.color.accent, paintModeReactive())
-  });
+  // The selected track's ink, as the slot's scheme hands it over (ADR-544).
+  let drumInk = $derived(drum.color);
 
   // Comp and Boom were measured off the running Drum Buss. Drive, its
   // type, Crunch, Damp and Trim are the user's indices (2026-09-12).
@@ -115,10 +111,11 @@
 </script>
 
 <div class="drum-buss-layout" class:slot-ghost={drum.isGhost}>
-  <FaceGrid sections={[5, 2]}>
-  <!-- Live's chain, in its order: Trim, Comp, the drive type, Drive, Crunch, Damp. -->
-  <FaceSection span={5} class={drum.isGhost ? 'drum-buss-faces-ghost' : ''}>
-    {#snippet head()}<PanelEyebrow title="Drive" color={drumInk.primary} />{/snippet}
+  <FaceGrid sections={[1, 4, 2]}>
+  <!-- Live's chain, in its order: Trim and Comp, then the drive type,
+       Drive, Crunch and Damp, then Boom. -->
+  <FaceSection span={1} class={drum.isGhost ? 'drum-buss-faces-ghost' : ''}>
+    {#snippet head()}<PanelEyebrow title="Input" color={drumInk.primary} />{/snippet}
     <!-- Input Trim, first in Live's chain, over the Comp switch. -->
     <div class="col trim-comp">
       <div class="trim">
@@ -129,7 +126,6 @@
           knobSize="l"
           icon="gain"
           orientation="vertical"
-          labelSize="small"
           isGhost={drum.isGhost}
           color={drumInk}
           readout={drum.paramDisplay(PARAM.trim)}
@@ -137,26 +133,28 @@
         />
       </div>
       <button
-        class="physical-button btn-toggle comp-toggle w-full font-bold"
+        class="physical-button btn-toggle comp-toggle w-full"
         class:active={compressorOn}
-        style="--btn-tint: {drumInk.primary};"
         use:press={{ onPress: () => toggleComp() }}
       >
         Comp
       </button>
     </div>
+  </FaceSection>
+  <FaceSeam ink={drumInk.primary} />
 
-    <!-- Drive type is a VERTICAL tab that scrubs, Soft → Medium → Hard. -->
+  <FaceSection span={4} class={drum.isGhost ? 'drum-buss-faces-ghost' : ''}>
+    {#snippet head()}<PanelEyebrow title="Drive" color={drumInk.primary} />{/snippet}
+    <!-- Drive type is a VERTICAL tab that scrubs, Soft → Medium → Hard,
+         beside the Drive knob it belongs to. -->
     <ScrubTabs
       options={DRIVE_TYPES}
       selected={driveType}
       onSelect={(step) => drum.sendParam(PARAM.driveType, step)}
       cols={1}
-      tint={drumInk.primary}
-      inked
       label={(t) => `Drive type ${t}`}
       name="drive-type"
-      style="height: 100%; --scrub-font-size: 0.8125rem; --scrub-font-weight: var(--font-weight-medium);"
+      style="height: 100%; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
     >
       {#snippet item(t)}{t}{/snippet}
     </ScrubTabs>
@@ -241,32 +239,15 @@
     flex: 0 0 var(--height-touch);
     min-height: var(--height-touch);
     font-size: 1rem;
+    font-weight: 700;
     text-transform: uppercase;
   }
 
-
-  /* Flat grammar: Live sets control text at medium weight and mixed-case. */
-  :global([data-grammar="flat"]) .physical-button {
-    font-weight: var(--font-weight-medium);
-  }
+  /* Flat grammar: control text at medium weight and mixed-case. A lit Comp
+     is on's block and an unlit one a label, by app.css's own law
+     (ADR-544): the view passes no tint. */
   :global([data-grammar="flat"]) .comp-toggle {
+    font-weight: var(--font-weight-medium);
     text-transform: none;
-  }
-
-  /* ONE ink for the whole view (user, 2026-09-12: "can the colors be more
-     consistent?"). The flat grammar lights every active `.physical-button`
-     and `.device-segment` with the house ON colour, `--phosphor`, and
-     ignores `--btn-tint` — so the lit Comp button and the lit drive type
-     read a lighter amber beside faders and a pad drawn in the Drum Buss's
-     own ink: two oranges in one view. Both take `--btn-tint` (the device
-     ink) here, and an unlit step's word takes a mix of it, the same
-     override DriftCentralView makes for its oscillator controls. */
-  :global([data-grammar="flat"]) .comp-toggle.active {
-    background: var(--btn-tint);
-    border-color: var(--btn-tint);
-    color: var(--flat-on-fg);
-  }
-  :global([data-grammar="flat"]) .comp-toggle:not(.active) {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
 </style>

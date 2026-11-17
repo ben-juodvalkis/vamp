@@ -115,7 +115,8 @@
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-sm);
     background: var(--surface-well);
-    color: var(--picker-tint);
+    /* A pick's value is a value, in its ink; `tint` colours nothing (ADR-544). */
+    color: var(--value);
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.1;
@@ -204,7 +205,8 @@
   .picker-title {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--picker-tint);
+    /* A pick's value is a value, in its ink; `tint` colours nothing (ADR-544). */
+    color: var(--value);
     text-align: center;
   }
   .picker-grid {

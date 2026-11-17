@@ -4,13 +4,18 @@
    * Redux's view (Live's Redux, the `redux` slot): the rest of
    * the device (user, 2026-10-26: "add more of redux's controls").
    *
-   *   Crush [Jitter] [Bit Depth] [Shape] | [Pre-Filter · Post-Filter ·
-   *   DC Shift] | Mix [Dry/Wet]
+   *   Crush [Pre-Filter over Jitter] [Post-Filter over Bit Depth]
+   *   [DC Shift over Shape] | Mix [Dry/Wet]
    *
-   * On the face grid (ADR-510), sections [3, 1, 1], in Live's order: the
-   * downsampler's Jitter, the bit reduction, the switches, then Dry/Wet,
-   * the played level, past a seam at the right edge as Reverb's (ADR-509).
-   * Every knob one to a column, so large.
+   * On the face grid (ADR-510), sections [6, 1], seven equal columns: each
+   * knob stands over two with its switch above it, one touch row (ADR-544:
+   * a switch sits with a control, above it, as Auto Filter's Time/Sync over
+   * Morph), then Dry/Wet, the played level, a box past a seam at the right
+   * edge as Reverb's (ADR-509). In Live's order left to right, switches and
+   * knobs alike: the downsampler's Pre-Filter and Jitter, the Post-Filter
+   * between it and the bit reduction, then the quantizer's Shape and DC
+   * Shift. Until the Ink rollout the three switches were a column of their
+   * own with no name, floating at mid-height.
    *
    * Sample Rate and Post-Filter are the chain cell's pad (the `redux`
    * control, `deviceControls`, ADR-479), drawn above this view, so the view
@@ -25,8 +30,6 @@
    */
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -40,28 +43,22 @@
   /** Live's values on a freshly inserted Redux, what a ghost shows. */
   const REST: Record<number, number> = { 2: 0, 3: 16, 4: 0, 5: 0, 6: 0, 7: 1, 9: 1 };
 
-  let reduxInk = $derived({
-    primary: trackInk(redux.color.primary, paintModeReactive()),
-    secondary: redux.color.secondary,
-    accent: trackInk(redux.color.accent, paintModeReactive())
-  });
+  // The selected track's ink, as the slot's scheme hands it over (ADR-544).
+  let reduxInk = $derived(redux.color);
 
   const value = (index: number) => redux.paramValue(index) ?? REST[index];
   const on = (index: number) => value(index) >= 0.5;
   const toggle = (index: number) => redux.sendParam(index, on(index) ? 0 : 1);
 
   type Slider = { index: number; title: string; min: number; max: number; icon?: 'mix' };
-  const CRUSH: Slider[] = [
-    { index: REDUX.jitter, title: 'Jitter', min: 0, max: 1 },
-    { index: REDUX.bitDepth, title: 'Bit Depth', min: BIT_DEPTH_MIN, max: BIT_DEPTH_MAX },
-    { index: REDUX.shape, title: 'Shape', min: 0, max: 1 }
+  type Switch = { index: number; label: string };
+  // Each knob with the switch that stands over it, in Live's order.
+  const CRUSH: { knob: Slider; sw: Switch }[] = [
+    { knob: { index: REDUX.jitter, title: 'Jitter', min: 0, max: 1 }, sw: { index: REDUX.preFilter, label: 'Pre-Filter' } },
+    { knob: { index: REDUX.bitDepth, title: 'Bit Depth', min: BIT_DEPTH_MIN, max: BIT_DEPTH_MAX }, sw: { index: REDUX.postFilterOn, label: 'Post-Filter' } },
+    { knob: { index: REDUX.shape, title: 'Shape', min: 0, max: 1 }, sw: { index: REDUX.dcShift, label: 'DC Shift' } }
   ];
   const DRY_WET: Slider = { index: REDUX.dryWet, title: 'Dry/Wet', min: 0, max: 1, icon: 'mix' };
-  const SWITCHES = [
-    { index: REDUX.preFilter, label: 'Pre-Filter' },
-    { index: REDUX.postFilterOn, label: 'Post-Filter' },
-    { index: REDUX.dcShift, label: 'DC Shift' }
-  ];
 </script>
 
 {#snippet control(s: Slider)}
@@ -71,6 +68,7 @@
       title={s.title}
       face={s.index === REDUX.dryWet ? 'slider' : 'knob'}
       knobSize="l"
+      knobCaptionBelow
       icon={s.icon}
       orientation="vertical"
       min={s.min}
@@ -83,23 +81,18 @@
   </div>
 {/snippet}
 
-<div class="redux-layout" data-view="redux" style="--btn-tint: {reduxInk.primary};">
-  <FaceGrid sections={[3, 1, 1]}>
-    <FaceSection span={3}>
+<div class="redux-layout" data-view="redux">
+  <FaceGrid sections={[6, 1]}>
+    <FaceSection span={6}>
       {#snippet head()}<PanelEyebrow title="Crush" color={reduxInk.primary} />{/snippet}
-      {#each CRUSH as s (s.index)}{@render control(s)}{/each}
-    </FaceSection>
-    <FaceSeam ink={reduxInk.primary} />
-
-    <FaceSection span={1}>
-      {#snippet head()}<PanelEyebrow color={reduxInk.primary} />{/snippet}
-      <div class="switches" class:slot-ghost={redux.isGhost}>
-        {#each SWITCHES as s (s.index)}
-          <button class="physical-button btn-toggle redux-switch w-full" class:active={on(s.index)} aria-pressed={on(s.index)} use:press={{ onPress: () => toggle(s.index) }}>
-            {s.label}
+      {#each CRUSH as c (c.knob.index)}
+        <div class="pair face-span-2" class:slot-ghost={redux.isGhost}>
+          <button class="physical-button btn-toggle redux-switch" class:active={on(c.sw.index)} aria-pressed={on(c.sw.index)} use:press={{ onPress: () => toggle(c.sw.index) }}>
+            {c.sw.label}
           </button>
-        {/each}
-      </div>
+          {@render control(c.knob)}
+        </div>
+      {/each}
     </FaceSection>
     <FaceSeam ink={reduxInk.primary} />
 
@@ -111,14 +104,15 @@
 </div>
 
 <style>
-  /* The face is the FaceGrid (ADR-510): five equal columns. */
+  /* The face is the FaceGrid (ADR-510): seven equal columns, a knob with
+     its switch over two each, Dry/Wet one. */
   .redux-layout {
     height: 100%;
     width: 100%;
   }
 
   .box,
-  .switches {
+  .pair {
     display: flex;
     flex-direction: column;
     gap: var(--face-gutter);
@@ -126,32 +120,29 @@
     min-height: 0;
   }
 
+  .box {
+    flex: 1 1 0;
+  }
   .box > :global(*) {
     flex: 1 1 0;
     min-height: 0;
   }
 
-  /* The switches: one touch row each, centred in their column (ADR-509). */
-  .switches {
-    justify-content: center;
-  }
+  /* A switch over its knob: one touch row, as wide as a column of the
+     face, centred over the knob (two columns of slab were wider than the
+     word and the knob under it). */
   .redux-switch {
     flex: 0 0 var(--height-touch);
+    align-self: center;
+    width: calc((100% - var(--face-gutter)) / 2 + 1.5rem);
+    max-width: 100%;
     font-size: 1rem;
     font-weight: 600;
   }
 
-  /* Flat grammar: medium weight, and the device's own ink when on (as the
-     Drum Buss's Comp switch), not the house ON color beside its faders. */
+  /* Flat grammar: medium weight. On is on's block and off a label, by
+     app.css's own law (ADR-544): the view passes no tint. */
   :global([data-grammar="flat"]) .redux-switch {
     font-weight: var(--font-weight-medium);
-  }
-  :global([data-grammar="flat"]) .redux-switch.active {
-    background: var(--btn-tint);
-    border-color: var(--btn-tint);
-    color: var(--flat-on-fg);
-  }
-  :global([data-grammar="flat"]) .redux-switch:not(.active) {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
 </style>

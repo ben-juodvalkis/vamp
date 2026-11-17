@@ -11,6 +11,10 @@
    * Parameters bind by Live's name (`usePanelParams`); the routing mode is
    * the device property `routing_mode_index`. A ghost draws the face's
    * controls dimmed, and the first touch loads Roar.
+   *
+   * One ink (ADR-544): every amount is the selected track's, as the slot's
+   * scheme hands it over; a section's name is a label, a pick's value a
+   * value, a lit switch on's block. The band's knobs are one size.
    */
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
@@ -52,7 +56,10 @@
       {/snippet}
     </InstrumentBoard>
   {:else}
-    <div class="roar-face">
+    <!-- At full screen with no Roar loaded there is no board to draw: the
+         face keeps the band's height at the top, not stretched over the
+         screen with its knobs adrift in it. -->
+    <div class="roar-face" class:at-band-height={centralDisplayStore.expanded}>
       <RoarPages page="face" {params} ink={fx.color} {routing} {setRouting} />
     </div>
   {/if}
@@ -63,5 +70,9 @@
     width: 100%;
     height: 100%;
     min-height: 0;
+  }
+  /* The band's body at the default sections, 1366 x 1024. */
+  .roar-face.at-band-height {
+    height: min(100%, 18.125rem);
   }
 </style>

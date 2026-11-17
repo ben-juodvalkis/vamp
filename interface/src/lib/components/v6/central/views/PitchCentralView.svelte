@@ -4,10 +4,15 @@
 	 * Pitch Shift's view (the `octave` slot):
 	 * three pick-one tabs, as the Variation view draws them (user,
 	 * 2026-10-26): Pitch (+12, +7, -5, -12, high to low), Response and
-	 * Quality; then Tone, a value box (ADR-477). The grid's Pitch slider is
+	 * Quality; then Tone, a knob (ADR-509). The grid's Pitch slider is
 	 * its Mix. Indices and labels in
-	 * `octaveParams.ts`, measured on the rig. On the face grid (ADR-510),
-	 * four one-column sections, each named on the header line.
+	 * `octaveParams.ts`, measured on the rig.
+	 *
+	 * On the face grid (ADR-510), sections [2, 1, 1, 1], five equal columns,
+	 * each named on the header line: Pitch, the one that is played, takes
+	 * two, and Response, Quality and Tone, set once, one each (four equal
+	 * columns until the Ink rollout, ADR-544, Tone a lone knob in a quarter
+	 * of the view). A step's word is a label and the chosen one on's block.
 	 *
 	 * A step on a ghost loads the device with its Mix at 50, dry and shifted
 	 * both at full level, and lands it at the head of the chain, as the Pitch
@@ -29,8 +34,6 @@
 		OCTAVE_TONE_MAX
 	} from '$lib/components/v6/device-panel/octaveParams';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-	import { trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import FaceGrid from '../FaceGrid.svelte';
 	import FaceSection from '../FaceSection.svelte';
 	import FaceSeam from '../FaceSeam.svelte';
@@ -39,12 +42,9 @@
 	const octave = useFxGridSlot('octave');
 	const octaveChain = useBassChainPosition(octave, 'PitchCentralView');
 
-	let ink = $derived(trackInk(octave.color.primary, paintModeReactive()));
-	let inkScheme = $derived({
-		primary: ink,
-		secondary: octave.color.secondary,
-		accent: trackInk(octave.color.accent, paintModeReactive())
-	});
+	// The selected track's ink, as the slot's scheme hands it over (ADR-544).
+	let inkScheme = $derived(octave.color);
+	let ink = $derived(inkScheme.primary);
 
 	const OCTAVE_LOAD_MIX = 50;
 	function send(index: number, v: number) {
@@ -56,9 +56,9 @@
 	}
 
 	const COLUMNS = [
-		{ title: 'Pitch', index: OCTAVE_PITCH_PARAM, steps: OCTAVE_PITCH_STEPS.map((s) => ({ label: s.label, value: s.value })) },
-		{ title: 'Response', index: OCTAVE_RESPONSE_PARAM, steps: OCTAVE_RESPONSE_STEPS.map((label, value) => ({ label, value })) },
-		{ title: 'Quality', index: OCTAVE_QUALITY_PARAM, steps: OCTAVE_QUALITY_STEPS.map((label, value) => ({ label, value })) }
+		{ title: 'Pitch', span: 2, index: OCTAVE_PITCH_PARAM, steps: OCTAVE_PITCH_STEPS.map((s) => ({ label: s.label, value: s.value })) },
+		{ title: 'Response', span: 1, index: OCTAVE_RESPONSE_PARAM, steps: OCTAVE_RESPONSE_STEPS.map((label, value) => ({ label, value })) },
+		{ title: 'Quality', span: 1, index: OCTAVE_QUALITY_PARAM, steps: OCTAVE_QUALITY_STEPS.map((label, value) => ({ label, value })) }
 	];
 
 	// The lit step is the one the device matches exactly; a ghost lights none.
@@ -68,12 +68,12 @@
 	};
 </script>
 
-<div class="pitch-layout" data-view="octave" style="--btn-tint: {ink};">
-	<FaceGrid sections={[1, 1, 1, 1]}>
+<div class="pitch-layout" data-view="octave">
+	<FaceGrid sections={[2, 1, 1, 1]}>
 		{#each COLUMNS as column (column.index)}
-			<FaceSection span={1}>
+			<FaceSection span={column.span}>
 				{#snippet head()}<PanelEyebrow title={column.title} color={ink} />{/snippet}
-				<div class="pitch-col" class:slot-ghost={octave.isGhost}>
+				<div class="pitch-col face-span-all" class:slot-ghost={octave.isGhost}>
 					<div class="pitch-stack device-segmented seg-grid" role="radiogroup" aria-label={column.title}>
 						{#each column.steps as step (step.value)}
 							<button
@@ -111,7 +111,7 @@
 </div>
 
 <style>
-	/* The face is the FaceGrid (ADR-510): four equal columns. */
+	/* The face is the FaceGrid (ADR-510): five equal columns, Pitch two. */
 	.pitch-layout {
 		height: 100%;
 		width: 100%;
@@ -140,6 +140,8 @@
 		min-width: 0;
 	}
 
+	/* A step's word is a label and the chosen one on's block, by app.css's
+	   own law (ADR-544): the view passes no tint. */
 	.pitch-btn {
 		flex: 1;
 		min-height: 0;
@@ -148,20 +150,7 @@
 		font-weight: 700;
 	}
 
-	/* As the Variation view's tabs: the name in the device ink, the lit one
-	   filled with it. */
-	:global([data-skin="hybrid"]) .pitch-btn {
-		color: var(--btn-tint);
-	}
-	:global(.light[data-skin="hybrid"]) .pitch-btn {
-		color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
-	}
 	:global([data-grammar="flat"]) .pitch-btn {
 		font-weight: var(--font-weight-medium);
-	}
-	:global([data-grammar="flat"]) .pitch-btn.active {
-		background: var(--btn-tint);
-		border-color: var(--btn-tint);
-		color: var(--flat-on-fg);
 	}
 </style>

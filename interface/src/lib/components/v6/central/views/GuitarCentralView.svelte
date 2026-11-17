@@ -16,7 +16,10 @@
    * tap disabled: this is its home), then the Spring (X) / Room (Y) pad over
    * the Tremolo pad, rate (X) / amount (Y) (user, 2026-10-05), side by side
    * since 2026-10-26. On the face grid (ADR-510), sections [1, 2, 2]: Amp,
-   * Reverb, Tremolo, in the rack's macro order.
+   * Reverb, Tremolo, in the rack's macro order. The Ink rollout (ADR-544)
+   * left the layout as it was (one box, two pads, each filling its
+   * section) and took the view's own ink off: the amounts are the selected
+   * track's, as the slot's scheme hands it over.
    *
    * NO {#if device} gate - always renders, handles its own state.
    */
@@ -24,8 +27,6 @@
   import GuitarControl from '$lib/components/v6/device-panel/GuitarControl.svelte';
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -33,11 +34,8 @@
 
   const guitar = useFxGridSlot('guitar');
 
-  let guitarInk = $derived({
-    primary: trackInk(guitar.color.primary, paintModeReactive()),
-    secondary: guitar.color.secondary,
-    accent: trackInk(guitar.color.accent, paintModeReactive())
-  });
+  // The selected track's ink, as the slot's scheme hands it over (ADR-544).
+  let guitarInk = $derived(guitar.color);
 
   const GTR = { spring: 2, tremRate: 3, tremAmount: 4, room: 5 } as const;
   const MACRO_MAX = 127;

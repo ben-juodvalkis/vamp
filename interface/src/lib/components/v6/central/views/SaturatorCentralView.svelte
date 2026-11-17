@@ -4,10 +4,18 @@
    * file since the FX chain overview took over from the grid (2026-10-26);
    * it was the `effects` part of the Pedal view.
    *
-   *   Color [Bass] [Color pad: Freq across, Hi up] | Output [Output] | Mix [Mix]
+   *   Color [Color pad: Freq across, Hi up][Bass] | Output [Output][Mix]
    *
-   * On the face grid (ADR-510), sections [3, 1, 1], in Live's order; Mix,
-   * the played level, past a seam at the right edge (ADR-509).
+   * On the face grid (ADR-510), sections [4, 2], six equal columns. The
+   * Color pad leads, the one thing played, over three columns, its name at
+   * its foot (a fresh Saturator rests the dot in the pad's middle, where
+   * its mark and name hid it), Live's frequency in the name's place while a
+   * finger moves it; then the two
+   * amounts set and left, Bass and Output, two knobs of one size on one
+   * line either side of the seam; Mix, the level that is ridden, a box at
+   * the right edge (ADR-509). Until the Ink rollout (ADR-544) Bass stood
+   * ahead of the pad, one knob beside a field four times its size, and
+   * Output and Mix were a section each, named twice.
    *
    * The Color section as a slider and a pad (user, 2026-10-26; one Color Hi
    * fader before). Indices and rails measured on the rig the same day (the
@@ -24,8 +32,6 @@
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -33,11 +39,8 @@
 
   const saturator = useFxGridSlot('saturator');
 
-  let saturatorInk = $derived({
-    primary: trackInk(saturator.color.primary, paintModeReactive()),
-    secondary: saturator.color.secondary,
-    accent: trackInk(saturator.color.accent, paintModeReactive())
-  });
+  // The selected track's ink, as the slot's scheme hands it over (ADR-544).
+  let saturatorInk = $derived(saturator.color);
 
   const COLOR = { on: 4, low: 5, freq: 6, hi: 8 } as const;
   /** Live's values on a fresh Saturator, what a ghost shows. */
@@ -49,6 +52,11 @@
     if ((saturator.paramValue(COLOR.on) ?? 1) < 0.5) saturator.sendParam(COLOR.on, 1);
     for (const [index, v] of writes) saturator.sendParam(index, v);
   }
+
+  // The pad says Live's frequency in place of its name while a finger moves
+  // it, as a box does, and no number at rest (ADR-544).
+  let colorDragging = $state(false);
+  let colorReadout = $derived(colorDragging && !saturator.isGhost ? saturator.paramDisplay(COLOR.freq) : undefined);
 
   // Index, label, and the value a fader rests at before the device answers.
   const SATURATOR_FADERS = [
@@ -78,9 +86,27 @@
 {/snippet}
 
 <div class="saturator-layout" data-view="saturator">
-  <FaceGrid sections={[3, 1, 1]}>
-    <FaceSection span={3}>
+  <FaceGrid sections={[4, 2]}>
+    <FaceSection span={4}>
       {#snippet head()}<PanelEyebrow title="Color" color={saturatorInk.primary} />{/snippet}
+      <div class="pad-col face-span-3" class:slot-ghost={saturator.isGhost}>
+        <DeviceXY
+          xValue={value(COLOR.freq, REST.freq)}
+          yValue={value(COLOR.hi, REST.hi)}
+          title={colorReadout ?? 'Color'}
+          titleAt="bottom"
+          isGhost={saturator.isGhost}
+          showCurve={false}
+          color={saturatorInk}
+          onTap={() => saturator.loadIfGhost()}
+          onInteraction={(x, y) => {
+            colorDragging = true;
+            writeColor([[COLOR.freq, x], [COLOR.hi, y]]);
+          }}
+          onRelease={() => (colorDragging = false)}
+        />
+      </div>
+
       <div class="slider-col" class:slot-ghost={saturator.isGhost}>
         <DeviceSlider
           value={value(COLOR.low, REST.low)}
@@ -100,34 +126,18 @@
           onInteraction={(v) => writeColor([[COLOR.low, v]])}
         />
       </div>
-
-      <div class="pad-col face-span-2" class:slot-ghost={saturator.isGhost}>
-        <DeviceXY
-          xValue={value(COLOR.freq, REST.freq)}
-          yValue={value(COLOR.hi, REST.hi)}
-          title="Color"
-          icon="tone"
-          rateLabel={saturator.paramDisplay(COLOR.freq)}
-          isGhost={saturator.isGhost}
-          showCurve={false}
-          color={saturatorInk}
-          onTap={() => saturator.loadIfGhost()}
-          onInteraction={(x, y) => writeColor([[COLOR.freq, x], [COLOR.hi, y]])}
-        />
-      </div>
     </FaceSection>
-    {#each SATURATOR_FADERS as f (f.index)}
-      <FaceSeam ink={saturatorInk.primary} />
-      <FaceSection span={1}>
-        {#snippet head()}<PanelEyebrow title={f.title} color={saturatorInk.primary} />{/snippet}
-        {@render fader(f)}
-      </FaceSection>
-    {/each}
+    <FaceSeam ink={saturatorInk.primary} />
+
+    <FaceSection span={2}>
+      {#snippet head()}<PanelEyebrow title="Output" color={saturatorInk.primary} />{/snippet}
+      {#each SATURATOR_FADERS as f (f.index)}{@render fader(f)}{/each}
+    </FaceSection>
   </FaceGrid>
 </div>
 
 <style>
-  /* The face is the FaceGrid (ADR-510): five equal columns, the pad two. */
+  /* The face is the FaceGrid (ADR-510): six equal columns, the pad three. */
   .saturator-layout {
     height: 100%;
     width: 100%;
