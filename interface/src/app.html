@@ -53,6 +53,8 @@
 				else if (asked === '1' || asked === '2' || asked === '3') localStorage.setItem('vamp.pitch', asked);
 				var pitch = localStorage.getItem('vamp.pitch');
 				if (pitch) document.documentElement.dataset.pitch = pitch;
+				var strip = localStorage.getItem('vamp.pitch.strip');
+				if (strip) document.documentElement.dataset.strip = strip;
 			})();
 		</script>
 		<div style="display: contents">%sveltekit.body%</div>

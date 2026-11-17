@@ -448,6 +448,19 @@ html[data-pitch='2'] .chain-cell.appointed .cell-head .name {
 	color: var(--sel-track-fg, var(--foreground));
 }
 
+/* The selected strip is shaded, not only framed (Ben, stop 1). Two ways to
+   try: a neutral lift (the default), or a shade of the track's own colour
+   (localStorage 'vamp.pitch.strip' = tint). */
+html[data-pitch='2'] .track-selected {
+	background: var(--secondary) !important;
+}
+html.dark[data-pitch='2'][data-strip='tint'] .track-selected {
+	background: oklch(from var(--sel-track, #8a8f98) 0.3 calc(c * 0.55) h) !important;
+}
+html.light[data-pitch='2'][data-strip='tint'] .track-selected {
+	background: oklch(from var(--sel-track, #8a8f98) 0.86 calc(c * 0.7) h) !important;
+}
+
 /* ---------- 3 · Dye ------------------------------------------------------ */
 
 html.dark[data-pitch='3'] {
