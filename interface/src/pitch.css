@@ -202,10 +202,6 @@ html[data-pitch] .clip-central-root .clip-switch.active {
 	color: var(--on-fg);
 }
 
-/* Pattern data (a sequencer's steps) wears the track's colour, as notes do. */
-html[data-pitch] [style*='--seq-color'] {
-	--seq-color: var(--data) !important;
-}
 
 /* The Clip view on the same parts as every other view: an action is a
    cell with its mark over its word. */
@@ -328,6 +324,11 @@ html[data-pitch] .panel-eyebrow {
 /* Permute's two rows say which is which in words: each knob names its
    row with what it sets (Mute length, Pitch rate), since the rows no
    longer differ by colour. */
+/* Permute keeps its two colours (Ben: "I like the blue"): the mute row is
+   the track's, the pitch row is pitch blue, steps and knobs alike. */
+html[data-pitch] .ctrl-cell .knob {
+	--knob-ink: var(--cell-ink) !important;
+}
 html[data-pitch] .ctrl-cell .knob-title {
 	font-size: 14px;
 	font-weight: 600;
