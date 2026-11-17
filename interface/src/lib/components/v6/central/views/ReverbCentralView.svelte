@@ -67,6 +67,7 @@
     ROUTING_CONVOLUTION,
     EQ_TYPE_LABELS,
     VINTAGE_MAX,
+    VINTAGE_LABELS,
     irSizeFactor,
     irSizePosition,
     algoDelaySeconds,
@@ -86,6 +87,9 @@
     timeLabel,
     vintageLabel
   } from '$lib/components/v6/device-panel/hybridReverbParams';
+
+  import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
+  import { pitchOn } from '$lib/utils/pitch';
 
   const fx = useFxGridSlot('reverb');
 
@@ -610,6 +614,24 @@
      shared knobs, ADR-509), not inside it. -->
 {#snippet sliderBox(row: Row, ownCellChip = false, size: 's' | 'm' | 'l' = knobSize)}
   {#snippet label()}{@render boxLabel(row.name, row.label)}{/snippet}
+  {#if pitchOn && row.key === 'vintage'}
+    <!-- PITCH (Ben, stop 1): Vintage is five named settings, so it is a
+         tab, not a knob: its column's two rows, the name over it. It
+         writes through the row's own write, as the knob did. -->
+    <div class="cell vintage-tab" data-reverb-vintage>
+      <span class="vintage-name">{row.name}</span>
+      <ScrubTabs
+        options={VINTAGE_LABELS}
+        selected={Math.round(row.position * VINTAGE_MAX)}
+        cols={1}
+        ghost={fx.isGhost}
+        label={(option) => `Vintage ${option}`}
+        onSelect={(index) => row.write(index / VINTAGE_MAX)}
+      >
+        {#snippet item(option)}{option}{/snippet}
+      </ScrubTabs>
+    </div>
+  {:else}
   <div class="cell" class:knob-cell={knobRow(row.key)}>
     <div class="box">
       <DeviceSlider
@@ -632,6 +654,7 @@
     </div>
     {#if row.chip && !ownCellChip}{@render chip(row.chip.name, row.chip.index)}{/if}
   </div>
+  {/if}
 {/snippet}
 
 {#snippet chip(name: string, index: number, title?: string)}
@@ -876,6 +899,23 @@
     gap: var(--spacing-sm);
     min-height: 0;
     min-width: 0;
+  }
+  /* PITCH: Vintage as a tab down its column's two rows. */
+  .vintage-tab {
+    grid-row: span 2;
+    gap: 4px;
+  }
+  .vintage-tab :global(.scrub-tabs) {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .vintage-name {
+    flex: 0 0 auto;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--foreground);
   }
   .box {
     flex: 1 1 0;
