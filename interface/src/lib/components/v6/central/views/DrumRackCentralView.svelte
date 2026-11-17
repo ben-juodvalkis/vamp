@@ -52,7 +52,7 @@
    *
    * The composition root, since 2026-09-10 (issue #491 E0): the pad grid
    * on the left, and on the right a row chosen by the kit's profile plus
-   * the Filter pad and the Gain slider that every kit shape shares. The
+   * the Filter pad and the Gain knob that every kit shape shares. The
    * rows are dumb (`drum/DrumCellControlsRow`, `drum/RackMacrosRow`,
    * `SimplerControlsRow`, `SamplerControlsRow`): values, states and badges
    * in, a write out. What a value IS under the current pad scope, and
@@ -226,9 +226,10 @@
   //
   // A DrumCell, Sampler or Simpler kit draws its row as a face: one grid of
   // equal columns right of the pads, eight columns on every kit, whose
-  // first column is the view's Gain over Trnsp — so they land on the same
-  // spot whichever kit is loaded (user, 2026-09-27: "make them more uniform
-  // so the muscle memory sticks"). Every other profile, and an effect's
+  // first two are the Kit section: Trnsp, the full-height box, then the
+  // view's Gain at the head of the knobs' column (user, 2026-11-06) — so
+  // they land on the same spot whichever kit is loaded (user, 2026-09-27:
+  // "make them more uniform so the muscle memory sticks"). Every other profile, and an effect's
   // pane, keeps the flex row. The swap pill lies over the pads on every
   // kit (it lay across the pads and the kit's first sliders from
   // 2026-09-16); a pads-alone pill sets the column's FLOOR, because the
@@ -318,6 +319,13 @@
     pitch: vm.badge('pitch')
   });
 
+  // The Kit column's knobs (Gain, and a row's own under it): large, drawn
+  // as large as their half-height cell holds with its name (84px on a
+  // DrumCell kit at the default sections; 70px, fitted, until 2026-11-17,
+  // when Ben asked for bigger). Medium while the notes strip takes the
+  // face's last quarter. One size for the column, so every row is handed it.
+  let kitKnobSize = $derived<'m' | 'l'>(showStrip ? 'm' : 'l');
+
   // The three slots outside the profile switch.
   let filterState = $derived(combineVmStates(vm.state('filterFreq'), vm.state('filterRes')));
   let gainState = $derived(vm.state('gain'));
@@ -352,14 +360,17 @@
   </VmSlot>
 {/snippet}
 
-{#snippet gainSlot(knob = false)}
+{#snippet gainSlot(knob = false, inside = false, size: 's' | 'm' | 'l' | 'xl' = kitKnobSize)}
   <!-- How loud the kit is — or, with pads held, how loud those pads are
        (2026-09-08, user's request). One `t` slider over three different
        measurements: DrumCell's Volume is 0..1, a Sampler's and a
        Simpler's is −36..36 dB, and a kit of nested Instrument Racks has
        no Volume to reach at all, so there the surface moves each pad's
        CHAIN volume instead. The fan-out spans each member's own range,
-       so a mixed kit moves together and keeps its balance. -->
+       so a mixed kit moves together and keeps its balance. A row draws it
+       as a knob (`knob`), as a ring with its name inside (`inside`) where
+       its column stacks three (the Sampler kit), or at the size of the
+       grid of knobs it leads (`size`, a nested-rack kit's macros). -->
   <VmSlot state={gainState} class="flex-1 flex flex-col" fn="gain" badge={vm.badge('gain')}>
     <DeviceSlider
       value={vm.value('gain') ?? 0.5}
@@ -367,8 +378,8 @@
       title="Gain"
       icon="gain"
       face={knob ? 'knob' : 'slider'}
-      knobSize="l"
-      knobFit
+      knobSize={size}
+      knobInside={inside}
       color={controlInk}
       isGhost={gainState === 'none'}
       onInteraction={(value) => vm.write('gain', value)}
@@ -389,6 +400,7 @@
       min={VM_PITCH_MIN}
       max={VM_PITCH_MAX}
       centerOrigin={true}
+      discrete
       centerValue={0}
       isGhost={pitchState === 'none'}
       onInteraction={(value) => vm.write('pitch', Math.round(value))}
@@ -456,10 +468,10 @@
     {:else if lead !== null}
     <!-- A DrumCell, Sampler or Simpler kit: its face (ADR-510), one grid
          of equal columns right of the pads, eight on every kit. Each row
-         draws the same first column, the view's Gain over Trnsp (user,
-         2026-09-27: "gain to be the same on both, and it to be the
-         leftmost slider"), so they sit on the same pixels whichever kit
-         is loaded; the view's Filter is the row's last section (under
+         draws the same Kit section first, Trnsp and then the view's Gain
+         (user, 2026-09-27: "gain to be the same on both"; a knob beside a
+         full-height Trnsp since 2026-11-06), so they sit on the same
+         pixels whichever kit is loaded; the view's Filter is the row's last section (under
          the Time pad on a DrumCell kit). -->
     <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap) vm-controls vm-face-col" class:vm-face-strip={showStrip}>
       {#if scopedProfile === 'sampler'}
@@ -488,7 +500,7 @@
           filter={filterSlot}
         />
       {:else}
-        <!-- DrumCell kits: Gain over Trnsp and Start, the FX pad over the
+        <!-- DrumCell kits: Trnsp, Gain over Start, the FX pad over the
              FX-type grid, the Time pad over Filter. -->
         <DrumCellControlsRow
           values={cellValues}
@@ -496,6 +508,7 @@
           badges={cellBadges}
           color={controlInk}
           fxTypes={FX_TYPES}
+          knobSize={kitKnobSize}
           onWrite={(control, value) => vm.write(control, value)}
           gain={gainSlot}
           filter={filterSlot}
@@ -512,9 +525,9 @@
     {:else}
     <!-- The kits off the face: a nested-rack kit's macros and a plugin
          kit's mapped macros come and go with the kit, so their count is
-         the kit's, not a face's; a pitch-only kit is Gain over Trnsp and
-         a card. A nested-rack or pitch-only kit draws Gain itself, over
-         Trnsp (ADR-477); a macro-grid kit draws neither Gain nor Filter:
+         the kit's, not a face's; a pitch-only kit is Trnsp, Gain and a
+         card. A nested-rack or pitch-only kit draws Gain itself, a knob
+         beside Trnsp; a macro-grid kit draws neither Gain nor Filter:
          the rack's mapped macros are its controls. -->
     <div class="flex-1 min-w-0 min-h-0 flex flex-col vm-controls">
     {#if scopedProfile === 'macro-grid'}
@@ -536,14 +549,14 @@
         gain={gainSlot}
       />
     {:else}
-      <!-- Any other native class: Gain over Trnsp, where every kit keeps
-           them (ADR-477), then the pad class. -->
-      <div class="flex-1 grid grid-cols-4 gap-(--central-gap) min-h-0">
-        <div class="flex flex-col gap-(--central-gap) h-full min-w-0">
-          {@render gainSlot()}
-          {@render trnspSlot()}
-        </div>
-        <div class="vm-kit-card col-span-3 min-w-0" style="--kit-ink: {controlInk.primary};">
+      <!-- Any other native class: Trnsp the full-height column and Gain a
+           knob beside it, as on every kit (two half-height boxes, Gain over
+           Trnsp, until ADR-544: Trnsp's name sat on its own centre line),
+           then the pad class. -->
+      <div class="flex-1 vm-pitch-only gap-(--central-gap) min-h-0">
+        <div class="vm-po-gain">{@render gainSlot(true)}</div>
+        <div class="vm-po-trnsp">{@render trnspSlot()}</div>
+        <div class="vm-kit-card min-w-0">
           <div class="vm-kit-class">{kitSummary?.label ?? ''}</div>
           <div class="vm-kit-detail">{kitSummary?.detail ?? ''}</div>
         </div>
@@ -675,6 +688,32 @@
     margin-top: var(--central-gap);
   }
 
+  /* ---- Pitch-only profile: Trnsp, a slider's width and the full height;
+     Gain, a knob in the next column; the kit card. Gain is first in the
+     markup (the order the slots are read in), Trnsp first on screen. */
+  .vm-pitch-only {
+    display: grid;
+    grid-template-columns: var(--vm-slider-w, 56px) minmax(5rem, 1fr) minmax(0, 4fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .vm-po-trnsp,
+  .vm-po-gain {
+    grid-row: 1;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+  .vm-po-trnsp {
+    grid-column: 1;
+  }
+  .vm-po-gain {
+    grid-column: 2;
+  }
+  .vm-pitch-only > .vm-kit-card {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
   /* ---- Kit card (pitch-only profile) --------------------------------
      A kit names its pad class where the FX and Time controls would sit: a
      flat well in the track's ink, the class large, the pad count (or the
@@ -690,7 +729,7 @@
     border-radius: var(--radius-sm);
     background: var(--surface-well);
     box-shadow: inset 0 1px 0 oklch(0 0 0 / 0.5);
-    color: var(--kit-ink, var(--foreground));
+    color: var(--foreground);
     font-family: var(--font-sans);
     text-align: center;
     padding: 0.5rem;
@@ -709,30 +748,20 @@
     color: var(--signal-dim);
   }
 
-  /* ---- Live skin (flat grammar) ------------------------------------
-     The FX-type buttons wear the focused track's ink (ADR-402) and keep it
-     under the flat grammar — as label and solid fill, never as the
-     GRATICULE wash/glow: an unselected pad is a control field (1px dark
-     frame, from the shared .physical-button flat base in app.css) with
-     the ink as its label; the selected pad is a solid block of the ink
-     with Live's ClipText, like a session slot. Tailwind `font-semibold`
-     comes down to medium — Live never bolds a pad. */
-  :global([data-grammar="flat"]) .physical-button {
-    font-weight: var(--font-weight-medium);
-    color: var(--btn-tint, var(--foreground));
+  /* ---- Ink (flat grammar, ADR-544) ---------------------------------
+     The view draws no button of its own: the FX types are the DrumCell
+     row's tab, the pad's mute the mixer column's switch, and both take
+     ON's block from app.css. The kit card is a slab with no drawn edge;
+     its class is a name, its pad count a value. */
+  :global([data-grammar="flat"]) .vm-kit-card {
+    border-color: transparent;
+    box-shadow: none;
+    color: var(--label);
   }
-  :global([data-grammar="flat"]) .physical-button.active {
-    background: var(--btn-tint, var(--phosphor));
-    border-color: var(--btn-tint, var(--phosphor));
-    color: var(--flat-clip-text);
-  }
-  /* Light: the ink's fill envelope is too pale for TEXT on paper — pull
-     the OFF label toward the foreground (hue kept), and keep the ON
-     frame dark so the block's boundary survives at ~1:1 luminance. */
-  :global(.light[data-grammar="flat"]) .physical-button:not(.active) {
-    color: color-mix(in oklab, var(--btn-tint, var(--foreground)) 55%, var(--foreground));
-  }
-  :global(.light[data-grammar="flat"]) .physical-button.active {
-    border-color: var(--line-strong);
+  :global([data-grammar="flat"]) .vm-kit-detail {
+    color: var(--value);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.8125rem;
   }
 </style>

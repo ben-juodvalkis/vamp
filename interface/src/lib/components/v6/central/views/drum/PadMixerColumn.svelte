@@ -37,7 +37,6 @@
     class="pad-mute physical-button btn-toggle"
     class:active={isMuted}
     class:pad-mute-none={muteGhost}
-    style="--btn-tint: {color.primary};"
     aria-label="Mute pad"
     aria-pressed={isMuted}
     aria-disabled={muteGhost}

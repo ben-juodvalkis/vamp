@@ -563,6 +563,7 @@ import { logger } from '$lib/utils/logger';
 					min={-AUDIO_CLIP_PITCH_RANGE}
 					max={AUDIO_CLIP_PITCH_RANGE}
 					centerOrigin={true}
+					discrete
 					centerValue={0}
 					onInteraction={(val) => setAudioClipPitch(val)}
 				/>

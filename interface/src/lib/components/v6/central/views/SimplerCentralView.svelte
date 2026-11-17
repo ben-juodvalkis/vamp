@@ -201,11 +201,6 @@
   let slicingParam33 = $derived(device ? selectedTrackStore.paramValueArmed(paramPathOf('SLICE_ATTACK')) ?? 0.5 : 0.5);
   let slicingParam35 = $derived(device ? selectedTrackStore.paramValueArmed(paramPathOf('SLICE_RELEASE')) ?? 0.5 : 0.5);
   let transposeValue = $derived(device ? selectedTrackStore.paramValueArmed(paramPathOf('TRANSPOSE')) ?? 0 : 0);
-  let transposeLabel = $derived.by(() => {
-    const n = Math.round(transposeValue);
-    if (n === 0) return 'Pitch 0';
-    return `Pitch ${n > 0 ? '+' : ''}${n}`;
-  });
   let fadeValue = $derived(device ? selectedTrackStore.paramValueArmed(paramPathOf('FADE')) ?? 0.5 : 0.5);
 
   // PR-3.5.7-impl: v3 property reads. Same `?? default` posture as
@@ -425,47 +420,63 @@
 </script>
 
 <!-- The Simpler's own controls, drawn by the band face and by the full-screen
-     board's Sample tile alike (ADR-521): `place` is the cell's grid placement
-     on the host's layout. -->
-{#snippet modeToggle()}
-  <button
-    use:press={{ onPress: () => setPlaybackMode(isSlicing ? PLAYBACK_MODE.CLASSIC : PLAYBACK_MODE.SLICING) }}
-    class="mode-toggle-glass flex-1 min-h-0 w-full rounded-full text-[22px] font-bold uppercase tracking-wider active:scale-95"
-    style="
-      --mode-ink: {simplerInk.primary};
-      transition: background-color var(--t-fast) var(--ease-precise), border-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise), transform var(--t-fast) var(--ease-precise);
-    "
-    aria-label="Toggle playback mode (currently {isSlicing ? 'Slice' : 'Classic'})"
+     board's Sample tile alike (ADR-521). Each fills the cell its host gives it. -->
+{#snippet modeTab(stacked = false)}
+  <!-- Classic | Slice: two named settings, so a tab (ADR-544; one button
+       that named the mode it was in until then). Each option writes only
+       from the other mode, as the toggle did. -->
+  <div
+    class="device-segmented seg-grid simpler-tab grid min-h-0 h-full w-full {stacked ? 'grid-rows-2' : 'grid-cols-2'}"
+    role="radiogroup"
+    aria-label="Playback mode"
+    data-simpler-mode={isSlicing ? 'slice' : 'classic'}
   >
-    {isSlicing ? 'Slice' : 'Classic'}
-  </button>
+    <button
+      use:press={{ onPress: () => { if (isSlicing) setPlaybackMode(PLAYBACK_MODE.CLASSIC); } }}
+      class="device-segment simpler-option"
+      class:active={!isSlicing}
+      role="radio"
+      aria-checked={!isSlicing}
+    >
+      Classic
+    </button>
+    <button
+      use:press={{ onPress: () => { if (!isSlicing) setPlaybackMode(PLAYBACK_MODE.SLICING); } }}
+      class="device-segment simpler-option"
+      class:active={isSlicing}
+      role="radio"
+      aria-checked={isSlicing}
+    >
+      Slice
+    </button>
+  </div>
 {/snippet}
 
-{#snippet loopOrVoicing(place: string)}
+{#snippet loopOrVoicing()}
   <!-- LOOP on/off (Classic); in Slice, Poly / Thru in its place. -->
   {#if !isSlicing}
     <button
       use:press={{ onPress: () => toggleLoopOn() }}
-      class="physical-button btn-toggle h-full w-full flex items-center justify-center {place}"
+      class="physical-button btn-toggle simpler-switch h-full w-full"
       class:active={loopOn}
-      style="--btn-tint: {simplerInk.primary};"
       aria-label="Loop {loopOn ? 'on' : 'off'}"
+      aria-pressed={loopOn}
     >
-      <Repeat size={36} strokeWidth={2.5} />
+      <Repeat class="simpler-mark" size={28} strokeWidth={2} aria-hidden="true" />
+      <span class="simpler-word">Loop</span>
     </button>
   {:else}
     <!-- Poly/Thru, Poly over Thru (a column is too narrow for the two
          abreast). Mono is intentionally omitted — the capture-into-Simpler
          flow doesn't benefit from it. -->
     <div
-      class="device-segmented grid grid-rows-2 min-h-0 {place}"
-      style="--btn-tint: {simplerInk.primary};"
+      class="device-segmented seg-grid simpler-tab grid grid-rows-2 min-h-0 h-full w-full"
       role="radiogroup"
       aria-label="Slicing playback mode"
     >
       <button
         use:press={{ onPress: () => setSlicingPlaybackMode(SLICING_PLAYBACK_MODE.POLY) }}
-        class="device-segment text-[22px] font-bold uppercase"
+        class="device-segment simpler-option"
         class:active={slicingPlaybackMode === SLICING_PLAYBACK_MODE.POLY}
         role="radio"
         aria-checked={slicingPlaybackMode === SLICING_PLAYBACK_MODE.POLY}
@@ -474,7 +485,7 @@
       </button>
       <button
         use:press={{ onPress: () => setSlicingPlaybackMode(SLICING_PLAYBACK_MODE.THRU) }}
-        class="device-segment text-[22px] font-bold uppercase"
+        class="device-segment simpler-option"
         class:active={slicingPlaybackMode === SLICING_PLAYBACK_MODE.THRU}
         role="radio"
         aria-checked={slicingPlaybackMode === SLICING_PLAYBACK_MODE.THRU}
@@ -489,25 +500,98 @@
   <SimplerLoopControl device={device} devicePath={devicePath} playbackMode={playbackMode} color={simplerInk} slices={sampleSlices} />
 {/snippet}
 
-{#snippet warpColumn(place: string)}
-  <!-- Off / Beats / Cplx / Pro stacked. -->
+{#snippet warpTab(layout: string)}
+  <!-- Off / Beats / Cplx / Pro: one tab, two by two on the face (a touch
+       row each), four down on the board. -->
   <div
-    class="device-segmented grid grid-rows-4 min-h-0 {place}"
-    style="--btn-tint: {simplerInk.primary};"
+    class="device-segmented seg-grid simpler-tab grid min-h-0 h-full w-full {layout}"
     role="radiogroup"
     aria-label="Warp mode"
   >
-    <button use:press={{ onPress: () => selectWarpOption('off') }} class="device-segment text-[22px] font-bold uppercase" class:active={!warping} role="radio" aria-checked={!warping}>Off</button>
-    <button use:press={{ onPress: () => selectWarpOption('beats') }} class="device-segment text-[22px] font-bold uppercase" class:active={warping && warpMode === 0} role="radio" aria-checked={warping && warpMode === 0}>Beats</button>
-    <button use:press={{ onPress: () => selectWarpOption('complex') }} class="device-segment text-[22px] font-bold uppercase" class:active={warping && warpMode === 4} role="radio" aria-checked={warping && warpMode === 4}>Cplx</button>
-    <button use:press={{ onPress: () => selectWarpOption('pro') }} class="device-segment text-[22px] font-bold uppercase" class:active={warping && warpMode === 6} role="radio" aria-checked={warping && warpMode === 6}>Pro</button>
+    <button use:press={{ onPress: () => selectWarpOption('off') }} class="device-segment simpler-option" class:active={!warping} role="radio" aria-checked={!warping}>Off</button>
+    <button use:press={{ onPress: () => selectWarpOption('beats') }} class="device-segment simpler-option" class:active={warping && warpMode === 0} role="radio" aria-checked={warping && warpMode === 0}>Beats</button>
+    <button use:press={{ onPress: () => selectWarpOption('complex') }} class="device-segment simpler-option" class:active={warping && warpMode === 4} role="radio" aria-checked={warping && warpMode === 4}>Cplx</button>
+    <button use:press={{ onPress: () => selectWarpOption('pro') }} class="device-segment simpler-option" class:active={warping && warpMode === 6} role="radio" aria-checked={warping && warpMode === 6}>Pro</button>
   </div>
 {/snippet}
 
-{#snippet gainSlider()}
+{#snippet trnspBox()}
+  <!-- Transpose, ±48: the amount that is played, so a box (ADR-509), the
+       name the kits and the Sampler give the same control. -->
+  <DeviceSlider
+    value={transposeValue}
+    title="Trnsp"
+    icon="transpose"
+    orientation="vertical"
+    labelOrientation="horizontal"
+    color={simplerInk}
+    min={-48}
+    max={48}
+    centerOrigin={true}
+    discrete
+    centerValue={0}
+    onInteraction={(value) => {
+      if (!device) return;
+      // ±48 — the project-wide pitch range (user, 2026-09-07); was ±12.
+      const semitones = Math.max(-48, Math.min(48, Math.round(value)));
+      selectedTrackStore.setParamValue(paramPathOf('TRANSPOSE'), semitones);
+    }}
+  />
+{/snippet}
+
+{#snippet timePad()}
+  {#if !isSlicing}
+    <DeviceXY
+      xValue={attackValue}
+      yValue={releaseValue}
+      title="Time"
+      icon="envelope"
+      onInteraction={handleTimeXYInteraction}
+      color={simplerInk}
+    />
+  {:else}
+    <DeviceXY
+      xValue={slicingParam33}
+      yValue={slicingParam35}
+      title="Time"
+      icon="envelope"
+      onInteraction={handleSlicingTimeXYInteraction}
+      color={simplerInk}
+    />
+  {/if}
+{/snippet}
+
+<!-- The view's knobs (Fade or Sens, Gain, Random) are set and left, and one
+     size wherever they sit together: medium, the largest a half-height cell
+     holds with its name (ADR-509, ADR-544). -->
+{#snippet fadeKnob()}
+  <!-- No mark: the `fade` glyph is two crossing ramps, which in a knob's
+       middle read as a close mark (2026-11-17). Its name says it. -->
+  <DeviceSlider
+    value={fadeValue}
+    title="Fade"
+    face="knob"
+    knobSize="m"
+    knobFit
+    orientation="vertical"
+    labelOrientation="horizontal"
+    color={simplerInk}
+    onInteraction={(value) => {
+      if (!device) return;
+      selectedTrackStore.setParamValue(paramPathOf('FADE'), value);
+    }}
+  />
+{/snippet}
+
+{#snippet gainKnob()}
+  <!-- The sample's gain: set for the sample and left, so a knob (a box
+       until ADR-544, its name under its own fill). -->
   <DeviceSlider
     value={sampleGain}
     title="Gain"
+    face="knob"
+    knobSize="m"
+    knobFit
     icon="gain"
     orientation="vertical"
     labelOrientation="horizontal"
@@ -528,7 +612,8 @@
     value={slicingSensitivity}
     title="Sens"
     face="knob"
-    knobSize="l"
+    knobSize="m"
+    knobFit
     icon="slice"
     orientation="vertical"
     labelOrientation="horizontal"
@@ -540,37 +625,47 @@
   />
 {/snippet}
 
-{#snippet actionsColumn(place: string)}
-  <!-- Reverse always; ½× / 2× only when warping is on (the underlying
-       SimplerDevice methods no-op without warping; hiding them keeps the
-       row honest). Reverse is symmetric, so a tap toggles. -->
-  <div class="min-h-0 min-w-0 grid {warping ? 'grid-rows-3' : 'grid-rows-1'} {place}" style="gap: var(--spacing-sm);">
+{#snippet reverseButton()}
+  <!-- Reverse is symmetric, so a tap toggles: a one-shot, round, its mark
+       over its word. -->
+  <div class="simpler-round-cell">
     <button
       use:press={{ onPress: () => handleReverse() }}
-      class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
-      style="--btn-tint: {simplerInk.primary};"
+      class="physical-button btn-action simpler-round"
       aria-label="Reverse sample"
     >
-      Rev
+      <svg class="simpler-mark" width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7M19 12H4" /></svg>
+      <span class="simpler-word">Rev</span>
     </button>
-    {#if warping}
+  </div>
+{/snippet}
+
+{#snippet warpActions(stacked = false)}
+  <!-- ½× and 2× act on the warped tempo, so they sit with Warp and answer
+       only while it is on (the SimplerDevice methods no-op without it):
+       dimmed and inert while Warp is Off, where they were not drawn at all,
+       so nothing moves when Warp turns on. -->
+  <div class="simpler-pair" class:simpler-pair-stacked={stacked} class:simpler-pair-off={!warping}>
+    <div class="simpler-round-cell">
       <button
-        use:press={{ onPress: () => handleWarpHalf() }}
-        class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
-        style="--btn-tint: {simplerInk.primary};"
+        use:press={{ onPress: () => handleWarpHalf(), disabled: !warping }}
+        class="physical-button btn-action simpler-round"
+        disabled={!warping}
         aria-label="Halve warped tempo"
       >
-        ½×
+        <span class="simpler-word simpler-word-lg">½×</span>
       </button>
+    </div>
+    <div class="simpler-round-cell">
       <button
-        use:press={{ onPress: () => handleWarpDouble() }}
-        class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
-        style="--btn-tint: {simplerInk.primary};"
+        use:press={{ onPress: () => handleWarpDouble(), disabled: !warping }}
+        class="physical-button btn-action simpler-round"
+        disabled={!warping}
         aria-label="Double warped tempo"
       >
-        2×
+        <span class="simpler-word simpler-word-lg">2×</span>
       </button>
-    {/if}
+    </div>
   </div>
 {/snippet}
 
@@ -581,7 +676,8 @@
     value={randomAmountValue}
     title="Random"
     face="knob"
-    knobSize="l"
+    knobSize="m"
+    knobFit
     icon="dice"
     orientation="vertical"
     labelOrientation="horizontal"
@@ -595,21 +691,19 @@
 
 <!-- The full-screen board's slots (ADR-521). -->
 {#snippet sampleSlot()}
-  <!-- Mode and Loop down the left, the brace, then Warp, Gain, the actions,
-       and Sens (Slice) over Random Start, each a column the full height. -->
+  <!-- One row of full-height columns: Mode, Loop (or Poly / Thru), the
+       brace, Warp, its ½× and 2×, Reverse, then the knobs (Gain, Sens in
+       Slice, Random Start). -->
   <div class="simpler-board-sample" data-simpler-board-sample>
-    <div class="min-h-0 min-w-0 flex flex-col" style="gap: var(--central-gap);">
-      {@render modeToggle()}
-      <div class="flex-1 min-h-0">{@render loopOrVoicing('')}</div>
-    </div>
+    <div class="min-h-0 min-w-0">{@render modeTab(true)}</div>
+    <div class="min-h-0 min-w-0">{@render loopOrVoicing()}</div>
     <div class="min-h-0 min-w-0 relative">{@render brace()}</div>
-    {@render warpColumn('')}
-    <div class="min-h-0 min-w-0">{@render gainSlider()}</div>
-    {@render actionsColumn('')}
-    <div class="min-h-0 min-w-0 grid" style="grid-template-rows: {isSlicing ? '1fr 1fr' : '1fr'}; gap: var(--central-gap);">
-      {#if isSlicing}<div class="min-h-0 min-w-0">{@render sensKnob()}</div>{/if}
-      <div class="min-h-0 min-w-0">{@render randomKnob()}</div>
-    </div>
+    <div class="min-h-0 min-w-0">{@render warpTab('grid-rows-4')}</div>
+    <div class="min-h-0 min-w-0">{@render warpActions(true)}</div>
+    <div class="min-h-0 min-w-0">{@render reverseButton()}</div>
+    <div class="min-h-0 min-w-0">{@render gainKnob()}</div>
+    {#if isSlicing}<div class="min-h-0 min-w-0">{@render sensKnob()}</div>{/if}
+    <div class="min-h-0 min-w-0">{@render randomKnob()}</div>
   </div>
 {/snippet}
 
@@ -649,125 +743,76 @@
       slots={{ sample: sampleSlot, filter: filterSlot, amp: ampSlot, filterEnv: filterEnvSlot, pitchEnv: pitchEnvSlot, lfo: lfoSlot }}
     />
   {:else if instrument && device}
-    <!-- The face (ADR-510): one grid of equal columns, a header line
-         every section shares, identical seams — Mode (the swap pill and
-         Classic / Slice over Loop, or Slice's Poly / Thru) · Sample (the
-         loop brace over Pitch, Time, Fade / Sens, Gain and the actions,
-         Warp down its last column) · Random Start (its own device, an M4L
-         utility ahead of the Simpler). Eight columns, so a column holds
-         Fade / Sens and Random as large knobs (96px). Each section's body
-         is the same two rows: the brace's, and the controls' (a large knob
-         and its caption, 150px, ADR-509). -->
-    <FaceGrid sections={[1, 6, 1]}>
-      <FaceSection span={1}>
+    <!-- The face (ADR-510, re-laid for ADR-544): one grid of eight equal
+         columns, a header line, identical seams, and every section's body
+         the same two equal rows.
+
+           Mode (2)             · Sample (5)                        · Warp (1)
+           swap pill              Trnsp | the loop brace ......       Off  Beats
+           Classic | Slice        (full | .....................       Cplx Pro
+           Loop     Rev           height) Time  Fade  Gain  Random    ½×   2×
+
+         The brace is the picture and the thing played, so it has half the
+         height (a quarter until now, under three 96px knobs); Trnsp, the
+         other played amount, is the full-height box it is on every kit and
+         on the Sampler. The pill lies over two columns so its name fits
+         (one column cut "Aurora Lead" to "A."). Fade (Sens in Slice), Gain
+         and Random are set and left: three knobs of one size in one row.
+         Warp and the two one-shots that need it share a column. Random
+         Start, an M4L utility ahead of the Simpler, is the Sample row's
+         last knob: it randomises where in the brace a note starts. -->
+    <FaceGrid sections={[2, 5, 1]} data-simpler-face>
+      <FaceSection span={2}>
         {#snippet head()}<PanelEyebrow title="Mode" color={simplerInk.primary} />{/snippet}
         <div class="simpler-rows face-span-all">
           <!-- The swap pill lying across the top of the left-hand column
-               (user's layout, 2026-09-16), then the Classic/Slice toggle. -->
-          <div class="min-h-0 min-w-0 flex flex-col" style="gap: var(--central-gap);">
+               (user's layout, 2026-09-16), over Classic | Slice. -->
+          <div class="simpler-pick">
             <HostedSwapPill />
-            {@render modeToggle()}
+            <div class="simpler-pick-mode">{@render modeTab()}</div>
           </div>
-          {@render loopOrVoicing('row-start-2')}
+          <div class="row-start-2 min-h-0 min-w-0">{@render loopOrVoicing()}</div>
+          <div class="row-start-2 min-h-0 min-w-0">{@render reverseButton()}</div>
         </div>
       </FaceSection>
       <FaceSeam ink={simplerInk.primary} />
 
-      <FaceSection span={6}>
+      <FaceSection span={5}>
         {#snippet head()}<PanelEyebrow title="Sample" color={simplerInk.primary} />{/snippet}
         <div class="simpler-rows face-span-all">
-          <!-- The loop brace over the controls, five columns. -->
+          <!-- TRNSP, the section's first column, over both rows. -->
+          <div class="simpler-trnsp min-h-0 min-w-0">{@render trnspBox()}</div>
+
+          <!-- The loop brace, the other four columns of the first row. -->
           <div class="simpler-brace min-h-0 relative">{@render brace()}</div>
 
-          <!-- The Warp column, the section's last column, over both rows. -->
-          {@render warpColumn('simpler-warp')}
-
-          <!-- PITCH (vertical) -->
-          <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">
-            <DeviceSlider
-              value={transposeValue}
-              title={transposeLabel}
-              icon="transpose"
-              orientation="vertical"
-              labelOrientation="horizontal"
-              color={simplerInk}
-              min={-48}
-              max={48}
-              centerOrigin={true}
-              centerValue={0}
-              onInteraction={(value) => {
-                if (!device) return;
-                // ±48 — the project-wide pitch range (user, 2026-09-07); was ±12.
-                const semitones = Math.max(-48, Math.min(48, Math.round(value)));
-                selectedTrackStore.setParamValue(paramPathOf('TRANSPOSE'), semitones);
-              }}
-            />
+          <!-- TIME XY. Two columns when Fade is hidden, so the row always
+               fills the four columns under the brace:
+               - Classic + non-warping: TIME + FADE + GAIN + RANDOM
+               - Classic + warping:     TIME (two columns) + GAIN + RANDOM
+               - Slice:                 TIME + SENS + GAIN + RANDOM -->
+          <div class="{!isSlicing && warping ? 'col-span-2' : 'col-span-1'} row-start-2 min-h-0 min-w-0" style="touch-action: none;">
+            {@render timePad()}
           </div>
 
-          <!-- TIME XY. Expands when Fade is hidden so the row fills exactly
-               the section's first five columns (the sixth is Warp's):
-               - Classic + non-warping: PITCH+FADE+GAIN+ACTIONS = 4 → TIME col-span-1
-               - Classic + warping:     PITCH+GAIN+ACTIONS = 3      → TIME col-span-2
-               - Slice:                 PITCH+SENS+GAIN+ACTIONS = 4 → TIME col-span-1
-               (Loop, or Slice's Poly / Thru, sits in the Mode column.) -->
-          <div class="{!isSlicing && warping ? 'col-span-2' : 'col-span-1'} row-start-2 row-span-1 min-h-0 min-w-0" style="touch-action: none;">
-            {#if !isSlicing}
-              <DeviceXY
-                xValue={attackValue}
-                yValue={releaseValue}
-                title="Time"
-                icon="envelope"
-                onInteraction={handleTimeXYInteraction}
-                color={simplerInk}
-              />
-            {:else}
-              <DeviceXY
-                xValue={slicingParam33}
-                yValue={slicingParam35}
-                title="Time"
-                icon="envelope"
-                onInteraction={handleSlicingTimeXYInteraction}
-                color={simplerInk}
-              />
-            {/if}
-          </div>
-
-          <!-- FADE (Classic, only when not warping) / SENS (Slice).
-               Hidden in Classic when warping is on — sibling controls expand. -->
+          <!-- FADE (Classic, only when not warping) / SENS (Slice). -->
           {#if isSlicing}
-            <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">{@render sensKnob()}</div>
+            <div class="row-start-2 min-h-0 min-w-0">{@render sensKnob()}</div>
           {:else if !warping}
-            <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">
-              <DeviceSlider
-                value={fadeValue}
-                title="Fade"
-                face="knob"
-                knobSize="l"
-                icon="fade"
-                orientation="vertical"
-                labelOrientation="horizontal"
-                color={simplerInk}
-                onInteraction={(value) => {
-                  if (!device) return;
-                  selectedTrackStore.setParamValue(paramPathOf('FADE'), value);
-                }}
-              />
-            </div>
+            <div class="row-start-2 min-h-0 min-w-0">{@render fadeKnob()}</div>
           {/if}
 
-          <!-- GAIN (vertical) -->
-          <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">{@render gainSlider()}</div>
-
-          {@render actionsColumn('row-start-2 col-span-1 row-span-1')}
+          <div class="row-start-2 min-h-0 min-w-0">{@render gainKnob()}</div>
+          <div class="row-start-2 min-h-0 min-w-0">{@render randomKnob()}</div>
         </div>
       </FaceSection>
       <FaceSeam ink={simplerInk.primary} />
 
-      <!-- RANDOM, in the controls' row. -->
       <FaceSection span={1}>
-        {#snippet head()}<PanelEyebrow title="Random Start" color={simplerInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Warp" color={simplerInk.primary} />{/snippet}
         <div class="simpler-rows face-span-all">
-          <div class="row-start-2 min-h-0 min-w-0">{@render randomKnob()}</div>
+          <div class="row-start-1 min-h-0 min-w-0">{@render warpTab('grid-cols-2 grid-rows-2')}</div>
+          <div class="row-start-2 min-h-0 min-w-0">{@render warpActions()}</div>
         </div>
       </FaceSection>
     </FaceGrid>
@@ -779,67 +824,171 @@
   {/if}
 </div>
 
-<!-- Physical-button and segmented chrome now live in app.css as the shared
+<!-- Physical-button and segmented chrome live in app.css as the shared
      .physical-button / .device-segmented / .device-segment classes (§5.5). -->
 
 <style>
-  /* Every section's body is the same two rows (the brace's, then the
-     controls': a large knob and its caption, ADR-509), its columns the
-     face's own (subgrid), so the rows line up across the seams. */
+  /* Every section's body is the same two equal rows (the brace's, then the
+     controls': a medium knob and its name, ADR-509), its columns the face's
+     own (subgrid), so the rows line up across the seams. */
   .simpler-rows {
     display: grid;
     grid-template-columns: subgrid;
-    grid-template-rows: minmax(0, 1fr) 9.375rem;
-    row-gap: var(--central-gap);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    row-gap: var(--face-gutter);
     min-width: 0;
     min-height: 0;
   }
+  .simpler-trnsp {
+    grid-row: 1 / span 2;
+    grid-column: 1;
+  }
   .simpler-brace {
     grid-row: 1;
-    grid-column: 1 / span 5;
+    grid-column: 2 / -1;
   }
-  .simpler-warp {
-    grid-row: 1 / span 2;
-    grid-column: 6;
+  /* The pill over Classic | Slice, across the Mode section's columns. */
+  .simpler-pick {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--face-gutter);
+    min-width: 0;
+    min-height: 0;
   }
-  /* The board's Sample tile (ADR-521): Mode | brace | Warp | Gain | actions | Random. */
+  .simpler-pick-mode {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  /* A tab's options: one size of word on every tab in the view. */
+  .simpler-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 2px;
+    font-size: 0.9375rem;
+    line-height: 1.1;
+    overflow: hidden;
+  }
+
+  /* A switch carries its mark over its word (ADR-544). */
+  .simpler-switch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 0;
+    container-type: size;
+  }
+  .simpler-word {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .simpler-word-lg {
+    font-size: 1rem;
+  }
+  /* The word first, the mark where there is room. */
+  @container (height < 72px) {
+    .simpler-switch :global(.simpler-mark) {
+      display: none;
+    }
+  }
+
+  /* A one-shot DRAWS a circle, the largest its cell holds, and ANSWERS to
+     its whole cell (the Clip view's rule): the circle is the button's
+     `::before`. */
+  .simpler-round-cell {
+    container-type: size;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+  .simpler-round {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 0;
+  }
+  .simpler-round::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: min(100cqw, 100cqh);
+    height: min(100cqw, 100cqh);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: var(--surface-well);
+    z-index: -1;
+  }
+  @container (height < 72px) or (width < 72px) {
+    .simpler-round :global(.simpler-mark) {
+      display: none;
+    }
+  }
+  /* ½× beside 2×, one cell; one over the other on the board. */
+  .simpler-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--face-gutter);
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+  .simpler-pair.simpler-pair-stacked {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .simpler-pair.simpler-pair-off {
+    opacity: var(--opacity-ghost);
+  }
+
+  /* The board's Sample tile (ADR-521): Mode | Loop | brace | Warp | ½× 2× |
+     Rev | the knobs, each a column the tile's height. */
   .simpler-board-sample {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 6fr) repeat(4, minmax(0, 1fr));
-    gap: var(--central-gap);
+    grid-auto-flow: column;
+    /* The knobs' columns (the auto ones) are wide enough for a medium knob. */
+    grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 4.4fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr);
+    grid-auto-columns: minmax(0, 1.2fr);
+    gap: var(--spacing-sm);
     height: 100%;
     min-height: 0;
   }
 
-  /* Classic/Slice mode toggle chrome (GRATICULE) — the same declarations
-     that used to sit inline on the button, lifted onto a class so the flat
-     grammar below can re-skin them without `!important`. `--mode-ink` is
-     set at the call site (the focused track's ink, ADR-402). */
-  .mode-toggle-glass {
-    background: color-mix(in oklab, var(--mode-ink) 30%, var(--card));
-    border: 1px solid var(--mode-ink);
-    color: var(--foreground);
-  }
-
-  /* ---- Live skin (flat grammar) ------------------------------------
-     Simpler's Classic/Slice chooser is a plain rectangular control field
-     in Live — no ink wash, no pill, no letter-spaced bold caps; the label
-     alone says which mode is engaged. Poly/Thru + Warp segments and the
-     LOOP / Rev / ½× / 2× physical buttons already come flat from app.css
-     (.device-segmented / .physical-button); only the utility-class
-     typography they carry here (font-bold uppercase tracking-wider) needs
-     quieting to Live's regular-case, medium-weight control text. */
-  :global([data-grammar="flat"]) .mode-toggle-glass {
-    border-radius: var(--radius-sm);
-    border-color: var(--button-frame, var(--line-strong));
-    background: var(--surface-well);
-    color: var(--foreground);
-  }
-  :global([data-grammar="flat"]) .mode-toggle-glass,
-  :global([data-grammar="flat"]) .device-segment,
-  :global([data-grammar="flat"]) .physical-button {
+  /* ---- Ink (flat grammar, ADR-544) -----------------------------------
+     The tabs and the Loop switch come flat from app.css (.device-segmented
+     / .physical-button): the chosen option and a lit switch are ON's block,
+     a word is a label. Here only the type, and a one-shot's circle in place
+     of the button's own field. */
+  :global([data-grammar="flat"]) .simpler-option,
+  :global([data-grammar="flat"]) .simpler-switch {
     text-transform: none;
     letter-spacing: 0;
     font-weight: var(--font-weight-medium);
+  }
+  :global([data-grammar="flat"]) .simpler-round,
+  :global([data-grammar="flat"]) .simpler-round:hover:not(.active) {
+    background: transparent;
+    border-color: transparent;
+  }
+  :global([data-grammar="flat"]) .simpler-round:hover:not(:disabled)::before {
+    background: var(--secondary);
   }
 </style>

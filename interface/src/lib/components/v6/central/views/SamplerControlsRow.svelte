@@ -10,11 +10,18 @@
    * Its face (ADR-510; the cells are the user's, 2026-09-07, the
    * envelope rebuilt 2026-09-12):
    *
-   *   Kit [Gain/Trnsp | Spread/Select] · Pitch/Osc [Osc over Pitch]
+   *   Kit [Trnsp | Gain, Spread, Select] · Pitch/Osc [Osc over Pitch]
    *   · Amp Envelope [A D S R] · Filter
    *
    * on one grid of equal columns, the host's Gain and Filter passed in as
-   * snippets. Gain over Trnsp is the first column on every Drum Rack kit.
+   * snippets. Trnsp, then Gain at the head of the knobs' column, are the
+   * first two columns on every Drum Rack kit.
+   *
+   * The kit section's knobs are one size (ADR-544). Two of them (the single
+   * Sampler's Gain and Spread) are medium knobs with their names; a kit's
+   * three (Gain, Spread, Select) share a column a third of the band each,
+   * where a named knob drew at 41px, so there each is a ring the cell's
+   * size with its name inside it (`knobInside`).
    *
    * The amp envelope is four sliders in ADSR order in their own section.
    * It used to be a Time XY pad (Attack across, Release up) with Decay
@@ -74,8 +81,8 @@
      * not hideable.
      */
     hidden?: readonly SamplerRowControl[];
-    /** The host's Gain, a knob beside the full-height Trnsp (`gain(true)`). */
-    gain?: Snippet<[knob?: boolean]>;
+    /** The host's Gain, a knob beside the full-height Trnsp (`gain(true)`), a ring with its name inside where the column stacks three (`gain(true, true)`). */
+    gain?: Snippet<[knob?: boolean, inside?: boolean]>;
     /** The host's Filter pad, the face's last section. */
     filter?: Snippet;
     /** Drawn across the top of the kit section (the single Sampler's swap pill). */
@@ -107,8 +114,10 @@
   // a stage; Osc / Pitch and Filter two each. A kit: [2, 2, 2, 2]; the
   // single Sampler: [2, 2, 4, 2].
   let voiceCount = $derived((hide.has('spread') ? 0 : 1) + (hide.has('selector') ? 0 : 1));
-  /** Select gets a column of its own on a kit (the single Sampler hides it). */
+  /** Select is a kit's control (the single Sampler hides it). */
   let showSelect = $derived(voiceCount > 0 && !hide.has('selector'));
+  /** Three knobs in the kit's column (Gain, Spread, Select): each a ring with its name inside. */
+  let knobsInside = $derived(!!gain && voiceCount === 2);
   let kitSpan = 2;
   let stageCount = $derived(2 + (hide.has('decay') ? 0 : 1) + (hide.has('sustain') ? 0 : 1));
   let sectionSpans = $derived(filter ? [kitSpan, 2, stageCount, 2] : [kitSpan, 2, stageCount]);
@@ -145,7 +154,7 @@
   </span>
 {/snippet}
 
-{#snippet slider(control: SamplerRowControl, title: string, icon: ControlGlyphName, state: VmState, badge: string | null | undefined, atRest: number, knob = false)}
+{#snippet slider(control: SamplerRowControl, title: string, icon: ControlGlyphName, state: VmState, badge: string | null | undefined, atRest: number, knob = false, inside = false)}
   <div
     class="vm-slot slider-column min-w-0 flex flex-col"
     class:vm-none={state === 'none'}
@@ -159,6 +168,7 @@
       {icon}
       face={knob ? 'knob' : 'slider'}
       knobSize="m"
+      knobInside={inside}
       orientation="vertical"
       labelOrientation="horizontal"
       {color}
@@ -188,8 +198,7 @@
         <div class="kit-lead">{@render lead()}</div>
       {/if}
       <!-- Kit (user, 2026-11-06): Trnsp the full-height column; Gain, Spread
-           and Select knobs stacked in the next, an icon inside each and no
-           caption, so three hold their size in one column. Gain and Trnsp sit
+           and Select knobs stacked in the next, one size. Gain and Trnsp sit
            on the same pixels on every kit. -->
       <div class="kit-col">
         <div
@@ -208,6 +217,7 @@
             min={VM_PITCH_MIN}
             max={VM_PITCH_MAX}
             centerOrigin={true}
+            discrete
             centerValue={0}
             isGhost={pitchState === 'none'}
             onInteraction={(value) => write('pitch', Math.round(value))}
@@ -216,9 +226,9 @@
         </div>
       </div>
       <div class="kit-col">
-        {#if gain}{@render gain(true)}{/if}
-        {#if voiceCount > 0 && !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0, true)}{/if}
-        {#if showSelect}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0, true)}{/if}
+        {#if gain}{@render gain(true, knobsInside)}{/if}
+        {#if voiceCount > 0 && !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0, true, knobsInside)}{/if}
+        {#if showSelect}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0, true, knobsInside)}{/if}
       </div>
     </div>
   </FaceSection>
@@ -228,7 +238,7 @@
        Pitch: envelope attack across, envelope amount up (centre = none). -->
   <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Pitch / Osc" color={color.primary} />{/snippet}
-    <div class="pad-column face-span-all flex flex-col gap-(--central-gap) min-w-0 h-full">
+    <div class="pad-column face-span-all flex flex-col gap-(--face-gutter) min-w-0 h-full">
       <div
         class="vm-slot min-w-0 min-h-0 flex-1"
         class:vm-none={oscState === 'none'}
@@ -282,8 +292,10 @@
     {#snippet head()}<PanelEyebrow title="Amp Envelope" color={color.primary} />{/snippet}
     {#if envelope}
       <!-- A host that reaches the device's own parameters draws the envelope
-           as Live does (ADR-514): the single Sampler. -->
-      <div class="face-span-all">{@render envelope()}</div>
+           as Live does (ADR-514): the single Sampler. Two equal rows on the
+           section's columns, level with Osc and Pitch: the host's picture
+           across the first, its stages' knobs one a column in the second. -->
+      <div class="envelope-host face-span-all">{@render envelope()}</div>
     {:else}
       {@render slider('attack', 'A', 'attack', attackState, badges.attack, 0.5)}
       {#if !hide.has('decay')}{@render slider('decay', 'D', 'decay', decayState, badges.decay, 0.5)}{/if}
@@ -315,8 +327,26 @@
     min-width: 0;
     min-height: 0;
   }
+  /* Under the host's pill (the single Sampler) the knobs' column is a
+     little wider, 9rem and over, so each knob keeps its size with its name
+     beside it: two knobs share what the pill leaves of the height. */
   .kit-stack.kit-has-lead {
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
     grid-template-rows: auto minmax(0, 1fr);
+    row-gap: var(--face-gutter);
+  }
+  .kit-stack.kit-has-lead .kit-col {
+    gap: var(--face-gutter);
+  }
+  /* A knob with its name beside it centres the pair, so two names of
+     different lengths put their knobs on different pixels. Here they start
+     from the column's edge, one knob over the other. (KnobFace's own body;
+     the same query it uses to put a caption beside.) */
+  @container (min-aspect-ratio: 6/5) and (min-width: 9rem) {
+    .kit-stack.kit-has-lead .kit-col :global(.knob-body) {
+      justify-content: start;
+      padding-left: 0.75rem;
+    }
   }
   .kit-lead {
     grid-column: 1 / -1;
@@ -336,6 +366,14 @@
     flex: 1 1 0;
     min-height: 0;
     min-width: 0;
+  }
+  .envelope-host {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    row-gap: var(--face-gutter);
+    min-width: 0;
+    min-height: 0;
   }
   .filter-cell {
     display: flex;

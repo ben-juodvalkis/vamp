@@ -24,10 +24,17 @@
    * shows the held pad's instance of the same type, ghosted if that pad
    * lacks it, which is the tile behaviour applied to a view.
    *
-   * The header is a chip with the pad's name in its chain colour, the
-   * device's name, and the way back. The effect keeps its family ink
-   * inside (ADR-400: device colour is module identity); the pad's ink is
-   * on the chip only. Lazy component loading follows `CentralDisplay`'s
+   * The header is the way back, a chip with the pad's name in its chain
+   * colour, and the device's name: one line, the title band's order (whose,
+   * then what). The pad's colour is on the chip only; the view inside draws
+   * its amounts in the track's ink, as every view does (ADR-544).
+   *
+   * The view mounted here was laid out for a central frame of its own. Its
+   * inset is the Drum Rack's, already around the pane, so the pane zeroes
+   * the view's own (`--central-inset`): padded twice, the view sat 16px in
+   * where the pads beside it sit 8px, and lost 16px of a width it is short
+   * of. A view is still drawn in about half the width it was laid out for;
+   * that is the views' to answer (a narrow layout), not the pane's. Lazy component loading follows `CentralDisplay`'s
    * idiom, with one module-level cache (the `<script module>` above — an
    * instance-level Map would die with the pane, whose lifetime is the
    * scope's, so a type opened twice mounts synchronously the second time
@@ -48,6 +55,7 @@
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { logger } from '$lib/utils/logger';
   import { press } from '$lib/actions';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 
   interface Props {
     /** The registry's device subtype (`reverb`, `delay`, …). */
@@ -111,7 +119,7 @@
       class="pad-fx-back physical-button"
       aria-label="Back to the pad's controls"
       use:press={{ onPress: onBack, touchAction: 'none' }}
-    >‹</button>
+    ><ChevronLeft size={18} strokeWidth={2} aria-hidden="true" /></button>
     <span class="pad-chip pad-fx-chip" aria-label="pad">{padLabel}</span>
     <span class="pad-fx-device">{deviceLabel}</span>
   </div>
@@ -130,7 +138,7 @@
     min-height: 0;
     height: 100%;
     flex: 1 1 0;
-    gap: 6px;
+    gap: var(--central-gap);
   }
   .pad-fx-header {
     display: flex;
@@ -139,33 +147,46 @@
     flex: 0 0 auto;
     min-height: 28px;
   }
+  /* The way back draws 28px tall, to leave the view its height, and
+     answers to a touch row: its target reaches 8px past it, above and
+     below, into the band over it and the gap under it. */
   .pad-fx-back {
+    position: relative;
     width: 44px;
     height: 28px;
     border-radius: var(--radius-sm, 2px);
-    font-size: 18px;
-    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .pad-fx-back::before {
+    content: '';
+    position: absolute;
+    inset: -8px 0;
   }
   /* The chip's face is the global `.pad-chip` (app.css). */
   .pad-fx-chip {
     padding: 2px 10px;
   }
+  /* The device's name: a name (ADR-544), at the title band's weight for a
+     device. */
   .pad-fx-device {
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: 0.875rem;
     font-weight: var(--font-weight-medium);
-    letter-spacing: 0.04em;
-    color: var(--signal-dim);
+    color: var(--label, var(--foreground));
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
   .pad-fx-body {
     flex: 1 1 0;
     min-height: 0;
     min-width: 0;
     position: relative;
+    /* The view's inset is the Drum Rack's, around the pane already. */
+    --central-inset: 0px;
   }
   /* The effect views size themselves to their host; give them one. */
   .pad-fx-body > :global(*) {

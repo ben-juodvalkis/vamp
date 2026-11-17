@@ -8,11 +8,13 @@
    * semitones for pitch. The host decides what a write means — on a kit
    * each control is a function fanned out to every pad by name.
    *
-   *   Kit [Gain/Trnsp] · Envelope [Time] · Filter
+   *   Kit [Trnsp | Gain] · Envelope [Time] · Filter
    *
    * on the face grid (ADR-510), the Drum Rack's Gain and Filter passed in
-   * as snippets: eight columns, as on a DrumCell kit, so Gain over Trnsp
-   * is on the same pixels on both.
+   * as snippets: eight columns, 2 · 3 · 3 as on a DrumCell kit (nine until
+   * 2026-11-17, which put nothing on the DrumCell kit's pixels), so Trnsp
+   * and Gain's column, the Time pad and the Filter pad each stand where
+   * that kit has Trnsp and Gain, its FX pad and its Time / Filter pads.
    *
    * Not a registry view: it drops the `*CentralView` suffix the
    * reachability test enforces, like `SamplerControlsRow`.
@@ -75,15 +77,17 @@
   </span>
 {/snippet}
 
-<!-- The face (ADR-510), on the Drum Rack's kit columns: Kit (the view's
-     Gain over Trnsp, the first column on every kit) · Envelope (the Time
-     pad, four columns) · Filter (the view's, three columns, where the
-     DrumCell kit's Time / Filter section sits). Eight columns, as on a
-     DrumCell kit, so Gain and Trnsp land on its pixels. No padding of
-     its own: the Drum Rack owns the inset. -->
-<!-- Kit: Trnsp the full-height column, Gain a knob at the top of the
-     next (user, 2026-11-06), the same two columns on every kit. -->
-<FaceGrid sections={filter ? [2, 4, 3] : [2, 4]} class="simpler-row">
+<!-- The face (ADR-510), on the Drum Rack's kit columns: Kit (Trnsp, then
+     the view's Gain, the first two columns on every kit) · Envelope (the
+     Time pad, three columns, where the DrumCell kit's FX section sits) ·
+     Filter (the view's, three columns, where its Time / Filter section
+     sits). No padding of its own: the Drum Rack owns the inset. -->
+<!-- Kit: Trnsp the full-height column, Gain a knob in the next (user,
+     2026-11-06), the same two columns on every kit. A Simpler kit has no
+     third control, so Gain's cell is the column: the knob stands in its
+     middle, not at the head of an empty half, and a finger that lands
+     where Gain is on the other kits still turns it. -->
+<FaceGrid sections={filter ? [2, 3, 3] : [2, 3]} class="simpler-row">
   <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Kit" color={color.primary} />{/snippet}
     <div class="kit-split face-span-all">
@@ -104,6 +108,7 @@
           min={VM_PITCH_MIN}
           max={VM_PITCH_MAX}
           centerOrigin={true}
+          discrete
           centerValue={0}
           isGhost={pitchState === 'none'}
           onInteraction={(value) => write('pitch', Math.round(value))}
@@ -113,14 +118,13 @@
     </div>
     <div class="kit-col">
       {#if gain}{@render gain(true)}{/if}
-      <div aria-hidden="true"></div>
     </div>
     </div>
   </FaceSection>
   <FaceSeam ink={color.primary} />
 
   <!-- Time: Attack across, Release up (the regular Simpler view's axes). -->
-  <FaceSection span={4}>
+  <FaceSection span={3}>
     {#snippet head()}<PanelEyebrow title="Envelope" color={color.primary} />{/snippet}
     <div
       class="vm-slot time-column face-span-all min-w-0 h-full"

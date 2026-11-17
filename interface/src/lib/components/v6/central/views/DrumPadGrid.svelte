@@ -37,9 +37,10 @@
    * `color` — the way the rack itself is, with the label in whichever of
    * dark or light text that fill leaves readable (`padTextCss`). At rest
    * the fill is slightly dimmed; Live's selection brings it to full and
-   * frames it; a held pad brightens and takes a thicker frame; a
-   * triggered pad flashes brighter still. A pad Live left uncoloured
-   * keeps the well and the track's ink.
+   * frames it; a held or latched pad brightens and wears the ON ring
+   * (`--on-bg`, ADR-544: what a lit switch wears); a triggered pad flashes
+   * brighter still. A pad Live left uncoloured keeps the well, its name a
+   * label and the track's ink its frame and its held fill.
    */
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import type { MomentaryReleaseReason } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
@@ -228,7 +229,9 @@
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-sm);
     background: var(--surface-well);
-    color: var(--pad-ink, var(--foreground));
+    /* A pad Live left uncoloured: its name is a label (ADR-544), the
+       track's ink its frame and its held fill. */
+    color: var(--label, var(--foreground));
     font-family: var(--font-sans);
     font-size: 11px;
     font-weight: var(--font-weight-medium);
@@ -255,23 +258,23 @@
      of it, like an active FX-type pad — the finger is on it and the
      controls are its — wearing the ON ring below. */
   .pad-tile.pad-selected {
-    border-color: var(--pad-ink, var(--phosphor));
-    box-shadow: inset 0 0 0 1px var(--pad-ink, var(--phosphor));
+    border-color: var(--pad-ink, var(--on-bg));
+    box-shadow: inset 0 0 0 1px var(--pad-ink, var(--on-bg));
   }
   .pad-tile.pad-held {
-    background: var(--pad-ink, var(--phosphor));
-    border-color: var(--phosphor);
+    background: var(--pad-ink, var(--on-bg));
+    border-color: var(--on-bg);
     color: var(--flat-clip-text, var(--background));
     opacity: 1;
     box-shadow:
-      inset 0 0 0 4px var(--phosphor),
+      inset 0 0 0 4px var(--on-bg),
       inset 0 0 0 5px var(--flat-clip-text, var(--background));
   }
   /* Triggered: the ink, lifted — on for PAD_FLASH_MS, then the transition
      above lets it fall back. A held pad that is also triggered brightens. */
   .pad-tile.pad-lit {
-    background: var(--pad-ink, var(--phosphor));
-    border-color: var(--pad-ink, var(--phosphor));
+    background: var(--pad-ink, var(--on-bg));
+    border-color: var(--pad-ink, var(--on-bg));
     color: var(--flat-clip-text, var(--background));
     filter: brightness(1.35);
     opacity: 1;
@@ -289,19 +292,20 @@
     filter: brightness(1);
     box-shadow: inset 0 0 0 2px var(--pad-fg);
   }
-  /* Held or latched: the ON ring — the phosphor, the colour a switch that
-     is on wears everywhere else — 4px inside the edge, with a 1px hairline
-     of the text colour inside it so the ring reads on a pad of any colour,
-     the phosphor's own included. It used to be a 3px frame in the text
-     colour alone, which on a white pad was a black outline and nothing
-     else (user, 2026-09-10). */
+  /* Held or latched: the ON ring — `--on-bg`, what a switch that is on
+     wears everywhere else (ADR-544: paper white on the dark theme, ink
+     black on the light) — 4px inside the edge, with a 1px hairline of the
+     text colour inside it so the ring reads on a pad of any colour, a
+     white pad on the dark theme included. It used to be a 3px frame in the
+     text colour alone, which on a white pad was a black outline and
+     nothing else (user, 2026-09-10). */
   .pad-tile.pad-colored.pad-held {
     background: var(--pad-fill);
-    border-color: var(--phosphor);
+    border-color: var(--on-bg);
     color: var(--pad-fg);
     filter: brightness(1.15);
     box-shadow:
-      inset 0 0 0 4px var(--phosphor),
+      inset 0 0 0 4px var(--on-bg),
       inset 0 0 0 5px var(--pad-fg);
   }
   .pad-tile.pad-colored.pad-lit {

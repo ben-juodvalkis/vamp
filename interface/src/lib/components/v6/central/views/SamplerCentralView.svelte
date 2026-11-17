@@ -4,9 +4,13 @@
    * one Sampler, with Gain (the wheels left for the MidiWheels device's
    * chain cell, user, 2026-10-26). Laid out on the Drum Rack's
    * Sampler-kit cells (2026-09-27, user's call: the same muscle memory in
-   * both), on the face grid since ADR-510: Gain over Trnsp and Spread
-   * under the swap pill, then Osc over Pitch · the amp envelope's four
-   * stages, eight equal columns. The Filter pad (cutoff across, resonance
+   * both), on the face grid since ADR-510, eight equal columns: Global
+   * (Trnsp, the played amount, a box; Gain over Spread, set and left, two
+   * knobs of one size with their names beside them) under the swap pill ·
+   * Osc over Pitch · the amp envelope, its picture over a knob for each
+   * stage, one under each of the picture's four slots (ADR-544: at the
+   * size of the view's other knobs, where the graph's own were 48px), the
+   * picture and the knobs level with the two pads. The Filter pad (cutoff across, resonance
    * up) is the chain cell's (`sampler` in deviceControls), drawn above
    * this view, so the view no longer draws it too (user, 2026-11-06); a
    * Sampler KIT in the Drum Rack keeps it, where no chain cell carries a
@@ -160,6 +164,16 @@
   }
 
   const GAIN = 'Volume';
+
+  // The amp envelope by Live's names: the graph's breakpoints and the four
+  // stage knobs under it.
+  const AMP_ENVELOPE = { attack: 'Ve Attack', decay: 'Ve Decay', sustain: 'Ve Sustain', release: 'Ve Release', initial: 'Ve Init', peak: 'Ve Peak' } as const;
+  const AMP_STAGES = [
+    ['attack', 'Attack'],
+    ['decay', 'Decay'],
+    ['sustain', 'Sustain'],
+    ['release', 'Release']
+  ] as const;
   let gainState = $derived(stateAt(GAIN));
 
   // The full-screen board (ADR-521): the filter's pad and curve.
@@ -182,7 +196,6 @@
       icon="gain"
       face={knob ? 'knob' : 'slider'}
       knobSize="m"
-      knobCaption={!knob}
       color={samplerInk}
       isGhost={gainState === 'none'}
       onInteraction={(value) => writeAt(GAIN, value)}
@@ -190,9 +203,35 @@
   </VmSlot>
 {/snippet}
 
-
 {#snippet ampEnvelope()}
-  <EnvelopeGraph {params} ink={samplerInk.primary} names={{ attack: 'Ve Attack', decay: 'Ve Decay', sustain: 'Ve Sustain', release: 'Ve Release', initial: 'Ve Init', peak: 'Ve Peak' }} />
+  <!-- The picture across the section, and under each of its four slots
+       that stage's knob at the size of the view's other knobs (ADR-544):
+       the same parameters by name, written as the graph's own small knobs
+       wrote them. -->
+  <div class="amp-graph">
+    <EnvelopeGraph {params} ink={samplerInk.primary} names={AMP_ENVELOPE} knobs={false} />
+  </div>
+  {#each AMP_STAGES as [key, title] (key)}
+    {@const name = AMP_ENVELOPE[key]}
+    {@const range = params.range(name)}
+    <div class="amp-knob" data-param={name}>
+      <DeviceSlider
+        value={params.raw(name) ?? range?.min ?? 0}
+        {title}
+        icon={key}
+        face="knob"
+        knobSize="m"
+        knobFit
+        min={range?.min ?? 0}
+        max={range?.max ?? 1}
+        orientation="vertical"
+        isGhost={!params.has(name)}
+        color={samplerInk}
+        readout={params.display(name)}
+        onInteraction={(v) => params.write(name, v)}
+      />
+    </div>
+  {/each}
 {/snippet}
 
 <!-- The full-screen board's slots (ADR-521). -->
@@ -254,3 +293,22 @@
     <DeviceEmptyState glyph="~" message="Load Sampler to access envelope controls" color={samplerInk.primary} />
   {/if}
 </div>
+
+<style>
+  /* The amp envelope's two rows (the row's `.envelope-host`): the picture
+     across the section's columns, a knob under each of its four slots. */
+  .amp-graph {
+    grid-column: 1 / -1;
+    min-width: 0;
+    min-height: 0;
+  }
+  .amp-knob {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+  .amp-knob > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+</style>

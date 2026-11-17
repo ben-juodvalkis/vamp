@@ -11,8 +11,11 @@
    * the parent decides what a write means (the kit, or the held pads) and
    * hands in its Filter pad as a snippet.
    *
-   * Since ADR-510 it draws the whole face: Kit (the view's Gain over
-   * Trnsp, then Start) · FX · Time / Filter, eight equal columns. The
+   * Since ADR-510 it draws the whole face: Kit (Trnsp the full-height
+   * box, then the view's Gain over Start, two knobs of one size, as large
+   * as their half of the column holds with a name: 84px at the default
+   * sections since 2026-11-17, Ben's "could be bigger"; fitted to 70px
+   * before) · FX · Time / Filter, eight equal columns. The
    * Simpler and Sampler rows draw the same Kit column first, so Gain and
    * Trnsp sit on the same pixels whichever kit is loaded. (It was one
    * flex ruler, then cells on the view's lead grid, before.)
@@ -61,6 +64,8 @@
     filter?: Snippet;
     /** The view's Gain: here a knob over Start (`gain(true)`), Trnsp the full-height column beside. */
     gain?: Snippet<[knob?: boolean]>;
+    /** Start's size, the view's Gain's: the Kit column's knobs are one size. */
+    knobSize?: 'm' | 'l';
   }
 
   let {
@@ -71,7 +76,8 @@
     fxTypes,
     onWrite,
     filter,
-    gain
+    gain,
+    knobSize = 'l'
   }: Props = $props();
 
   function t(control: DrumCellRowControl, atRest: number): number {
@@ -122,6 +128,7 @@
           min={VM_PITCH_MIN}
           max={VM_PITCH_MAX}
           centerOrigin={true}
+          discrete
           centerValue={0}
           isGhost={pitchState === 'none'}
           onInteraction={(value) => write('pitch', Math.round(value))}
@@ -136,8 +143,7 @@
         labelOrientation="horizontal"
         title="Start"
         face="knob"
-        knobSize="l"
-        knobFit
+        {knobSize}
         icon="start"
         {color}
         isGhost={startState === 'none'}
@@ -176,7 +182,7 @@
            ADR-427 exists for. A choice writes through the scope rule, so
            with a pad held it is that pad's type. -->
       <VmSlot state={fxTypeState} class="vm-slot-fx-type min-w-0" fn="fxType" badge={badges.fxType}>
-        <div class="device-segmented seg-grid fx-type-grid" style="--btn-tint: {color.primary};" role="group" aria-label="FX type">
+        <div class="device-segmented seg-grid fx-type-grid" role="group" aria-label="FX type">
           {#each fxTypes as fxTypeName, index}
             <button
               type="button"
@@ -290,7 +296,7 @@
     overflow: hidden;
   }
   /* Ink (ADR-544): an FX type's word is a label, the chosen one ON's
-     block; the track's ink (`--btn-tint`) colours neither. */
+     block; the track's ink colours neither. */
   :global([data-grammar="flat"]) .fx-type-option {
     font-weight: var(--font-weight-medium);
     color: var(--label);

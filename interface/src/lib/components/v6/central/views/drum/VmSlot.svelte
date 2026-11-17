@@ -11,7 +11,10 @@
    * either, and wears a small badge saying why ("macro", or "31/32 macro"
    * when only some members are held and the control still moves the
    * free ones). A coverage badge (some pads lack a rack macro) sits
-   * top-left so it never hides under a held badge. The control inside
+   * top-left so it never hides under a held badge. Over a knob, which
+   * stands in the middle of its cell with nothing in its corners to spare,
+   * a host asks for the badges on the cell's top edge instead (`badgeAt`
+   * `edge`: half in the gap above, clear of the ring). The control inside
    * stays unaware of any of it.
    *
    * `data-vm-state` / `data-vm-function` / `data-vm-macro` are what the
@@ -31,15 +34,18 @@
     badge?: string | null;
     /** "pads reached" text, or nothing. */
     coverage?: string | null;
+    /** Where the badges sit: inside the slot's top corners, or centred on its top edge (a knob's cell). */
+    badgeAt?: 'corner' | 'edge';
     class?: string;
     children: Snippet;
   }
 
-  let { state, fn, macro, badge = null, coverage = null, class: klass = '', children }: Props = $props();
+  let { state, fn, macro, badge = null, coverage = null, badgeAt = 'corner', class: klass = '', children }: Props = $props();
 </script>
 
 <div
   class="vm-slot {klass}"
+  class:vm-badge-edge={badgeAt === 'edge'}
   class:vm-none={state === 'none'}
   class:vm-held={state === 'held'}
   data-vm-state={state}
@@ -81,6 +87,18 @@
   }
   .vm-coverage-badge {
     left: 6px;
+    right: auto;
+  }
+  /* On the top edge: the held badge from the right corner, the coverage
+     badge from the left, each half above the cell. */
+  .vm-badge-edge > .vm-held-badge {
+    top: 0;
+    right: 0;
+    transform: translateY(-50%);
+    white-space: nowrap;
+  }
+  .vm-badge-edge > .vm-coverage-badge {
+    left: 0;
     right: auto;
   }
 </style>

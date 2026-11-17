@@ -506,12 +506,13 @@
 	}
 	.strip-bar-word {
 		font-size: 0.6875rem;
-		color: var(--muted-foreground);
+		color: var(--value, var(--muted-foreground));
 	}
 	.strip-bar-num {
 		font-size: 1.25rem;
 		font-weight: var(--font-weight-medium);
 		font-variant-numeric: tabular-nums;
+		color: var(--label, var(--foreground));
 	}
 	/* Q: a slider's width, the strip's height. */
 	.strip-q {

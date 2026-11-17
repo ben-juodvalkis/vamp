@@ -82,8 +82,11 @@
   {#if instrument}
     <!-- One slider per mapped macro -->
     {#if usedMacros.length > 0}
-      <!-- The rack's mapped macros as knobs, as Live draws them (ADR-509). -->
-      <KnobGrid count={usedMacros.length}>
+      <!-- The rack's mapped macros as knobs, as Live draws them (ADR-509).
+           They are the kit's only controls, so they take the room there is:
+           up to the largest size (128px) where a kit maps two or three, in a
+           space two 96px knobs left mostly empty. -->
+      <KnobGrid count={usedMacros.length} ceiling="xl">
         {#snippet item(i, size)}
           {@const paramIndex = usedMacros[i]}
           <DeviceSlider
