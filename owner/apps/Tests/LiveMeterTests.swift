@@ -185,8 +185,8 @@ final class LiveMeterTests: XCTestCase {
     /// a 61 frame, the 23 ground, rules at 54 around a 128 pt graph, the
     /// signal's fill (73) rising `fillAt(x)` of the graph, the orange line at
     /// `lineAt(x)`, the zero line's dots and the cyan threshold.
-    private func activityPicture(fillAt: (Double) -> Double, lineAt: (Double) -> Double, threshold: Double)
-        -> (pixels: [UInt8], width: Int, height: Int) {
+    private func activityPicture(fillAt: (Double) -> Double, lineAt: (Double) -> Double, threshold: Double,
+                                 readout: Bool = false) -> (pixels: [UInt8], width: Int, height: Int) {
         let width = 310, height = 240
         var px = [UInt8](repeating: 47, count: width * height * 4)
         func put(_ x: Int, _ y: Int, _ v: (UInt8, UInt8, UInt8)) {
@@ -206,6 +206,8 @@ final class LiveMeterTests: XCTestCase {
             put(x, row(threshold), (0, 186, 206))
             put(x, row(lineAt(t)), (243, 152, 75))
         }
+        // Live's reduction number ("-4.07 dB"), in the line's orange at the foot.
+        if readout { for y in 170..<180 { for x in 230..<275 where (x + y) % 3 == 0 { put(x, y, (243, 152, 75)) } } }
         return (px, width, height)
     }
 
@@ -234,5 +236,22 @@ final class LiveMeterTests: XCTestCase {
         guard let v else { return XCTFail("no reading") }
         XCTAssertEqual(v[0], 0.6, accuracy: 0.01)
         XCTAssertEqual(Array(v[1...compressor.columns]), Array(repeating: 0, count: compressor.columns))
+    }
+
+    func testTheReductionNumberIsNotTheLine() {
+        // Where Live drew no line in a column, its number below is not read as one.
+        let p = activityPicture(fillAt: { _ in 0.2 }, lineAt: { _ in 0.85 }, threshold: 0.3, readout: true)
+        var pixels = p.pixels
+        for y in 0..<p.height { for x in 240..<246 {
+            let i = (y * p.width + x) * 4
+            if pixels[i + 2] == 243 && y < 120 { pixels[i] = 23; pixels[i + 1] = 23; pixels[i + 2] = 23 }
+        } }
+        let v = pixels.withUnsafeBufferPointer {
+            LiveMeter.activity(pixels: $0.baseAddress!, width: p.width, height: p.height, bytesPerRow: p.width * 4,
+                               scale: 1, shape: compressor)
+        }
+        guard let v else { return XCTFail("no reading") }
+        let line = v[(1 + compressor.columns)...]
+        XCTAssertTrue(line.allSatisfy { $0 < 0 || $0 > 0.8 }, "a line reading off the number: \(line.filter { $0 >= 0 && $0 <= 0.8 })")
     }
 }

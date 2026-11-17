@@ -33,6 +33,20 @@ the zero line's dots 54–62.
 - **On the wire**: `/meter/activity <path> <status> <threshold> <fill × 128>
   <line × 128>`, sent when any height moves by 0.004 (a pixel's worth); it
   scrolls, so about 30 a second while sound plays.
+- **The line is followed column to column**, its blended edge counted:
+  Live writes the reduction's number ("−4.07 dB") in the same orange at the
+  display's foot, and where a column's line went unread the first orange
+  below was that text, a spike to the floor (Ben: "weird spikes"; 41 of 102
+  readings had one, in columns 107–123). A column with no orange within a
+  quarter of the graph of the last is a gap, which the page fills.
+- **The page scrolls smoothly**: Live scrolls its display in steps (a column
+  or none per reading), which drawn as they came read as jerky.
+  `activityScroll` keeps one history, finds each reading's scroll (0–6
+  columns: a drum loop repeats, so a long shift would match the previous
+  hit), measures the rate (≈ 26 columns a second here) and moves the
+  drawing's head on at it, three columns behind the newest. A box shows as
+  many of the newest columns as it has room for at 2 px each, so a narrow
+  cell shows the last few seconds rather than every hit squeezed to a spike.
 - **On the page**: `ActivityTrace` draws it over the Compressor's threshold
   slider, on its chain cell and in its view: the fill faint in the
   foreground ink, the threshold dashed, the line in the device's ink. While
@@ -41,7 +55,3 @@ the zero line's dots 54–62.
 ## Consequences
 - Not measured in a light theme; the reader keys on the rules and the line's
   orange, not the face, so it should hold, but it has not been seen.
-- Live 13 can show the clip editor and the device chain stacked. In that
-  layout its Accessibility tree lists only the clip editor
-  (`ClipDetailView`), so every live meter reads `not-shown` until the clip
-  editor is closed. Live's `hide_view('Detail/Clip')` does not close it.

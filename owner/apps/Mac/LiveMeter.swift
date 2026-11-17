@@ -387,23 +387,38 @@ enum LiveMeter {
         func isFill(_ p: (r: Int, g: Int, b: Int)) -> Bool {
             max(p.r, p.g, p.b) - min(p.r, p.g, p.b) <= 6 && p.g >= 60 && p.g < 160
         }
-        func isLine(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.r > 140 && p.r - p.b > 80 && p.g > 70 }
+        // Orange, its blended edge included (≈ 154 101 54 where it straddles two rows).
+        func isLine(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.r >= 90 && p.r - p.b >= p.r * 2 / 5 && p.g > p.b && p.r > p.g }
         func isThreshold(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.b > 150 && p.g > 120 && p.b - p.r > 90 }
         var fills: [Double] = [], lines: [Double] = [], thresholds: [Int] = []
         let n = shape.columns, w = Double(x1 - x0 + 1)
+        // The line is followed column to column: Live writes the reduction's
+        // number in the same orange at the display's foot, apart from the line.
+        let reach = max(3, (floorRow - topRow) / 4)
+        var lineRow: Int?
         for i in 0..<n {
             let x = min(x1, x0 + Int((Double(i) + 0.5) * w / Double(n)))
-            var fill = 0.0, line = -1.0, sawThreshold = i % 16 != 8
+            var fill = 0.0, sawThreshold = i % 16 != 8
+            var runs: [Int] = []
+            var inRun = false
             for y in topRow...floorRow {
                 let p = px(x, y)
-                if line < 0 && isLine(p) { line = heightOf(y) }
+                let orange = isLine(p)
+                if orange && !inRun { runs.append(y) }
+                inRun = orange
                 // A fill is solid below its top; the zero line's dots are not.
                 if fill == 0 && isFill(p) && y < floorRow && isFill(px(x, y + 1)) { fill = heightOf(y) }
                 if !sawThreshold && isThreshold(p) { thresholds.append(y); sawThreshold = true }
-                if fill > 0 && line >= 0 && sawThreshold { break }
             }
+            var row: Int?
+            if let prev = lineRow {
+                row = runs.min { abs($0 - prev) < abs($1 - prev) }.flatMap { abs($0 - prev) <= reach ? $0 : nil }
+            } else {
+                row = runs.first
+            }
+            if let row { lineRow = row }
             fills.append(fill)
-            lines.append(line)
+            lines.append(row.map(heightOf) ?? -1)
         }
         let threshold = thresholds.isEmpty ? -1 : heightOf(thresholds.sorted()[thresholds.count / 2])
         return [threshold] + fills + lines

@@ -1,7 +1,7 @@
 /**
- * The Compressor's activity view as Vamp draws it (ADR-543): the reading's
- * fill, line and threshold as an SVG, broken where Live drew no line, and
- * nothing at all with no reading or the switch off.
+ * The Compressor's activity view as Vamp draws it (ADR-543): a reading
+ * draws the fill, the threshold and the line; nothing is drawn with no
+ * reading or the switch off. How it scrolls is `activityScroll.test.ts`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
@@ -16,6 +16,7 @@ import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 const PATH = 'tracks/1/devices/1';
 const switchOn = (on: boolean) =>
 	bridgeStatus.updateFeatures(JSON.stringify({ liveMeters: { enabled: on, available: true, reason: '' } }));
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(undefined)));
 
 beforeEach(() => {
 	liveMeterStore.reset();
@@ -23,19 +24,24 @@ beforeEach(() => {
 });
 
 describe('ActivityTrace', () => {
-	it('draws the fill, the threshold and the line, breaking the line where Live drew none', () => {
+	it('draws the fill, the threshold and an unbroken line', async () => {
 		const { container } = render(ActivityTrace, { devicePath: PATH, ink: '#e0b030' });
-		liveMeterStore.handleMessage(ACTIVITY_ADDRESS, [PATH, 'ok', 0.3, 0.5, 0.25, 0, 0, 0.85, 0.8, -1, 0.75]);
+		const n = 32;
+		const fill = Array.from({ length: n }, (_, i) => (i % 8) / 10);
+		const line = Array.from({ length: n }, (_, i) => (i === 5 ? -1 : 0.8));
+		liveMeterStore.handleMessage(ACTIVITY_ADDRESS, [PATH, 'ok', 0.3, ...fill, ...line]);
 		flushSync();
-		const svg = container.querySelector('[data-activity]');
-		expect(svg).not.toBeNull();
-		expect(container.querySelector('.fill')?.getAttribute('d')).toBe('M0,100L0,50.00L12.50,50.00L37.50,75.00L62.50,100.00L87.50,100.00L100,100.00L100,100Z');
+		await nextFrame();
+		flushSync();
+		expect(container.querySelector('[data-activity]')).not.toBeNull();
 		expect(container.querySelector('.threshold')?.getAttribute('y1')).toBe('70');
-		// Two strokes: the first two columns, then the last on its own.
-		expect(container.querySelector('.line')?.getAttribute('d')).toBe('M12.50,15.00L37.50,20.00M87.50,25.00');
+		const d = container.querySelector('.line')?.getAttribute('d') ?? '';
+		expect(d.startsWith('M')).toBe(true);
+		expect(d.match(/M/g)).toHaveLength(1);
+		expect(container.querySelector('.fill')?.getAttribute('d')).toMatch(/Z$/);
 	});
 
-	it('draws nothing with no reading, a status that is not ok, or the switch off', () => {
+	it('draws nothing with no reading, a status that is not ok, or the switch off', async () => {
 		const { container } = render(ActivityTrace, { devicePath: PATH, ink: '#e0b030' });
 		flushSync();
 		expect(container.querySelector('[data-activity]')).toBeNull();
@@ -44,6 +50,8 @@ describe('ActivityTrace', () => {
 		expect(container.querySelector('[data-activity]')).toBeNull();
 		liveMeterStore.handleMessage(ACTIVITY_ADDRESS, [PATH, 'ok', 0.3, 0.5, 0.85]);
 		switchOn(false);
+		flushSync();
+		await nextFrame();
 		flushSync();
 		expect(container.querySelector('[data-activity]')).toBeNull();
 	});
