@@ -244,14 +244,35 @@ html[data-pitch] .clip-central-root .knob .knob-caption {
 	gap: 2px;
 	z-index: 1;
 }
-html[data-pitch] .clip-central-root .knob .knob-title {
-	font-size: 16px;
+/* At rest a knob here reads as a button does: its mark over its name
+   (Ben). The arc is the value; the number takes the mark's place only
+   while a finger turns it. */
+html[data-pitch] .clip-central-root .knob .knob-caption {
+	padding-top: 2.5rem;
 }
-html[data-pitch] .clip-central-root .knob .knob-value-text {
+html[data-pitch] .clip-central-root .knob .knob-title {
 	font-size: 14px;
+	font-weight: 600;
 }
 html[data-pitch] .clip-central-root .knob .knob-icon {
+	display: flex;
+	width: 2.25rem;
+	height: 2.25rem;
+	top: calc(50% - 0.875rem);
+	opacity: 1;
+}
+html[data-pitch] .clip-central-root .knob .knob-value-text {
 	display: none;
+}
+html[data-pitch] .clip-central-root .knob.dragging .knob-icon {
+	display: none;
+}
+html[data-pitch] .clip-central-root .knob.dragging .knob-value-text {
+	display: block;
+	position: absolute;
+	top: calc(50% - 1.75rem);
+	font-size: 22px;
+	color: var(--label);
 }
 html[data-pitch] .clip-central-root .knob .knob-track,
 html[data-pitch] .clip-central-root .knob .knob-value {
