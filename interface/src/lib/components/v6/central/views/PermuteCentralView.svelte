@@ -215,8 +215,7 @@
 		title="Mute length: {muteLength} steps"
 		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={muteLength} tabindex="0"
 	>
-		{#if pitchOn}<span class="row-name">Mute</span>{/if}
-		<KnobFace position={(muteLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Length" centreValue={`${muteLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingMuteLength} ink={muteColor} size="xl" fit captionBelow />
+		<KnobFace position={(muteLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title={pitchOn ? 'Mute length' : 'Length'} centreValue={`${muteLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingMuteLength} ink={muteColor} size="xl" fit captionBelow />
 	</div>
 
 	<!-- Mute rate — col 10, row 1 -->
@@ -230,7 +229,7 @@
 		title="Mute rate"
 		role="slider" aria-valuemin={0} aria-valuemax={RATE_COUNT - 1} aria-valuenow={muteRateIndex} tabindex="0"
 	>
-		<KnobFace position={Math.max(0, muteRateIndex) / (RATE_COUNT - 1)} title="Rate" centreValue={muteRateDisplay} steps={RATE_COUNT} dragging={isDraggingMuteRate} ink={muteColor} size="xl" fit captionBelow />
+		<KnobFace position={Math.max(0, muteRateIndex) / (RATE_COUNT - 1)} title={pitchOn ? 'Mute rate' : 'Rate'} centreValue={muteRateDisplay} steps={RATE_COUNT} dragging={isDraggingMuteRate} ink={muteColor} size="xl" fit captionBelow />
 	</div>
 
 	<!-- Mute steps — cols 2-9, row 1 -->
@@ -257,8 +256,7 @@
 		title="Pitch length: {pitchLength} steps"
 		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={pitchLength} tabindex="0"
 	>
-		{#if pitchOn}<span class="row-name">Pitch</span>{/if}
-		<KnobFace position={(pitchLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Length" centreValue={`${pitchLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingPitchLength} ink={pitchColor} size="xl" fit captionBelow />
+		<KnobFace position={(pitchLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title={pitchOn ? 'Pitch length' : 'Length'} centreValue={`${pitchLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingPitchLength} ink={pitchColor} size="xl" fit captionBelow />
 	</div>
 
 	<!-- Pitch rate — col 10, row 3 -->
@@ -272,7 +270,7 @@
 		title="Pitch rate"
 		role="slider" aria-valuemin={0} aria-valuemax={RATE_COUNT - 1} aria-valuenow={pitchRateIndex} tabindex="0"
 	>
-		<KnobFace position={Math.max(0, pitchRateIndex) / (RATE_COUNT - 1)} title="Rate" centreValue={pitchRateDisplay} steps={RATE_COUNT} dragging={isDraggingPitchRate} ink={pitchColor} size="xl" fit captionBelow />
+		<KnobFace position={Math.max(0, pitchRateIndex) / (RATE_COUNT - 1)} title={pitchOn ? 'Pitch rate' : 'Rate'} centreValue={pitchRateDisplay} steps={RATE_COUNT} dragging={isDraggingPitchRate} ink={pitchColor} size="xl" fit captionBelow />
 	</div>
 
 	<!-- Pitch steps — cols 2-9, row 2 -->

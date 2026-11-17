@@ -325,21 +325,12 @@ html[data-pitch] .panel-eyebrow {
 	color: var(--value) !important;
 	font-size: 0.8125rem;
 }
-/* Permute's two rows say which is which in words. */
-html[data-pitch] .ctrl-cell {
-	position: relative;
-}
-html[data-pitch] .row-name {
-	position: absolute;
-	top: -2px;
-	left: 0;
-	right: 0;
-	text-align: center;
-	font-size: 15px;
-	font-weight: 700;
-	line-height: 1;
-	color: var(--label);
-	pointer-events: none;
+/* Permute's two rows say which is which in words: each knob names its
+   row with what it sets (Mute length, Pitch rate), since the rows no
+   longer differ by colour. */
+html[data-pitch] .ctrl-cell .knob-title {
+	font-size: 14px;
+	font-weight: 600;
 }
 
 /* ---------- 1 · Session -------------------------------------------------- */
