@@ -326,6 +326,11 @@ click / drag / hold steps `shot` performs, shared through
 `contact.png` — every state in a labelled grid — and the `contact.html` it
 was rendered from.
 
+Several runs at once (agents working side by side on one checkout): give
+each `SHOT_PARALLEL=1` and its own `--out-dir`. Each then takes a free mock
+port of its own (two runs otherwise fight over :8081 in the gap between
+states); they share the one dev server.
+
 A state can name `shell: 'pad'` to be shot inside Vamp for iPad (the full
 screen, 16px margins), as `shot`'s `pad-app` view is: the `ipad` tour's
 states do.

@@ -156,6 +156,11 @@ export function freePort() {
  * {@link assertMockPort}.
  */
 export async function resolveMockPort({ log = () => {} } = {}) {
+	// SHOT_PARALLEL=1: several runs at once (agents working side by side).
+	// Each takes a free port of its own from the start: :8081 reads as free
+	// in the gap between one run's states, and two runs then fight over it.
+	// The page's socket is routed to the mock either way.
+	if (process.env.SHOT_PARALLEL) return { port: await freePort(), moved: true };
 	if (!(await portInUse(CLIENT_WS_PORT))) return { port: CLIENT_WS_PORT, moved: false };
 	const port = await freePort();
 	log(
