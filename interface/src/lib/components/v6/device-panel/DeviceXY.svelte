@@ -355,13 +355,15 @@
       </div>
     {/if}
 
-    <!-- Where the dot is, said twice: a hairline to each axis, and the
-         value on that axis where the hairline meets the pad's edge. -->
+    <!-- Where the dot is: a hairline to each axis. The number on each
+         axis shows only while a finger moves the dot (a pad is continuous). -->
     {#if pitchOn && !isGhost}
       <div class="xy-cross xy-cross-x" style="left: calc(var(--dot-r) + {localX} * (100% - 2 * var(--dot-r)));"></div>
       <div class="xy-cross xy-cross-y" style="bottom: calc(var(--dot-r) + {localY * yTop} * (100% - 2 * var(--dot-r)));"></div>
-      <span class="xy-val xy-val-x" style="left: calc(var(--dot-r) + {localX} * (100% - 2 * var(--dot-r)));">{Math.round(localX * 100)}</span>
+{#if isDragging}
+            <span class="xy-val xy-val-x" style="left: calc(var(--dot-r) + {localX} * (100% - 2 * var(--dot-r)));">{Math.round(localX * 100)}</span>
       <span class="xy-val xy-val-y" style="bottom: calc(var(--dot-r) + {localY * yTop} * (100% - 2 * var(--dot-r)));">{Math.round(localY * 100)}</span>
+      {/if}
     {/if}
 
     <!-- Control handle: its travel inset by the dot's radius, so at a rail

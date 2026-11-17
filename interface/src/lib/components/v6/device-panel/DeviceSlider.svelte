@@ -196,10 +196,17 @@
   // Computed for display (guard against division by zero if min >= max)
   let fillPercent = $derived(max > min ? ((localValue - min) / (max - min)) * 100 : 0);
 
-  // What the control reads at rest: Live's own words where the host has
-  // them, else the number itself.
-  let restValue = $derived.by(() => {
-    if (!pitchOn) return valueText;
+  // What a control says about its value (Ben, stop 1): a continuous
+  // amount shows no number at rest, its arc or fill is the reading, and
+  // says the number only while a finger moves it; a discrete one (steps,
+  // or whole semitones about a centre) keeps its value under its name.
+  let discrete = $derived(
+    (steps !== undefined && steps >= 2) ||
+      (centerOrigin && Number.isInteger(min) && Number.isInteger(max)) ||
+      // Live's word for a setting with no number in it ("Off", "Triangle").
+      (valueText !== undefined && valueText !== '' && !/\d/.test(valueText))
+  );
+  let liveValue = $derived.by(() => {
     if (valueText) return valueText;
     const span = max - min;
     if (!(span > 0)) return undefined;
@@ -210,6 +217,7 @@
     }
     return span >= 8 ? `${Math.round(localValue)}` : localValue.toFixed(2);
   });
+  let restValue = $derived(pitchOn ? (discrete ? liveValue : undefined) : valueText);
 
   // Center origin calculations (for bipolar controls)
   // Use provided centerValue, or default to midpoint of range
@@ -354,7 +362,7 @@
         {origin}
         {title}
         valueText={restValue}
-        {readout}
+        readout={readout ?? (pitchOn ? liveValue : undefined)}
         {icon}
         {steps}
         size={knobSize}
@@ -448,7 +456,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label || icon}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}" class:label-top={labelAt === 'top'}>
-        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if pitchOn && restValue && !isDragging}<span class="slider-value">{restValue}</span>{/if}{/if}</span>
+        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if pitchOn && liveValue && (discrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
       </div>
       {#if showFill}
         <div
@@ -457,7 +465,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if pitchOn && restValue && !isDragging}<span class="slider-value">{restValue}</span>{/if}{/if}</span>
+          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{#if pitchOn && liveValue && (discrete ? !isDragging || !readout : isDragging && !readout)}<span class="slider-value">{liveValue}</span>{/if}{/if}</span>
         </div>
       {/if}
     {/if}

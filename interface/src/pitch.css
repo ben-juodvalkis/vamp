@@ -82,7 +82,7 @@ html[data-pitch].light .knob-readout {
 	color: var(--label);
 }
 html[data-pitch] .knob-icon {
-	opacity: 0.55;
+	opacity: 0.8;
 }
 html[data-pitch] .slider-container {
 	--slider-tint: var(--amount) !important;
@@ -160,6 +160,23 @@ html[data-pitch] .xy-handle::before {
 /* A chain cell is small: the dot alone, as today. */
 html[data-pitch] .chain-cell .xy-cross,
 html[data-pitch] .chain-cell .xy-val {
+	display: none;
+}
+/* A knob with no value under its name keeps one caption line, not two:
+   the room goes to the knob. */
+html[data-pitch] .knob:not(:has(.knob-value-text)) {
+	--knob-caption-h: 2rem;
+}
+html[data-pitch] .knob.size-s:not(:has(.knob-value-text)) {
+	--knob-caption-h: 1.75rem;
+}
+html[data-pitch] .knob.size-l:not(:has(.knob-value-text)),
+html[data-pitch] .knob.size-xl:not(:has(.knob-value-text)) {
+	--knob-caption-h: 2.25rem;
+}
+/* A value box that draws its own label (Reverb's Dry/Wet) follows the
+   same rule: continuous, so no number at rest. */
+html[data-pitch] .slider-label .box-value {
 	display: none;
 }
 html[data-pitch] .knob-track {
@@ -260,19 +277,6 @@ html[data-pitch] .clip-central-root .knob .knob-icon {
 	height: 2.25rem;
 	top: calc(50% - 0.875rem);
 	opacity: 1;
-}
-html[data-pitch] .clip-central-root .knob .knob-value-text {
-	display: none;
-}
-html[data-pitch] .clip-central-root .knob.dragging .knob-icon {
-	display: none;
-}
-html[data-pitch] .clip-central-root .knob.dragging .knob-value-text {
-	display: block;
-	position: absolute;
-	top: calc(50% - 1.75rem);
-	font-size: 22px;
-	color: var(--label);
 }
 html[data-pitch] .clip-central-root .knob .knob-track,
 html[data-pitch] .clip-central-root .knob .knob-value {
