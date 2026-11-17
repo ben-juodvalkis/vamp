@@ -77,7 +77,7 @@
 
 {#if onGrid}
 <div class="envelope-grid" data-envelope-group>
-  <span class="envelope-title" style="color: {ink};">{title}</span>
+  <span class="envelope-title">{title}</span>
   {@render children()}
 </div>
 {:else}
@@ -87,7 +87,7 @@
 <div class="envelope-group" data-envelope-group>
   {#if header}{@render header()}{/if}
   <div class="envelope-stages">
-    <span class="envelope-title" style="color: {ink};">{title}</span>
+    <span class="envelope-title">{title}</span>
     <div class="envelope-body">
       {@render children()}
     </div>
@@ -99,6 +99,10 @@
 {/if}
 
 <style>
+  /* A group's name is a label (ADR-544); `ink` colours nothing here. */
+  .envelope-title {
+    color: var(--value);
+  }
   .envelope-group {
     display: flex;
     flex-direction: column;

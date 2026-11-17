@@ -115,8 +115,8 @@
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-sm);
     background: var(--surface-well);
-    /* A pick's value is a value, in its ink; `tint` colours nothing (ADR-544). */
-    color: var(--value);
+    /* The chosen option's name is a label; `tint` colours nothing (ADR-544). */
+    color: var(--label);
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.1;

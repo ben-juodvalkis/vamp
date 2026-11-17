@@ -786,9 +786,9 @@ import { logger } from '$lib/utils/logger';
 	.combo-toolbar {
 		flex: 0 0 clamp(200px, 20%, 260px);
 		display: flex;
-		/* Clear of the frame's full-screen icon, whose 44px touch box
-		   holds the corner (ADR-511). */
-		padding: var(--central-inset) var(--height-touch, 44px) 0 0;
+		/* The full-screen icon is on the title band now (ADR-544), so the
+		   toolbar runs to the view's own inset. */
+		padding: var(--central-inset) var(--central-inset) 0 0;
 		min-height: 0;
 	}
 	.combo-toolbar:empty { display: none; }

@@ -225,9 +225,13 @@
     .knob:not(.caption-below) .knob-body {
       grid-template-rows: auto;
       grid-template-columns: auto minmax(0, max-content);
-      justify-content: center;
+      /* From the cell's start, so knobs stacked in a column stand on one
+         x whatever their names' lengths (centred as a pair, they sat up
+         to ~19px apart). */
+      justify-content: start;
       align-items: center;
       gap: 0.625rem;
+      padding-left: 0.5rem;
     }
   }
   /* Its size's diameter, less only what a small cell cannot hold: the

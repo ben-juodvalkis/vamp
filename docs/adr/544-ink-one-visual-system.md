@@ -164,5 +164,51 @@ value once a 0..1 amount about a centre counted as continuous.
 - Not measured: frames. Nothing here runs per frame; the root's colours
   are written when the selection or the theme changes.
 
+## Addendum (2026-11-17): the rollout
+
+Ben, after stop 2: "More than just dealing with obvious bugs and overflows,
+we want to make sure each of these central views looks beautiful and as
+ideal layout." Every remaining central view, the full-screen boards and
+the note editor were then looked at and laid out again, in seven groups
+worked side by side and reviewed in both themes. Each view's header comment
+says what it is now; the commits name what moved and why.
+
+Rules the rollout added or settled:
+
+- **A switch sits with what it switches**, over or under it in the same
+  column (Ben, for Auto Filter's Time/Sync over Morph).
+- **Discrete is said, not guessed.** `DeviceSlider` takes `discrete`; a
+  range of whole numbers is not a sign of it (a gain of +-15 dB is
+  continuous). A transpose says `discrete`; a panel's data marks a knob
+  Live counts in semitones `whole`.
+- **A box's label is always at its head**, a column, however wide the box.
+- **Beside a knob, its name starts at one x**, so knobs stacked in a column
+  line up whatever their names' lengths. A knob with a value under its name
+  sits level with one without.
+- **An amount ink is finished**: `trackInk` and `deviceInk` hand it back
+  untouched, so a view that still re-inks a scheme cannot pale it on light.
+- **One ink a view.** The second hues inside Wavetable, Drift, Meld, Analog
+  and Auto Filter are gone; a half (osc 1/2, engine A/B) is told by the
+  number or letter in its knob, on on's block for the one shown.
+- **A picture is not a control.** Channel EQ's view is its curve, drawn
+  from its parameters and taking no pointer: the gesture is its chain
+  cell's (ADR-510).
+- **The title band names the device the chain picked**, by Live's name.
+
+Left open, for Ben:
+
+- **The full-screen boards are still under the touch floor in places**
+  (Analog's, Meld's, Operator's and Collision's tables: rows about 27px,
+  knobs about 40px). Every control is on screen at once (ADR-512, 513);
+  making them hittable means showing fewer.
+- **An effect opened for one drum pad** is drawn in about half the width
+  its view was laid out for.
+- **A rack's own colour** on its chain cell's macro knobs and its unfolded
+  devices is kept.
+- Collision's band gained Structure (it was on the board only), and Drift's
+  board moved Shape Mod into an "Osc Mod" tile.
+
+`SHOT_PARALLEL=1` lets several tours run at once on one dev server.
+
 ## Tags
 `visual-system`, `colour`, `tokens`, `central-view`, `controls`, `track-strip`, `chain`

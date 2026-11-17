@@ -55,7 +55,7 @@
 
 {#if device}
 	<div class="chain-device-view" data-density="compact">
-		<div class="eyebrow">{device.name}</div>
+		<!-- The device's name is on the view's title band (ADR-544). -->
 		<!-- A plug-in's parameters as knobs, as Live draws a rack's macros (ADR-509). -->
 		<KnobGrid count={params.length}>
 			{#snippet item(i, size)}

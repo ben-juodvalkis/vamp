@@ -34,7 +34,7 @@
 {#if audioEffectRack}
 	<div class="audio-effect-rack-view" data-density="compact">
 		<!-- Which rack: a track can carry several, and the chain overview picks one. -->
-		<div class="rack-name">{audioEffectRack.name}</div>
+		<!-- The device's name is on the view's title band (ADR-544). -->
 		<div class="rack-body">
 			<RackVariations rack={audioEffectRack} ink={effectiveColor.primary} />
 			<RackMacroPanel rack={audioEffectRack} colorAt={() => effectiveColor} />
