@@ -63,14 +63,15 @@ function oscTab(o: Osc): PanelTab {
 				title: `Oscillator ${o}`,
 				page: `osc-${o}`,
 				switchParam: on,
-				// Three knobs stacked over two columns, names beside, as Global's
-				// (2026-11-08): a row of three under the tabs left the band's
-				// height empty above and below them.
+				// Three knobs over two columns, as Global's: stacked with their
+				// names beside where the band is tall enough to hold them medium
+				// (2026-11-08), else two over one, the level centred under the
+				// pair as Global's volume is (ADR-544).
 				columns: 2,
 				controls: [
 					{ kind: 'box', param: `${o} Coarse`, title: 'Coarse' },
-					{ kind: 'box', param: `Osc-${o} Level`, title: 'Level' },
-					{ kind: 'box', param: `Osc-${o} Feedb`, title: 'Feedback' }
+					{ kind: 'box', param: `Osc-${o} Feedb`, title: 'Feedback' },
+					{ kind: 'box', param: `Osc-${o} Level`, title: 'Level' }
 				]
 			},
 			adsr(`${o}e`, `osc-${o}-env`, on)
@@ -228,18 +229,21 @@ const ALGORITHM_NUMBERS = ALGORITHMS.map((_, i) => String(i + 1));
 
 /**
  * Operator at full screen (ADR-512). The four oscillators are a table, a
- * row each with every control of their pages. Under them the seven
- * envelopes' stages, a row each, beside the Filter (its pad, type,
- * circuits and Shaper) and the LFO; then a table of what the LFO, the
- * pitch envelope and the filter envelope reach (their slopes, amounts,
- * destination and scaling) beside Global. Each envelope's loop (Mode,
- * Loop, Retrig, R Vel) stays on its page: seven rows of four more
- * columns do not fit beside the stages at a touchable size.
+ * row each with every control of their pages. Under them one envelope as
+ * Live draws it beside every envelope's loop (Mode, Loop, Retrig, R Vel,
+ * a row an envelope, ADR-513), and Global with its output. Then the Filter
+ * (its pad, type, circuits and Shaper) and the LFO; then a table of what
+ * the LFO, the pitch envelope and the filter envelope reach (their slopes,
+ * amounts, destination and scaling) beside the pan. A tile's knobs are one
+ * size (ADR-544): where a row is one knob high its knobs stand a column
+ * each (`knobStack`) and only its picks and switches stack.
  */
 const OPERATOR_BOARD: PanelBoard = {
+	// The filter's and Global's columns hold a small knob: every tile's match.
+	knobSize: 's',
 	rows: [
 		{
-			weight: 2.95,
+			weight: 2.9,
 			tiles: [
 				{
 					id: 'oscillators',
@@ -290,7 +294,10 @@ const OPERATOR_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 3.6,
+			// The envelopes with their loop settings (ADR-513), and Global beside
+			// them: the one row tall enough to stack Global's knobs two high with
+			// their names (ADR-544; on the last row they were cut).
+			weight: 3.5,
 			tiles: [
 				{
 					id: 'envelopes',
@@ -303,7 +310,7 @@ const OPERATOR_BOARD: PanelBoard = {
 							kind: 'slot',
 							slot: 'envelope',
 							title: 'Envelope',
-							columns: 9,
+							columns: 7,
 							params: OPERATOR_ENVS.flatMap((e) => Object.values(operatorEnvelope(e)).filter((n): n is string => !!n))
 						},
 						{
@@ -317,7 +324,7 @@ const OPERATOR_BOARD: PanelBoard = {
 										// Each envelope's loop (ADR-513: on the board, since the band opens no page).
 										title: 'Loop',
 										columns: [
-											col('Mode', ENVS, (e) => ({ kind: 'choice', param: `${e.prefix} Mode`, title: 'Mode', options: ENV_MODES })),
+											col('Mode', ENVS, (e) => ({ kind: 'choice', param: `${e.prefix} Mode`, title: 'Mode', options: ENV_MODES }), { span: 2 }),
 											col('Loop', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Loop`, title: 'Loop' })),
 											col('Retrig', ENVS, (e) => ({ kind: 'step', param: `${e.prefix} Retrig`, title: 'Retrig', labels: RETRIG })),
 											col('R Vel', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} R < Vel`, title: 'R Vel' }))
@@ -327,19 +334,57 @@ const OPERATOR_BOARD: PanelBoard = {
 							}
 						}
 					]
+				},
+				{
+					id: 'global',
+					title: 'Global',
+					// Wide enough for a pick's name ("Algorithm").
+					columnPx: 76,
+					sections: [
+						{
+							kind: 'group',
+							stack: 2,
+							group: {
+								title: 'Global',
+								controls: [
+									{ kind: 'step', param: 'Algorithm', title: 'Algorithm', labels: ALGORITHM_NUMBERS },
+									{ kind: 'switch', param: 'Glide On', title: 'Glide' },
+									{ kind: 'box', param: 'Glide Time', title: 'Glide' },
+									{ kind: 'box', param: 'Transpose', title: 'Transp', whole: true },
+									{ kind: 'box', param: 'Spread', title: 'Spread' },
+									{ kind: 'box', param: 'PB Range', title: 'PB', whole: true }
+								]
+							}
+						},
+						{
+							kind: 'group',
+							stack: 2,
+							group: {
+								title: 'Output',
+								controls: [
+									{ kind: 'box', param: 'Time', title: 'Time' },
+									{ kind: 'box', param: 'Time < Key', title: 'Key' },
+									{ kind: 'box', param: 'Tone', title: 'Tone' },
+									{ kind: 'box', param: 'Volume', title: 'Volume' }
+								]
+							}
+						}
+					]
 				}
 			]
 		},
 		{
-			// The filter, its LFO and pan, under the envelopes: the envelopes take the
-			// full width with their loop settings (ADR-513).
-			weight: 2.55,
+			// The filter and the LFO: a row one knob high, so a knob stands a
+			// column and the picks stack two touch rows beside them.
+			weight: 2.5,
 			tiles: [
 				{
 					id: 'filter',
 					title: 'Filter',
 					// Its switch is on the tile's bar (ADR-516).
 					switchParam: 'Filter On',
+					// Wide enough for a pick's name ("BP / Morph").
+					columnPx: 76,
 					// The pad near square on the left, its type, circuit and shaper in
 					// columns on its right (user, 2026-11-07: "make the filter XY taller
 					// and narrower so it's more square ... controls to the right side").
@@ -354,6 +399,8 @@ const OPERATOR_BOARD: PanelBoard = {
 						{
 							kind: 'group',
 							stack: 2,
+							// The row is one knob high: a knob a column, the picks two high.
+							knobStack: 1,
 							// Every choice a pick: tabs beside picks read as two kinds of control.
 							tabMax: 1,
 							group: {
@@ -362,9 +409,9 @@ const OPERATOR_BOARD: PanelBoard = {
 								controls: [
 									{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
 									{ kind: 'choice', param: 'Filter Slope', title: 'Slope', options: ['12 dB', '24 dB'] },
-									{ kind: 'switch', param: 'Filt < LFO', title: 'LFO' },
 									{ kind: 'choice', param: 'Filter Circuit - LP/HP', title: 'LP / HP', options: ['Clean', 'OSR', 'MS2', 'SMP', 'PRD'] },
 									{ kind: 'choice', param: 'Filter Circuit - BP/NO/Morph', title: 'BP / Morph', options: ['Clean', 'OSR'] },
+									{ kind: 'switch', param: 'Filt < LFO', title: 'LFO' },
 									{ kind: 'box', param: 'Filter Morph', title: 'Morph' },
 									{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
 								]
@@ -373,6 +420,8 @@ const OPERATOR_BOARD: PanelBoard = {
 						{
 							kind: 'group',
 							stack: 2,
+							// The row is one knob high: a knob a column, the picks two high.
+							knobStack: 1,
 							// Every choice a pick: tabs beside picks read as two kinds of control.
 							tabMax: 1,
 							group: {
@@ -401,7 +450,13 @@ const OPERATOR_BOARD: PanelBoard = {
 						},
 						{
 							kind: 'group',
-							stack: 3,
+							// Its wave over its range, its two switches, then the rate and
+							// the synced rate that stands in for it: picks and switches a
+							// touch row each, two high (three high they were 30px), the
+							// knob a column.
+							stack: 2,
+							knobStack: 1,
+							tabMax: 1,
 							group: {
 								title: 'LFO',
 								switchParam: 'LFO On',
@@ -409,27 +464,9 @@ const OPERATOR_BOARD: PanelBoard = {
 									{ kind: 'choice', param: 'LFO Type', title: 'Wave', options: ['Sine', 'Square', 'Tri', 'Saw Up', 'Saw Dn', 'S&H', 'Noise'] },
 									{ kind: 'choice', param: 'LFO Range', title: 'Range', options: ['Low', 'High', 'Sync'] },
 									{ kind: 'switch', param: 'LFO Retrigger', title: 'Retrig' },
-									{ kind: 'box', param: 'LFO Rate', title: 'Rate', knobSize: 'l' },
-									{ kind: 'step', param: 'LFO Sync', title: 'Sync', labels: RETRIG },
-									{ kind: 'switch', param: 'LFO < Pe', title: 'Pitch Env' }
-								]
-							}
-						}
-					]
-				},
-				{
-					id: 'pan',
-					title: 'Pan',
-					sections: [
-						{
-							kind: 'group',
-							stack: 3,
-							group: {
-								title: 'Pan',
-								controls: [
-									{ kind: 'box', param: 'Panorama', title: 'Pan', knobSize: 'm' },
-									{ kind: 'box', param: 'Pan < Key', title: 'Key', knobSize: 's' },
-									{ kind: 'box', param: 'Pan < Rnd', title: 'Rnd', knobSize: 's' }
+									{ kind: 'switch', param: 'LFO < Pe', title: 'Pitch Env' },
+									{ kind: 'box', param: 'LFO Rate', title: 'Rate' },
+									{ kind: 'step', param: 'LFO Sync', title: 'Sync', labels: RETRIG }
 								]
 							}
 						}
@@ -438,7 +475,7 @@ const OPERATOR_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 2.4,
+			weight: 2.6,
 			tiles: [
 				{
 					id: 'modulation',
@@ -477,34 +514,19 @@ const OPERATOR_BOARD: PanelBoard = {
 					]
 				},
 				{
-					id: 'global',
-					title: 'Global',
+					id: 'pan',
+					title: 'Pan',
 					sections: [
 						{
 							kind: 'group',
-							stack: 2,
+							// One row: the tile is one knob high.
+							stack: 1,
 							group: {
-								title: 'Global',
+								title: 'Pan',
 								controls: [
-									{ kind: 'step', param: 'Algorithm', title: 'Algorithm', labels: ALGORITHM_NUMBERS },
-									{ kind: 'switch', param: 'Glide On', title: 'Glide' },
-									{ kind: 'box', param: 'Glide Time', title: 'Glide', knobSize: 's' },
-									{ kind: 'box', param: 'Transpose', title: 'Transp', knobSize: 's' },
-									{ kind: 'box', param: 'Spread', title: 'Spread', knobSize: 'm' },
-									{ kind: 'box', param: 'PB Range', title: 'PB', knobSize: 's' }
-								]
-							}
-						},
-						{
-							kind: 'group',
-							stack: 2,
-							group: {
-								title: 'Output',
-								controls: [
-									{ kind: 'box', param: 'Time', title: 'Time', knobSize: 's' },
-									{ kind: 'box', param: 'Time < Key', title: 'Key', knobSize: 's' },
-									{ kind: 'box', param: 'Tone', title: 'Tone', knobSize: 'm' },
-									{ kind: 'box', param: 'Volume', title: 'Volume', knobSize: 'l' }
+									{ kind: 'box', param: 'Panorama', title: 'Pan' },
+									{ kind: 'box', param: 'Pan < Key', title: 'Key' },
+									{ kind: 'box', param: 'Pan < Rnd', title: 'Rnd' }
 								]
 							}
 						}
@@ -759,9 +781,9 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 					{
 						title: 'Pitch',
 						controls: [
-							{ kind: 'box', param: 'Transpose', title: 'Transpose' },
+							{ kind: 'box', param: 'Transpose', title: 'Transpose', whole: true },
 							{ kind: 'box', param: 'Spread', title: 'Spread' },
-							{ kind: 'box', param: 'PB Range', title: 'PB' }
+							{ kind: 'box', param: 'PB Range', title: 'PB', whole: true }
 						]
 					},
 					{

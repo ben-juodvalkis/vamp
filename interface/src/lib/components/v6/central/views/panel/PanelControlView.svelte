@@ -9,6 +9,11 @@
 	 * here converts. A parameter the device does not list draws ghosted and
 	 * inert; one in a switched-off section draws ghosted and, touched, turns
 	 * the section on.
+	 *
+	 * In Ink (ADR-544) a control takes the scheme for its amount alone (a
+	 * knob's arc, a box's fill). A tab's options, a switch's word and a
+	 * pick's value are labels, and the chosen option or a lit switch is ON's
+	 * block: none is passed a tint.
 	 */
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
@@ -93,7 +98,7 @@
 			onSelect={(i) => write(lo + i)}
 			label={pickTitle}
 			caption={bareCaption ? undefined : pickTitle}
-			tint={color.primary}
+			tint="var(--label)"
 			ghost={!listed}
 			art={pickArt?.[control.param]}
 		/>
@@ -115,6 +120,7 @@
 			knobFit
 			knobCaption={caption && !mark}
 			knobMark={mark}
+			discrete={control.whole ? true : undefined}
 			label={caption || face === 'knob' ? undefined : noLabel}
 			readout={params.display(control.param)}
 			valueText={face === 'knob' ? params.display(control.param) : undefined}
@@ -126,7 +132,6 @@
 				class:active={toggleOn}
 				aria-pressed={toggleOn}
 				disabled={!toggleListed}
-				style="--btn-tint: {color.primary};"
 				data-param={toggle.param}
 				use:press={{ onPress: () => flipToggle(), disabled: !toggleListed }}
 			>{toggle.title}</button>
@@ -144,12 +149,10 @@
 			onSelect={(i) => write(lo + i)}
 			{cols}
 			{rows}
-			tint={color.primary}
-			inked
 			ghost={!listed}
 			label={(o) => o}
 			groupLabel={control.kind === 'choice' ? (control.title ?? control.param) : control.kind === 'step' ? control.title : control.param}
-			style="height: {compact ? `calc(${rows} * var(--height-touch))` : '100%'}; width: 100%; --scrub-font-size: {Math.max(...tabs.map((o) => o.length)) > 5 ? '0.6875rem' : '0.8125rem'};"
+			style="height: {compact ? `calc(${rows} * var(--height-touch))` : '100%'}; width: 100%; --scrub-font-size: {rows === 1 && tabs.length > 2 ? '0.75rem' : Math.max(...tabs.map((o) => o.length)) > 5 ? '0.6875rem' : '0.8125rem'};"
 		/>
 	</div>
 {:else if control.kind === 'step'}
@@ -191,7 +194,6 @@
 		aria-pressed={on}
 		aria-label={control.title}
 		disabled={!listed}
-		style="--btn-tint: {color.primary};"
 		data-param={control.param}
 		use:press={{ onPress: () => write(on ? lo : hi), disabled: !listed }}
 	>{caption ? control.title : ''}</button>
@@ -281,14 +283,16 @@
 		width: min(100%, 5.5rem);
 	}
 
-	:global([data-grammar='flat']) .panel-switch.active {
-		background: var(--btn-tint);
-		border-color: var(--btn-tint);
-		color: var(--flat-on-fg);
+	/* On a board a switch's word is the tile bar's switch's size, and
+	   breaks over two lines in a column too narrow for it ("Pitch Env"). */
+	:global([data-instrument-board]) .panel-switch:not(.lamp) {
+		font-size: 0.75rem;
+		line-height: 1.1;
+		white-space: normal;
+		padding: 0.375rem 0.125rem 0;
 	}
-	:global([data-grammar='flat']) .panel-switch:not(.active) {
-		color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
-	}
+	/* Ink (ADR-544): a lit switch is ON's block and an unlit one's word a
+	   label, by app.css's laws; nothing here colours either. */
 	:global([data-grammar='flat']) .panel-switch {
 		font-weight: var(--font-weight-medium);
 	}

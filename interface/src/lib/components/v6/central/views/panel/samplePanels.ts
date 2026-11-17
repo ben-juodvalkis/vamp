@@ -49,6 +49,8 @@ const envParams = (prefix: string, levels: boolean) => Object.values(sampleEnvel
 const group = (title: string, controls: PanelControl[], extra: Partial<PanelGroup> = {}, stack = 2): PanelBoardSection => ({
 	kind: 'group',
 	stack,
+	// Its picks and switches in columns of their own, its knobs in theirs.
+	knobStack: stack,
 	tabMax: 1,
 	group: { title, controls, ...extra }
 });
@@ -89,15 +91,20 @@ function filterSections(): PanelBoardSection[] {
 	];
 }
 
-/** An LFO's controls by its prefix (`L` on Simpler, `L 1` on Sampler). */
+/**
+ * An LFO's controls by its prefix (`L` on Simpler): its picks and its
+ * switch first, then its knobs, so each fills columns of its own
+ * (`knobStack`): the wave over its sync, the synced rate over the
+ * retrigger, then the rate and what scales it.
+ */
 const lfoControls = (p: string): PanelControl[] => [
 	{ kind: 'choice', param: `${p} Wave`, title: 'Wave', options: SAMPLE_LFO_WAVES },
 	{ kind: 'choice', param: `${p} Sync`, title: 'Sync', options: ['Free', 'Sync'] },
+	{ kind: 'step', param: `${p} Sync Rate`, title: 'Synced', labels: SYNC_RATES },
+	{ kind: 'switch', param: `${p} Retrig`, title: 'Retrig' },
 	{ kind: 'box', param: `${p} Rate`, title: 'Rate' },
-	{ kind: 'step', param: `${p} Sync Rate`, title: 'Sync Rate', labels: SYNC_RATES },
 	{ kind: 'box', param: `${p} R < Key`, title: 'Key' },
 	{ kind: 'box', param: `${p} Attack`, title: 'Attack' },
-	{ kind: 'switch', param: `${p} Retrig`, title: 'Retrig' },
 	{ kind: 'box', param: `${p} Offset`, title: 'Offset' }
 ];
 
@@ -167,7 +174,7 @@ export const SIMPLER_PANEL: InstrumentPanel = {
 						id: 'pitch-env',
 						title: 'Pitch Env',
 						switchParam: 'Pe On',
-						sections: [envSlot('pitchEnv', 'Pe', false), group('', [{ kind: 'box', param: 'Pe < Env', title: 'Amount' }], { switchParam: 'Pe On' }, 1)]
+						sections: [envSlot('pitchEnv', 'Pe', false), group('', [{ kind: 'box', param: 'Pe < Env', title: 'Amount', whole: true }], { switchParam: 'Pe On' }, 1)]
 					},
 					{
 						id: 'lfo',
@@ -193,7 +200,7 @@ export const SIMPLER_PANEL: InstrumentPanel = {
 						title: 'Global',
 						sections: [
 							group('Pitch', [
-								{ kind: 'box', param: 'Transpose', title: 'Transpose' },
+								{ kind: 'box', param: 'Transpose', title: 'Transpose', whole: true },
 								{ kind: 'box', param: 'Detune', title: 'Detune' }
 							], {}, 1),
 							group('Glide', [
@@ -239,11 +246,12 @@ export const SAMPLER_PANEL: InstrumentPanel = {
 								{ kind: 'box', param: 'O Volume', title: 'Volume' },
 								{ kind: 'box', param: 'O Vol < Vel', title: 'Vel' }
 							], { switchParam: 'Osc On' }),
+							// The ratio's two knobs, the fixed frequency, then its switch over its multiplier.
 							group('Frequency', [
 								{ kind: 'box', param: 'O Coarse', title: 'Coarse' },
 								{ kind: 'box', param: 'O Fine', title: 'Fine' },
-								{ kind: 'switch', param: 'O Fix On', title: 'Fixed' },
 								{ kind: 'box', param: 'O Fix Freq', title: 'Freq' },
+								{ kind: 'switch', param: 'O Fix On', title: 'Fixed' },
 								{ kind: 'step', param: 'O Fix Freq Mul', title: 'Mul', labels: FIX_MUL }
 							], { switchParam: 'Osc On' }),
 							envSlot('oscEnv', 'Oe', true, 3, 'Osc On')
@@ -253,16 +261,18 @@ export const SAMPLER_PANEL: InstrumentPanel = {
 						id: 'pitch-env',
 						title: 'Pitch Env',
 						switchParam: 'Pe On',
-						sections: [envSlot('pitchEnv', 'Pe', true), group('', [{ kind: 'box', param: 'Pe < Env', title: 'Amount' }], { switchParam: 'Pe On' }, 1)]
+						sections: [envSlot('pitchEnv', 'Pe', true), group('', [{ kind: 'box', param: 'Pe < Env', title: 'Amount', whole: true }], { switchParam: 'Pe On' }, 1)]
 					},
 					{
 						id: 'pitch',
 						title: 'Pitch',
+						// Wide enough for a knob's name ("Transpose").
+						columnPx: 80,
 						sections: [
 							group('', [
-								{ kind: 'box', param: 'Transpose', title: 'Transpose' },
+								{ kind: 'box', param: 'Transpose', title: 'Transpose', whole: true },
 								{ kind: 'box', param: 'Detune', title: 'Detune' },
-								{ kind: 'box', param: 'Key Zone Shift', title: 'Zone' },
+								{ kind: 'box', param: 'Key Zone Shift', title: 'Zone', whole: true },
 								{ kind: 'box', param: 'Pitch < LFO', title: 'LFO' }
 							])
 						]
@@ -280,8 +290,8 @@ export const SAMPLER_PANEL: InstrumentPanel = {
 						sections: [
 							group('', [
 								{ kind: 'choice', param: 'Shaper Type', title: 'Type', options: ['Soft', 'Hard', 'Sine', '4Bit'] },
-								{ kind: 'box', param: 'Shaper Amt', title: 'Amount' },
-								{ kind: 'switch', param: 'Shaper Pre-Filter', title: 'Pre' }
+								{ kind: 'switch', param: 'Shaper Pre-Filter', title: 'Pre' },
+								{ kind: 'box', param: 'Shaper Amt', title: 'Amount' }
 							], { switchParam: 'Shaper On' })
 						]
 					},
@@ -316,17 +326,19 @@ export const SAMPLER_PANEL: InstrumentPanel = {
 						id: 'global',
 						title: 'Global',
 						sections: [
+							// Its switches, its picks, then its knobs, two by two: the glide's time
+							// beside its pick, the stretch over its key, the fades.
 							group('', [
-								{ kind: 'choice', param: 'Glide Mode', title: 'Glide', options: ['Off', 'Porta', 'Glide'] },
-								{ kind: 'box', param: 'Glide Time', title: 'Time' },
-								{ kind: 'box', param: 'Spread', title: 'Spread' },
 								{ kind: 'switch', param: 'Reverse', title: 'Reverse' },
+								{ kind: 'switch', param: 'Snap', title: 'Snap' },
+								{ kind: 'choice', param: 'Trigger Mode', title: 'Mode', options: ['Trigger', 'Gate'] },
+								{ kind: 'choice', param: 'Glide Mode', title: 'Glide', options: ['Off', 'Porta', 'Glide'] },
+								{ kind: 'box', param: 'Spread', title: 'Spread' },
+								{ kind: 'box', param: 'Glide Time', title: 'Time' },
 								{ kind: 'box', param: 'Time', title: 'Stretch' },
 								{ kind: 'box', param: 'Time < Key', title: 'Key' },
 								{ kind: 'box', param: 'Fade In', title: 'Fade In' },
-								{ kind: 'box', param: 'Fade Out', title: 'Fade Out' },
-								{ kind: 'choice', param: 'Trigger Mode', title: 'Mode', options: ['Trigger', 'Gate'] },
-								{ kind: 'switch', param: 'Snap', title: 'Snap' }
+								{ kind: 'box', param: 'Fade Out', title: 'Fade Out' }
 							])
 						]
 					}

@@ -8,14 +8,21 @@
 	 *   - Audio: waveform at central scale (canvas) and its warp markers.
 	 *   - Both: a 30 Hz playhead and draggable loop braces.
 	 *
+	 * In Ink (ADR-544): a note and the waveform are the track's amount ink
+	 * (a Drum Rack row its pad's chain colour); the playhead, the braces and
+	 * the markers have no hue; the grid is the line ladder, a bar stronger
+	 * than a beat and a beat than a grid step; the names on the two axes are
+	 * quiet labels. The same in both themes, where a white key's lane is the
+	 * lighter one.
+	 *
 	 * Scroll/zoom on both axes (pinch + drag). This file is the composition
 	 * root: the zoom/scroll windows, the canvas pan/pinch surface, and note
 	 * editing (draw, move, resize, erase, quantize), which share the canvas's
 	 * pointers. The pieces live in `clipEditor/`: what the editor reads
 	 * about the focused clip (`useFocusedClip`), the warp markers
 	 * (`useWarpMarkers`), and the gutter, velocity lane, braces, waveform
-	 * and toolbar as components. Activation is the manual toggle in
-	 * ClipCentralView (decision 8); this view never auto-switches itself in.
+	 * and toolbar as components. It is drawn at full screen only, under the
+	 * clip view's strip, which hosts its toolbar (ADR-526..528).
 	 */
 
 	import { untrack } from 'svelte';
@@ -76,9 +83,9 @@
 
 	let { color, toolbarTarget = null }: Props = $props();
 
-	const PITCH_AXIS_W = 36; // piano-key gutter width (px)
-	const DRUM_PITCH_AXIS_W = 80; // wide enough for a pad's name
-	const TIME_AXIS_H = 18; // bar/beat ruler height (px)
+	const PITCH_AXIS_W = 44; // piano-key gutter width (px): a note's name at 11px, a finger wide
+	const DRUM_PITCH_AXIS_W = 96; // wide enough for a pad's name
+	const TIME_AXIS_H = 22; // bar/beat ruler height (px)
 	const VELOCITY_LANE_H = 56; // velocity-lane strip height (px, MIDI only)
 
 	const clip = useFocusedClip();
@@ -228,7 +235,7 @@
 	// ── Grid lines (bar / beat) ──────────────────────────────────────
 	let beatsPerBar = $derived(Math.max(1, session.timeSignature?.numerator ?? 4));
 	let gridLines = $derived.by(() => {
-		const out: { x: number; bar: boolean; barNum: number | null }[] = [];
+		const out: { x: number; bar: boolean; beat: boolean; barNum: number | null }[] = [];
 		if (contentW <= 0) return out;
 		const start = beatWindow.startBeats;
 		const end = beatWindow.endBeats;
@@ -244,6 +251,7 @@
 			out.push({
 				x: beatToX(b, beatWindow, contentW),
 				bar: isBar,
+				beat: Math.abs(b - Math.round(b)) < 1e-6,
 				barNum: isBar ? Math.round(b / beatsPerBar) + 1 : null
 			});
 		}
@@ -812,6 +820,7 @@
 					<div
 						class="ruler-tick"
 						class:bar={line.bar}
+						class:beat={line.beat}
 						style="left: {line.x}px;"
 					></div>
 					{#if line.barNum != null}
@@ -845,15 +854,14 @@
 			>
 				<!-- Vertical gridlines -->
 				{#each gridLines as line (line.x)}
-					<div class="gridline" class:bar={line.bar} style="left: {line.x}px;"></div>
+					<div class="gridline" class:bar={line.bar} class:beat={line.beat} style="left: {line.x}px;"></div>
 				{/each}
 
 				{#if isMidi}
-					<!-- Horizontal lane shading (black keys) -->
+					<!-- Horizontal lane shading: the black keys' lanes a step off the
+					     white keys', whichever of the two the theme can shade. -->
 					{#each pitchLanes as lane (lane.pitch)}
-						{#if lane.black}
-							<div class="lane-shade" style="top: {lane.y}px; height: {lane.h}px;"></div>
-						{/if}
+						<div class="lane-shade" class:black={lane.black} style="top: {lane.y}px; height: {lane.h}px;"></div>
 					{/each}
 
 					<!-- Draw tap catcher (M4): sits above the grid, below the
@@ -1019,7 +1027,7 @@
 		bottom: 0;
 		height: 55%;
 		width: 1px;
-		background: color-mix(in oklab, var(--act-warn) 45%, transparent);
+		background: color-mix(in oklab, var(--foreground) 35%, transparent);
 		pointer-events: none;
 	}
 
@@ -1034,14 +1042,14 @@
 	.ruler-tick.bar {
 		background: var(--line-strong);
 	}
-	/* Mono bar numbers (§5.4). */
+	/* Bar numbers (§5.4): an axis's names, quiet, 11px (9px until ADR-544). */
 	.ruler-num {
 		position: absolute;
-		top: 1px;
-		transform: translateX(2px);
-		font-size: 9px;
+		top: 4px;
+		transform: translateX(4px);
+		font-size: 11px;
 		line-height: 1;
-		color: var(--fg-tertiary);
+		color: var(--value);
 		pointer-events: none;
 	}
 
@@ -1062,12 +1070,23 @@
 		background: var(--line);
 	}
 
+	/* A black key's lane is the darker of the two. On paper that is a
+	   shade over it; on the dark well, which is as dark as the ladder goes,
+	   it is a lift under the white keys' lanes instead. */
 	.lane-shade {
 		position: absolute;
 		left: 0;
 		right: 0;
-		background: color-mix(in srgb, var(--foreground) 5%, transparent);
 		pointer-events: none;
+	}
+	.lane-shade:not(.black) {
+		background: color-mix(in srgb, var(--foreground) 6%, transparent);
+	}
+	:global(.light) .lane-shade:not(.black) {
+		background: none;
+	}
+	:global(.light) .lane-shade.black {
+		background: color-mix(in srgb, var(--foreground) 6%, transparent);
 	}
 
 	/* Editor stacking order (content layer), low → high:
@@ -1132,7 +1151,7 @@
 		bottom: 0;
 		left: -0.5px;
 		width: 1px;
-		background: color-mix(in oklab, var(--act-warn) 55%, transparent);
+		background: color-mix(in oklab, var(--foreground) 55%, transparent);
 	}
 	.warp-grip {
 		position: absolute;
@@ -1156,7 +1175,7 @@
 		width: 10px;
 		height: 14px;
 		border-radius: 2px;
-		background: var(--act-warn);
+		background: var(--foreground);
 	}
 	.warp-grip.top::after {
 		top: 4px;
@@ -1165,7 +1184,7 @@
 		bottom: 4px;
 	}
 	.warp-marker.dragging .warp-line {
-		background: var(--act-warn);
+		background: var(--foreground);
 	}
 	.warp-marker.dragging .warp-grip::after {
 		background: var(--phosphor-100);
@@ -1175,8 +1194,8 @@
 		position: absolute;
 		top: 0;
 		bottom: 0;
-		width: 1px;
-		background: color-mix(in oklab, var(--act-warn) 70%, transparent);
+		width: 0;
+		border-left: 1px dashed color-mix(in oklab, var(--foreground) 60%, transparent);
 		pointer-events: none;
 	}
 
@@ -1217,40 +1236,44 @@
 		background: transparent;
 	}
 
-	/* ---- Live skin (flat grammar): the editor is Live's note/sample
-	   editor — a ControlBackground well in a 1px dark frame, grid lines as
-	   opaque steps off the well (the flat line ladder runs DARKER than the
-	   surface on the dark skins, so --line/--line-faint would invert bar vs
-	   beat weight on this well; mixing the foreground over the well keeps
-	   bars stronger than beats in both polarities), notes as solid track
-	   ink with Live's ClipBorder. The gutter, lane, braces and toolbar
-	   carry their own flat blocks in clipEditor/. */
+	/* ---- Flat grammar (Ink, ADR-544): the editor is a well in a 1px
+	   frame. The grid is the line ladder: a grid step faint, a beat
+	   standard, a bar strong, the same three in both themes (the lanes'
+	   shading lies over the lines, so a line keeps its step off its lane).
+	   Notes are solid ink with Live's ClipBorder. The markers have no hue:
+	   the clip's start and end are dashed, a warp marker a line with a grip
+	   at each end, a brace a line the height of the roll. The gutter, lane,
+	   braces and toolbar carry their own flat blocks in clipEditor/. */
 	:global([data-grammar="flat"]) .clip-editor {
-		--clip-grid-beat: color-mix(in srgb, var(--foreground) 10%, var(--surface-well));
-		--clip-grid-bar: color-mix(in srgb, var(--foreground) 24%, var(--surface-well));
 		border: 1px solid var(--line-strong);
 	}
 	:global([data-grammar="flat"]) .time-ruler {
 		border-bottom-color: var(--line-strong);
 	}
 	:global([data-grammar="flat"]) .ruler-tick {
-		background: var(--clip-grid-bar);
+		top: 55%;
+		background: var(--line);
+	}
+	:global([data-grammar="flat"]) .ruler-tick.beat {
+		top: 35%;
+		background: var(--line-strong);
 	}
 	:global([data-grammar="flat"]) .ruler-tick.bar {
-		background: var(--fg-tertiary); /* same ink as the bar numbers */
+		top: 0;
+		background: var(--value); /* same ink as the bar numbers */
 	}
 	:global([data-grammar="flat"]) .gridline {
-		background: var(--clip-grid-beat);
+		background: var(--line-faint);
+	}
+	:global([data-grammar="flat"]) .gridline.beat {
+		background: var(--line);
 	}
 	:global([data-grammar="flat"]) .gridline.bar {
-		background: var(--clip-grid-bar);
+		background: var(--line-strong);
 	}
 	/* Notes: solid ink, ClipBorder frame. */
 	:global([data-grammar="flat"]) .note {
 		box-shadow: none;
 		border: 1px solid var(--flat-clip-border);
-	}
-	:global([data-grammar="flat"]) .marker {
-		background: var(--act-warn); /* solid, no alpha */
 	}
 </style>

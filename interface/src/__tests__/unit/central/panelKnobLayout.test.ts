@@ -22,6 +22,12 @@ import {
 	regionSections,
 	tabOptions,
 	TAB_MAX_OPTIONS,
+	boardControls,
+	boardGroupColumns,
+	boardGroupStacks,
+	boardKnobSize,
+	boardSections,
+	type PanelControl,
 	type PanelGroup
 } from '$lib/components/v6/central/views/panel/panelTypes';
 import { KNOB_PX, knobDiameter, knobGridFit, knobSizeFits } from '$lib/components/v6/device-panel/knobLayout';
@@ -32,6 +38,7 @@ import { COLLISION_PANEL } from '$lib/components/v6/central/views/panel/collisio
 import { ANALOG_PANEL } from '$lib/components/v6/central/views/panel/analogPanel';
 import { WAVETABLE_PANEL } from '$lib/components/v6/central/views/panel/wavetablePanel';
 import { MELD_PANEL } from '$lib/components/v6/central/views/panel/meldPanel';
+import { SAMPLER_PANEL, SIMPLER_PANEL } from '$lib/components/v6/central/views/panel/samplePanels';
 
 const knobs: PanelGroup = {
 	title: 'Global',
@@ -275,5 +282,74 @@ describe('a section page on the face grid (ADR-510)', () => {
 		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd'] })).toBe(false);
 		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd', 'e'] })).toBe(true);
 		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd', 'e'] }, true)).toBe(false);
+	});
+});
+
+describe('a board group: one knob size, no empty cell (ADR-544)', () => {
+	const box = (param: string): PanelControl => ({ kind: 'box', param, title: param });
+	const pick = (param: string): PanelControl => ({ kind: 'choice', param, options: ['a', 'b', 'c'] });
+	const sw = (param: string): PanelControl => ({ kind: 'switch', param, title: param });
+	const params = (cols: { cells: PanelControl[] }[]) => cols.map((c) => c.cells.map((x) => x.param));
+
+	it('stacks a group column after column, the last of an odd run a column to itself', () => {
+		expect(params(boardGroupStacks([box('a'), box('b'), box('c')], 2))).toEqual([['a', 'b'], ['c']]);
+		// Every column is counted `stack` high, so the one left over draws in a
+		// cell the height of the others and takes their size.
+		expect(boardGroupStacks([box('a'), box('b'), box('c')], 2).map((c) => c.high)).toEqual([2, 2]);
+	});
+	it('gives a lead a column to itself and no size of its own', () => {
+		const cols = boardGroupStacks([box('a'), box('b'), box('c')], 2, 1);
+		expect(params(cols)).toEqual([['a'], ['b', 'c']]);
+		expect(cols.map((c) => c.high)).toEqual([2, 2]);
+	});
+	it('with knobStack keeps picks and switches in columns of their own, the knobs that many high', () => {
+		const controls = [pick('type'), pick('slope'), sw('lfo'), box('morph'), box('drive')];
+		const cols = boardGroupStacks(controls, 2, 0, 1);
+		expect(params(cols)).toEqual([['type', 'slope'], ['lfo'], ['morph'], ['drive']]);
+		expect(cols.map((c) => c.high)).toEqual([2, 2, 1, 1]);
+		expect(boardGroupColumns({ group: { controls }, stack: 2, knobStack: 1 })).toBe(4);
+		// A stepper with named values is a pick on a board, never a knob.
+		const sync: PanelControl = { kind: 'step', param: 'sync', title: 'Sync', labels: ['1/4', '1/8'] };
+		expect(params(boardGroupStacks([box('rate'), sync], 2, 0, 1))).toEqual([['rate'], ['sync']]);
+	});
+	it('sizes a group by its stacked cell, to the board’s ceiling at most', () => {
+		// A 110px column 160px high holds a large knob; stacked two high, a medium.
+		expect(boardKnobSize(110, 160, 1)).toBe('l');
+		expect(boardKnobSize(110, 224, 2)).toBe('m');
+		expect(boardKnobSize(110, 160, 1, 8, 's')).toBe('s');
+		// Unmeasured: medium, or the ceiling where it is smaller.
+		expect(boardKnobSize(0, 0, 2)).toBe('m');
+		expect(boardKnobSize(0, 0, 2, 8, 's')).toBe('s');
+	});
+	it('ranks no control of a rule-laid board by a size of its own', () => {
+		for (const panel of [OPERATOR_PANEL, ELECTRIC_PANEL, COLLISION_PANEL, SIMPLER_PANEL, SAMPLER_PANEL]) {
+			for (const c of boardControls(panel)) expect('knobSize' in c ? c.knobSize : undefined).toBeUndefined();
+			for (const s of boardSections(panel)) if (s.kind === 'group') expect(s.lead ?? 0).toBe(0);
+		}
+	});
+	it('lays Electric’s hammer and its fork and damper on the same ten columns, one row each', () => {
+		const rows = ELECTRIC_PANEL.board!.rows.map((r) => r.tiles.flatMap((t) => t.sections).reduce((n, s) => n + (s.kind === 'group' ? boardGroupColumns(s) : 0), 0));
+		expect(rows).toEqual([10, 10, 7]);
+	});
+});
+
+describe('a frame’s picks beside its knobs (ADR-544)', () => {
+	it('stands Collision’s resonator type in one row over its six knobs', () => {
+		const res = COLLISION_PANEL.frame.find((r) => r.kind === 'tabs');
+		if (res?.kind !== 'tabs') throw new Error('no tabs');
+		const group = res.tabs[0].groups[0];
+		expect(group.pickRow).toBe(1);
+		expect(group.controls[0]).toMatchObject({ kind: 'choice', maxRows: 1 });
+		expect(group.controls.slice(1).every((c) => c.kind === 'box')).toBe(true);
+		expect(group.controls.length - 1).toBe(group.columns);
+	});
+	it('stands a pick of two values over the knob after it, in one column (Collision’s Global)', () => {
+		const global = COLLISION_PANEL.frame.at(-1);
+		if (global?.kind !== 'group') throw new Error('no Global');
+		expect(frameColumns(global.group, 1).map((c) => c.controls.map((x) => x.param))).toEqual([['Structure', 'Volume']]);
+		// A longer list keeps its own column: Operator's filter type beside Env over Drive.
+		const filter = OPERATOR_PANEL.frame.find((r) => r.kind === 'group' && r.group.title === 'Filter');
+		if (filter?.kind !== 'group') throw new Error('no Filter');
+		expect(frameColumns(filter.group, 2).map((c) => c.controls.length)).toEqual([1, 2]);
 	});
 });

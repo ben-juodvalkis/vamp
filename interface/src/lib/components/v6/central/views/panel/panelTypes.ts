@@ -22,7 +22,11 @@ export type PanelControl =
 	 * spans 0. `toggle` is the on/off parameter that belongs to it (a source's
 	 * switch over its level), drawn small under it (ADR-509).
 	 */
-	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle; knobSize?: KnobSize; units?: number }
+	// `whole`: Live counts it in whole semitones and its raw value is that
+	// count (a transpose, a tuning, a bend range), so it is a discrete
+	// setting and keeps its value under its name (ADR-544). Checked against
+	// the reference by `instrumentPanels.test.ts`.
+	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle; knobSize?: KnobSize; units?: number; whole?: boolean }
 	/**
 	 * A quantized parameter with few values: one cell a value, its labels
 	 * Live's own. `title` names it over a page's picker (else Live's name).
@@ -70,6 +74,13 @@ export interface PanelGroup {
 	 * columns, names beside them. Unset, a column a control (`groupColumns`).
 	 */
 	columns?: number;
+	/**
+	 * On a frame, its first `pickRow` controls (picks) stand in one touch row
+	 * across its top and the rest in one row under them: ADR-516's selector
+	 * row over a knob row, at band size (Collision's resonator: what is
+	 * struck, over the six knobs that shape it).
+	 */
+	pickRow?: number;
 }
 
 /** A value box drawn as a box or as a knob (ADR-509). */
@@ -142,6 +153,11 @@ export interface InstrumentPanel {
  */
 export interface PanelBoard {
 	rows: readonly PanelBoardRow[];
+	/**
+	 * The largest its groups' knobs draw (ADR-544): a dense board names the
+	 * size its tightest tile holds, so every tile's knobs match. Unset, 'l'.
+	 */
+	knobSize?: KnobSize;
 }
 
 export interface PanelBoardRow {
@@ -188,8 +204,19 @@ export type PanelBoardSection =
 			 * Its first `lead` controls each stand a column, the full height,
 			 * the rest `stack` high after them (ADR-515: a section's primary
 			 * controls large, its secondary ones stacked small beside them).
+			 * Since ADR-544 a lead is its group's size like any other knob:
+			 * the column to itself is all that ranks it.
 			 */
 			lead?: number;
+			/**
+			 * How many high its knobs stack. Given, the group's knobs and its
+			 * picks and switches fill columns of their own (`boardGroupStacks`),
+			 * the picks and switches `stack` high: 1 in a short tile, whose rows
+			 * hold a pick's touch row but not a knob with its name under it
+			 * (Operator's filter and LFO); `stack` again to keep the kinds in
+			 * columns of their own (Sampler's Global).
+			 */
+			knobStack?: number;
 	  }
 	/** Twin sections as a table: a section a group of its columns (ADR-512). */
 	| { kind: 'matrix'; matrix: PanelMatrix }
@@ -414,11 +441,20 @@ export function isKnobControl(control: PanelControl): boolean {
 	return control.kind === 'box' || (control.kind === 'step' && !tabOptions(control));
 }
 
+/** A pick of two values: two touch rows, which leave a column room for a knob under them. */
+export function isShortPick(control: PanelControl): boolean {
+	const options = tabOptions(control);
+	return !!options && options.length <= 2;
+}
+
 /**
  * A mixed group's columns on a frame (ADR-510), when its `columns` is fewer
  * than a column a control: its knobs pair up, two to a column, first to
  * last, until the group fits (Operator's Filter: its type's tab, then Env
- * over Drive). Each entry is one column's controls and the columns it spans.
+ * over Drive), and a pick of two values stands over the knob after it
+ * (Collision's Structure over its Volume, ADR-544: a lone knob in a column
+ * left the band's height empty). Each entry is one column's controls and
+ * the columns it spans.
  */
 export function frameColumns(group: PanelGroup, columns: number): { controls: PanelControl[]; span: number }[] {
 	const cols = group.controls.map((c) => ({ controls: [c], span: controlColumns(c) }));
@@ -426,7 +462,7 @@ export function frameColumns(group: PanelGroup, columns: number): { controls: Pa
 	for (let i = 0; i < cols.length - 1 && total > columns; ) {
 		const a = cols[i];
 		const b = cols[i + 1];
-		if (a.controls.length === 1 && isKnobControl(a.controls[0]) && isKnobControl(b.controls[0])) {
+		if (a.controls.length === 1 && (isKnobControl(a.controls[0]) || isShortPick(a.controls[0])) && isKnobControl(b.controls[0])) {
 			a.controls.push(b.controls[0]);
 			cols.splice(i + 1, 1);
 			total -= b.span;
@@ -600,24 +636,56 @@ export function boardParamNames(panel: InstrumentPanel): string[] {
 	return [...names];
 }
 
-/** A board group's columns: its own, else its stages a column each, else its cells `stack` high. */
-export function boardGroupColumns(section: { group: PanelGroup; stack: number; columns?: number; lead?: number }): number {
+/** A board group's columns: its own, else its stages a column each, else its cells in stacks (`boardGroupStacks`). */
+export function boardGroupColumns(section: { group: PanelGroup; stack: number; columns?: number; lead?: number; knobStack?: number }): number {
 	if (section.columns !== undefined) return section.columns;
 	const n = section.group.controls.length;
 	if (section.group.face === 'slider') return n;
-	const lead = Math.min(n, section.lead ?? 0);
-	return lead + (n > lead ? Math.ceil((n - lead) / section.stack) : 0) || 1;
+	return boardGroupStacks(section.group.controls, section.stack, section.lead, section.knobStack).length || 1;
 }
 
 /**
- * Where a board group's control sits (ADR-515): a lead control a column of
- * its own, the full height; the rest `stack` high, column after column.
- * Lines are 1-based grid lines.
+ * A board group's controls in columns (ADR-512, ADR-515): its first `lead`
+ * a column each, the rest `stack` high, column after column. With
+ * `knobStack` a run of picks and switches and a run of knobs each fill
+ * their own columns, in the group's order, the knobs that many high: so a
+ * column holds one kind of control, and a short tile's knobs can stand a
+ * column each beside picks two high. `high` is how many the column would
+ * hold: a column short of it (the last of an odd run, a lead) centres what
+ * it has in cells of that same height, never over an empty cell and never
+ * a larger knob (ADR-544).
  */
-export function boardCellPlace(i: number, lead: number, stack: number): { column: number; row: string } {
-	if (i < lead) return { column: i + 1, row: '1 / -1' };
-	const j = i - lead;
-	return { column: lead + 1 + Math.floor(j / stack), row: String((j % stack) + 1) };
+export function boardGroupStacks(controls: readonly PanelControl[], stack: number, lead = 0, knobStack?: number): { cells: PanelControl[]; high: number }[] {
+	const cols: { cells: PanelControl[]; high: number }[] = [];
+	const n = Math.min(controls.length, lead);
+	for (let i = 0; i < n; i++) cols.push({ cells: [controls[i]], high: Math.max(1, knobStack ?? stack) });
+	let run: PanelControl[] = [];
+	let runKnobs = false;
+	const flush = () => {
+		const high = Math.max(1, runKnobs ? (knobStack ?? stack) : stack);
+		for (let i = 0; i < run.length; i += high) cols.push({ cells: run.slice(i, i + high), high });
+		run = [];
+	};
+	for (const c of controls.slice(n)) {
+		// On a board a stepper with named values is a tab or a pick, never a knob.
+		const knob = knobStack !== undefined && (c.kind === 'box' || (c.kind === 'step' && !c.labels));
+		if (run.length && knob !== runKnobs) flush();
+		runKnobs = knob;
+		run.push(c);
+	}
+	flush();
+	return cols;
+}
+
+/**
+ * The one size a board group's knobs draw (ADR-544: knobs that sit together
+ * are one size): the largest a cell `high` of the tile's `height` and one
+ * column `colW` wide holds, 'l' at most. A lead or a lone knob has a taller
+ * cell and takes the same size, so a tile's groups match.
+ */
+export function boardKnobSize(colW: number, height: number, high: number, gap = 8, ceiling: KnobSize = 'l'): KnobSize {
+	if (colW <= 0 || height <= 0) return ceiling === 's' ? 's' : 'm';
+	return knobSizeFits(ceiling, colW, (height - gap * (Math.max(1, high) - 1)) / Math.max(1, high));
 }
 
 /**

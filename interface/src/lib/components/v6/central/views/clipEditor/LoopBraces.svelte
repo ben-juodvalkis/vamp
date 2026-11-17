@@ -234,12 +234,24 @@
 		background: var(--phosphor-100);
 	}
 
-	/* Flat grammar: the wash tokens (orange, app.css) still tint the
-	   region — a solid fill would hide the notes under it — but the drag
-	   state drops its inset ring; the edge handles already mark the brace. */
+	/* Flat grammar (ADR-544): the loop is what is clear, and what lies
+	   outside it is dimmed. ON has no hue, so a wash of it over the loop
+	   (usually the whole view) was a grey veil over every note, on paper a
+	   dark one; the scrim is the region's own shadow, cut by the content
+	   box. A loop switched off dims nothing: its braces alone mark it. The
+	   region lights only while it is dragged. */
+	:global([data-grammar="flat"]) .loop-region {
+		background: transparent;
+	}
+	:global([data-grammar="flat"]) .loop-region.enabled {
+		box-shadow: 0 0 0 200vmax var(--scrim);
+	}
 	:global([data-grammar="flat"]) .loop-region.dragging {
-		background: var(--phosphor-wash);
-		box-shadow: none;
+		background: var(--phosphor-wash-lo);
+	}
+	:global([data-grammar="flat"]) .brace-line,
+	:global([data-grammar="flat"]) .brace-line::before {
+		background: var(--on-bg);
 	}
 	:global([data-grammar="flat"]) .brace-line::before {
 		border-radius: 0; /* square grip cap */

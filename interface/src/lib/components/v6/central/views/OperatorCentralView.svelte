@@ -1,25 +1,24 @@
 <script lang="ts">
   /**
-   * Operator in Live's arrangement (ADR-487): Live's oscillator, LFO and
-   * pitch-envelope tabs over the middle (each its main knobs and its
-   * envelope), the Filter's type, Env and Drive, and Time · Tone · Volume;
-   * every eyebrow opens its section's page. The Filter pad with its response
-   * curve is the Filter page's picture (`aside`), not the frame's: the chain
-   * cell's XY is the same Freq and Res. The panel is data
-   * (`panel/operatorPanel.ts`), bound by Live's parameter names; the pad is
-   * this view's own (`slots.filter`), bound the same way. Until 2026-10-27 the
-   * view was the amp envelope, Feedback, Time, Tone and the Filter pad,
-   * bound by index. At full screen it draws the panel's board (ADR-512):
-   * the oscillators and the envelopes as tables, every page at once.
+   * Operator in Live's arrangement (ADR-487): the oscillator its chain cell
+   * touched last (ADR-513: its two knobs over its level, and its envelope's
+   * four stages as boxes, their heights its shape), the Filter's type, Env
+   * and Drive, and Time and Tone over Volume. A section's eyebrow is its
+   * name; the band opens no page. The panel is data
+   * (`panel/operatorPanel.ts`), bound by Live's parameter names. Until
+   * 2026-10-27 the view was the amp envelope, Feedback, Time, Tone and the
+   * Filter pad, bound by index. At full screen it draws the panel's board
+   * (ADR-512): the oscillators and the modulation as tables, one envelope as
+   * Live draws it beside every envelope's loop, the filter with its pad
+   * (this view's `slots.filter`, its dot alone: the tile names it) and the
+   * LFO with its wave. Every amount is the selected track's ink and the
+   * shown envelope's tab is ON's block (ADR-544).
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { familyScheme } from '$lib/config/devicePresets';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
@@ -42,17 +41,9 @@
   let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
 
-  // Operator color scheme — distortion family (the view's old orange on
-  // the gap wheel, ADR-400; matches Operator's UI aesthetic).
-  const operatorColor = familyScheme('distortion');
-
-  // GRATICULE (§5.5): normalize the per-section palette through trackInk at injection.
-  let trackScheme = $derived(selectedTrackScheme());
-  let operatorInk = $derived(trackScheme ?? {
-    primary: trackInk(operatorColor.primary, paintModeReactive()),
-    secondary: operatorColor.secondary,
-    accent: trackInk(operatorColor.accent, paintModeReactive())
-  });
+  // Every amount is the selected track's ink (ADR-544): the view has no
+  // colour of its own.
+  let operatorInk = $derived(selectedAmountScheme());
 
   const params = usePanelParams(() => device);
 
@@ -100,6 +91,7 @@
         xValue={params.unit('Filter Freq') ?? 1}
         yValue={params.unit('Filter Res') ?? 0}
         title="Filter"
+        titleClass="sr-only"
         isGhost={!filterOn}
         showCurve={filterOn && filterCurve.curveType !== 'none'}
         curveType={filterCurve.curveType}
@@ -127,8 +119,6 @@
           selected={envShown}
           onSelect={(i) => (envPicked = i)}
           cols={1}
-          tint={operatorInk.primary}
-          inked
           label={(i) => OPERATOR_ENVS[i].title}
           groupLabel="Envelope shown"
           style="height: 100%; --scrub-font-size: 0.8125rem;"

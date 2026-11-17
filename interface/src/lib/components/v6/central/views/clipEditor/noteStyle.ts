@@ -1,7 +1,7 @@
 /** How the clip editor names and inks a note. */
 
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-import { deviceInk, trackInk } from '$lib/utils/formatters/trackFormatters';
+import { AMOUNT_INK_LIGHT_L, amountInk, deviceInk, inkShade } from '$lib/utils/formatters/trackFormatters';
 
 export const VELOCITY_MAX = 127;
 
@@ -14,14 +14,16 @@ export function pitchName(p: number): string {
 /**
  * GRATICULE (§5.4): velocity drives BOTH saturation (toward signal-dim)
  * and alpha — shared by the notes and the velocity-lane bars for visual
- * rhyme. The trackInk-normalized track color is the hue anchor; a Drum
- * Rack pad's chain colour (`pad`) goes through `padInk` instead.
+ * rhyme. The hue anchor is the track's amount ink (ADR-544: a note is an
+ * amount of its track, so on the light theme it takes the deeper ink a
+ * knob's arc does; the name-block ink was too pale on paper); a Drum Rack
+ * pad's chain colour (`pad`) goes through `padInk` instead.
  */
 export function noteColor(color: string | undefined, velocity: number, pad = false): string {
 	const t = Math.min(1, Math.max(0, velocity / VELOCITY_MAX));
 	const satPct = Math.round((0.45 + 0.55 * t) * 100);
 	const alphaPct = Math.round((0.5 + 0.5 * t) * 100);
-	const ink = color ? (pad ? padInk(color) : trackInk(color, paintModeReactive())) : 'var(--signal-dim)';
+	const ink = color ? (pad ? padNoteInk(color) : amountInk(color, paintModeReactive())) : 'var(--signal-dim)';
 	const sat = `color-mix(in oklab, ${ink} ${satPct}%, var(--signal-dim))`;
 	return `color-mix(in oklab, ${sat} ${alphaPct}%, transparent)`;
 }
@@ -33,4 +35,15 @@ export function noteColor(color: string | undefined, velocity: number, pad = fal
  */
 export function padInk(color: string): string {
 	return deviceInk(color, paintModeReactive());
+}
+
+/**
+ * A pad's chain colour as a note's fill: `padInk`, taken to the lightness
+ * an amount has on the light theme (ADR-544), where the brightened ink is
+ * as pale on paper as the track's was. The gutter's chip and its lit row
+ * keep `padInk`: a fill with dark text on it wants the light one.
+ */
+export function padNoteInk(color: string): string {
+	const ink = padInk(color);
+	return paintModeReactive() === 'light' ? inkShade(ink, AMOUNT_INK_LIGHT_L) : ink;
 }

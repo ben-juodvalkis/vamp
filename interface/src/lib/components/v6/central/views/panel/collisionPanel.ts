@@ -9,7 +9,6 @@
  * (docs/reference/instruments/Collision.md): every parameter but Device On.
  */
 import { matrixColumn as col, type InstrumentPanel, type PanelBoard, type PanelControl, type PanelGroup, type PanelPage } from './panelTypes';
-import type { KnobSize } from '$lib/components/v6/device-panel/knobLayout';
 
 const RES_TYPES = ['Beam', 'Marimba', 'String', 'Membrane', 'Plate', 'Pipe', 'Tube'];
 const QUALITY = ['Eco', 'Low', 'Med', 'High'];
@@ -32,18 +31,20 @@ function resonatorGroup(n: 1 | 2): PanelGroup {
 		title: `Resonator ${n}`,
 		page: `res${n}`,
 		switchParam: `${r} On/Off`,
-		// The LFO tab's six columns: the type's tab takes three, the knobs pair in the rest.
+		// The LFO tab's six columns. The object first, one touch row across
+		// them: what is struck is the resonator's first choice. Under it the
+		// six knobs in one row, a column each, medium as every knob on the
+		// face (ADR-544; until then the types were a three-by-three list with
+		// two empty cells beside two rows of small knobs).
 		columns: 6,
+		pickRow: 1,
 		controls: [
-			// The object first: what is struck is the resonator's first choice.
-			// Three rows: the list sits under the frame's tab strip, and under
-			// the view's title band four rows of the touch floor no longer fit.
-			{ kind: 'choice', param: `${r} Type`, title: 'Type', options: RES_TYPES, maxRows: 3 },
+			{ kind: 'choice', param: `${r} Type`, title: 'Type', options: RES_TYPES, maxRows: 1 },
 			{ kind: 'box', param: `${r} Decay`, title: 'Decay' },
 			{ kind: 'box', param: `${r} Material`, title: 'Material' },
 			{ kind: 'box', param: `${r} Brightness`, title: 'Bright' },
 			{ kind: 'box', param: `${r} Inharmonics`, title: 'Inharm' },
-			{ kind: 'box', param: `${r} Tune`, title: 'Tune' },
+			{ kind: 'box', param: `${r} Tune`, title: 'Tune', whole: true },
 			{ kind: 'box', param: `${r} Volume`, title: 'Gain' }
 		]
 	};
@@ -87,7 +88,7 @@ function resonatorPage(n: 1 | 2): PanelPage {
 					title: 'Tuning',
 					switchParam,
 					controls: [
-						{ kind: 'box', param: `${r} Tune`, title: 'Tune' },
+						{ kind: 'box', param: `${r} Tune`, title: 'Tune', whole: true },
 						{ kind: 'box', param: `${r} Fine Tune`, title: 'Fine' },
 						{ kind: 'box', param: `${r} Pitch Env.`, title: 'Env' },
 						{ kind: 'box', param: `${r} Pitch Env. Time`, title: 'Time' }
@@ -266,10 +267,10 @@ const MIDI_SOURCES = [
 	['Slide', 'Slide', true]
 ] as const;
 const LFOS = [1, 2] as const;
-/** A knob; `knobSize` its rank on the board (ADR-515), else its column's. */
-const box = (param: string, title: string, knobSize?: KnobSize): PanelControl => ({ kind: 'box', param, title, ...(knobSize ? { knobSize } : {}) });
+/** A knob: its group's size on the board (ADR-544; ADR-515 ranked some larger). `whole`: counted in semitones. */
+const box = (param: string, title: string, whole = false): PanelControl => ({ kind: 'box', param, title, ...(whole ? { whole } : {}) });
 /** A resonator's column: `name` is its parameter's name after "Res N ". */
-const res = (title: string, name: string) => col(title, RES, (n) => box(`Res ${n} ${name}`, title));
+const res = (title: string, name: string, whole = false) => col(title, RES, (n) => box(`Res ${n} ${name}`, title, whole));
 const lfo = (title: string, name: string) => col(title, LFOS, (n) => box(`LFO ${n} ${name}`, title));
 
 /**
@@ -277,16 +278,16 @@ const lfo = (title: string, name: string) => col(title, LFOS, (n) => box(`LFO ${
  * row each, over two rows of the board: the type, body, tuning and hit,
  * then the mix, the velocity and key amounts and the listening positions
  * (under their groups' names: Decay is a column of both). The two LFOs
- * another, every control of their pages. Under them Mallet, Noise (its
- * envelope's stages as knobs: four boxes over the touch floor want a
- * column the row does not have), the MIDI amounts (a source a row) and
- * Global, three to a column. The MIDI table carries each source's
- * destinations beside its amounts (ADR-513), as pickers naming them.
+ * another, every control of their pages. Under them Mallet and Noise (its
+ * envelope as Live draws it), their cells two high on the board's tallest
+ * row so a knob keeps its size and its name; then the MIDI sources as a
+ * table (a source a group, A over B, each destination beside its amount,
+ * ADR-513) and Global in one row. A group's knobs are one size (ADR-544).
  */
 const COLLISION_BOARD: PanelBoard = {
 	rows: [
 		{
-			weight: 1.75,
+			weight: 1.7,
 			tiles: [
 				{
 					id: 'resonators',
@@ -307,7 +308,7 @@ const COLLISION_BOARD: PanelBoard = {
 										]
 									},
 									{ title: 'Body', columns: [res('Decay', 'Decay'), res('Material', 'Material'), res('Bright', 'Brightness'), res('Inharm', 'Inharmonics')] },
-									{ title: 'Tuning', columns: [res('Tune', 'Tune'), res('Fine', 'Fine Tune'), res('Pitch Env', 'Pitch Env.'), res('Env Time', 'Pitch Env. Time')] },
+									{ title: 'Tuning', columns: [res('Tune', 'Tune', true), res('Fine', 'Fine Tune'), res('Pitch Env', 'Pitch Env.'), res('Env Time', 'Pitch Env. Time')] },
 									{ title: 'Hit', columns: [res('Hit', 'Hit'), res('Hit Rnd', 'Hit < Random'), res('Radius', 'Radius'), res('Opening', 'Opening')] }
 								]
 							}
@@ -317,7 +318,7 @@ const COLLISION_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 2.0,
+			weight: 1.95,
 			tiles: [
 				{
 					id: 'resonators-mod',
@@ -356,7 +357,7 @@ const COLLISION_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 1.75,
+			weight: 1.7,
 			tiles: [
 				{
 					id: 'lfos',
@@ -395,7 +396,7 @@ const COLLISION_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 2.45,
+			weight: 2.75,
 			tiles: [
 				{
 					id: 'mallet',
@@ -410,10 +411,10 @@ const COLLISION_BOARD: PanelBoard = {
 								title: 'Mallet',
 								switchParam: 'Mallet On/Off',
 								controls: [
-									box('Mallet Volume', 'Volume', 'l'),
-									box('Mallet Stiffness', 'Stiffness', 'l'),
-									box('Mallet Noise Amount', 'Noise', 's'),
-									box('Mallet Noise Color', 'Color', 's')
+									box('Mallet Volume', 'Volume'),
+									box('Mallet Stiffness', 'Stiffness'),
+									box('Mallet Noise Amount', 'Noise'),
+									box('Mallet Noise Color', 'Color')
 								]
 							}
 						},
@@ -423,7 +424,7 @@ const COLLISION_BOARD: PanelBoard = {
 							group: {
 								title: 'Velocity',
 								switchParam: 'Mallet On/Off',
-								controls: [box('Mallet Volume < Vel', 'Volume', 's'), box('Mallet Stiffness < Vel', 'Stiffness', 's'), box('Mallet Noise Amount < Vel', 'Noise', 's')]
+								controls: [box('Mallet Volume < Vel', 'Volume'), box('Mallet Stiffness < Vel', 'Stiffness'), box('Mallet Noise Amount < Vel', 'Noise')]
 							}
 						},
 						{
@@ -432,7 +433,7 @@ const COLLISION_BOARD: PanelBoard = {
 							group: {
 								title: 'Key',
 								switchParam: 'Mallet On/Off',
-								controls: [box('Mallet Volume < Key', 'Volume', 's'), box('Mallet Stiffness < Key', 'Stiffness', 's'), box('Mallet Noise Amount < Key', 'Noise', 's')]
+								controls: [box('Mallet Volume < Key', 'Volume'), box('Mallet Stiffness < Key', 'Stiffness'), box('Mallet Noise Amount < Key', 'Noise')]
 							}
 						}
 					]
@@ -446,15 +447,17 @@ const COLLISION_BOARD: PanelBoard = {
 						{
 							kind: 'group',
 							stack: 2,
+							// The filter's pick a column, its four knobs two by two.
+							knobStack: 2,
 							group: {
 								title: 'Noise',
 								switchParam: 'Noise On/Off',
 								controls: [
 									{ kind: 'choice', param: 'Noise Filter Type', title: 'Filter', options: ['LP', 'HP', 'BP', 'LP+HP'] },
-									box('Noise Volume', 'Volume', 'l'),
-									box('Noise Filter Freq', 'Freq', 'm'),
-									box('Noise Filter Q', 'Res', 's'),
-									box('Noise Freq < Env', 'Env Amt', 's')
+									box('Noise Volume', 'Volume'),
+									box('Noise Filter Freq', 'Freq'),
+									box('Noise Filter Q', 'Res'),
+									box('Noise Freq < Env', 'Env Amt')
 								]
 							}
 						},
@@ -470,21 +473,22 @@ const COLLISION_BOARD: PanelBoard = {
 						{
 							kind: 'group',
 							stack: 2,
-							group: { title: 'Velocity', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Vel', 'Volume', 's'), box('Noise Freq < Vel', 'Freq', 's')] }
+							group: { title: 'Velocity', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Vel', 'Volume'), box('Noise Freq < Vel', 'Freq')] }
 						},
 						{
 							kind: 'group',
 							stack: 2,
-							group: { title: 'Key', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Key', 'Volume', 's'), box('Noise Freq < Key', 'Freq', 's')] }
+							group: { title: 'Key', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Key', 'Volume'), box('Noise Freq < Key', 'Freq')] }
 						}
 					]
 				}
 			]
 		},
 		{
-			// The MIDI amounts and Global their own row (ADR-514): beside the mallet
-			// and the noise every caption was cut.
-			weight: 2.25,
+			// The MIDI sources and Global, a row one knob high (ADR-544). A source
+			// a group, A over B as each LFO's destinations read across: four rows
+			// of a source each left every pick and knob 25px.
+			weight: 2.0,
 			tiles: [
 				{
 					id: 'midi',
@@ -493,21 +497,19 @@ const COLLISION_BOARD: PanelBoard = {
 						{
 							kind: 'matrix',
 							matrix: {
-								// A source a row, each destination before its amount (ADR-513: the
-								// destinations were the MIDI page's alone; the band opens no page).
+								// Each destination before its amount (ADR-513: the destinations
+								// were the MIDI page's alone; the band opens no page). The bend
+								// has no B.
 								title: 'MIDI',
-								rows: MIDI_SOURCES.map(([title]) => ({ title })),
-								groups: [
-									{
-										title: 'Destinations',
-										columns: [
-											col('Dest A', MIDI_SOURCES, ([, s]) => ({ kind: 'step', param: `${s} Dest A`, title: 'Dest A', labels: MOD_DESTS })),
-											col('Amt A', MIDI_SOURCES, ([, s]) => box(`${s} Amt A`, 'Amt A')),
-											col('Dest B', MIDI_SOURCES, ([, s, both]) => (both ? { kind: 'step', param: `${s} Dest B`, title: 'Dest B', labels: MOD_DESTS } : undefined)),
-											col('Amt B', MIDI_SOURCES, ([, s, both]) => (both ? box(`${s} Amt B`, 'Amt B') : undefined))
-										]
-									}
-								]
+								groupLine: true,
+								rows: [{ title: 'A' }, { title: 'B' }],
+								groups: MIDI_SOURCES.map(([title, s, both]) => ({
+									title,
+									columns: [
+										col('Dest', ['A', 'B'] as const, (ab) => (ab === 'A' || both ? { kind: 'step', param: `${s} Dest ${ab}`, title: `Dest ${ab}`, labels: MOD_DESTS } : undefined), { span: 2 }),
+										col('Amt', ['A', 'B'] as const, (ab) => (ab === 'A' || both ? box(`${s} Amt ${ab}`, `Amt ${ab}`) : undefined))
+									]
+								}))
 							}
 						}
 					]
@@ -515,19 +517,23 @@ const COLLISION_BOARD: PanelBoard = {
 				{
 					id: 'global',
 					title: 'Global',
+					// Wide enough for a pick's name ("Structure").
+					columnPx: 76,
 					sections: [
 						{
 							kind: 'group',
-							stack: 2,
+							// One row: every pick a touch row, every knob with its name.
+							stack: 1,
+							tabMax: 1,
 							group: {
 								title: 'Global',
 								controls: [
 									{ kind: 'choice', param: 'Structure', title: 'Structure', options: ['1 > 2', '1 + 2'] },
 									{ kind: 'step', param: 'Voices', title: 'Voices', labels: VOICES },
 									{ kind: 'switch', param: 'Retrig On', title: 'Retrig' },
-									box('PB Range', 'PB', 's'),
-									box('Note PB Range', 'Note PB', 's'),
-									box('Volume', 'Volume', 'l')
+									box('PB Range', 'PB', true),
+									box('Note PB Range', 'Note PB', true),
+									box('Volume', 'Volume')
 								]
 							}
 						}
@@ -596,7 +602,18 @@ export const COLLISION_PANEL: InstrumentPanel = {
 		},
 		{
 			kind: 'group',
-			group: { title: 'Global', page: 'global', controls: [{ kind: 'box', param: 'Volume', title: 'Volume' }] }
+			group: {
+				title: 'Global',
+				page: 'global',
+				// How the resonators are joined over the volume, one column
+				// (`frameColumns`; ADR-544: the volume alone left the column's
+				// height empty).
+				columns: 1,
+				controls: [
+					{ kind: 'choice', param: 'Structure', title: 'Structure', options: ['1 > 2', '1 + 2'] },
+					{ kind: 'box', param: 'Volume', title: 'Volume' }
+				]
+			}
 		}
 	],
 	pages: [
@@ -719,8 +736,8 @@ export const COLLISION_PANEL: InstrumentPanel = {
 					{
 						title: 'Bend',
 						controls: [
-							{ kind: 'box', param: 'PB Range', title: 'PB' },
-							{ kind: 'box', param: 'Note PB Range', title: 'Note PB' }
+							{ kind: 'box', param: 'PB Range', title: 'PB', whole: true },
+							{ kind: 'box', param: 'Note PB Range', title: 'Note PB', whole: true }
 						]
 					},
 					{ title: 'Output', controls: [{ kind: 'box', param: 'Volume', title: 'Volume' }] }

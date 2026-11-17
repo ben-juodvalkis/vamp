@@ -22,26 +22,26 @@ const PAGES: PanelPage[] = [
 				{
 					title: 'Stiffness',
 					controls: [
-						{ kind: 'box', param: 'M Stiffness', title: 'Amount', knobSize: 'xl' },
-						{ kind: 'box', param: 'M Stiff < Vel', title: 'Vel', knobSize: 's' },
-						{ kind: 'box', param: 'M Stiff < Key', title: 'Key', knobSize: 's' }
+						{ kind: 'box', param: 'M Stiffness', title: 'Amount' },
+						{ kind: 'box', param: 'M Stiff < Vel', title: 'Vel' },
+						{ kind: 'box', param: 'M Stiff < Key', title: 'Key' }
 					]
 				},
 				{
 					title: 'Force',
 					controls: [
-						{ kind: 'box', param: 'M Force', title: 'Amount', knobSize: 'xl' },
-						{ kind: 'box', param: 'M Force < Vel', title: 'Vel', knobSize: 's' },
-						{ kind: 'box', param: 'M Force < Key', title: 'Key', knobSize: 's' }
+						{ kind: 'box', param: 'M Force', title: 'Amount' },
+						{ kind: 'box', param: 'M Force < Vel', title: 'Vel' },
+						{ kind: 'box', param: 'M Force < Key', title: 'Key' }
 					]
 				},
 				{
 					title: 'Noise',
 					controls: [
-						{ kind: 'box', param: 'Noise Amount', title: 'Amount', knobSize: 'l' },
-						{ kind: 'box', param: 'Noise Pitch', title: 'Pitch', knobSize: 's' },
-						{ kind: 'box', param: 'Noise Decay', title: 'Decay', knobSize: 's' },
-						{ kind: 'box', param: 'Noise < Key', title: 'Key', knobSize: 's' }
+						{ kind: 'box', param: 'Noise Amount', title: 'Amount' },
+						{ kind: 'box', param: 'Noise Pitch', title: 'Pitch' },
+						{ kind: 'box', param: 'Noise Decay', title: 'Decay' },
+						{ kind: 'box', param: 'Noise < Key', title: 'Key' }
 					]
 				}
 			]
@@ -55,20 +55,20 @@ const PAGES: PanelPage[] = [
 				{
 					title: 'Tine',
 					controls: [
-						{ kind: 'box', param: 'F Tine Color', title: 'Color', knobSize: 'xl' },
-						{ kind: 'box', param: 'F Tine Decay', title: 'Decay', knobSize: 'xl' },
-						{ kind: 'box', param: 'F Tine Vol', title: 'Volume', knobSize: 'm' },
-						{ kind: 'box', param: 'F Tine < Key', title: 'Key', knobSize: 's' }
+						{ kind: 'box', param: 'F Tine Color', title: 'Color' },
+						{ kind: 'box', param: 'F Tine Decay', title: 'Decay' },
+						{ kind: 'box', param: 'F Tine Vol', title: 'Volume' },
+						{ kind: 'box', param: 'F Tine < Key', title: 'Key' }
 					]
 				},
 				{
 					title: 'Tone',
 					controls: [
-						{ kind: 'box', param: 'F Tone Vol', title: 'Volume', knobSize: 'm' },
-						{ kind: 'box', param: 'F Tone Decay', title: 'Decay', knobSize: 'm' }
+						{ kind: 'box', param: 'F Tone Vol', title: 'Volume' },
+						{ kind: 'box', param: 'F Tone Decay', title: 'Decay' }
 					]
 				},
-				{ title: 'Release', controls: [{ kind: 'box', param: 'F Release', title: 'Release', knobSize: 'm' }] }
+				{ title: 'Release', controls: [{ kind: 'box', param: 'F Release', title: 'Release' }] }
 			]
 		]
 	},
@@ -80,20 +80,20 @@ const PAGES: PanelPage[] = [
 				{
 					title: 'Damper',
 					controls: [
-						{ kind: 'box', param: 'Damp Amount', title: 'Amount', knobSize: 'l' },
-						{ kind: 'box', param: 'Damp Tone', title: 'Tone', knobSize: 'm' },
-						{ kind: 'box', param: 'Damp Balance', title: 'Balance', knobSize: 's' }
+						{ kind: 'box', param: 'Damp Amount', title: 'Amount' },
+						{ kind: 'box', param: 'Damp Tone', title: 'Tone' },
+						{ kind: 'box', param: 'Damp Balance', title: 'Balance' }
 					]
 				},
 				{
 					title: 'Pickup',
 					controls: [
 						{ kind: 'choice', param: 'Pickup Model', options: ['R', 'W'] },
-						{ kind: 'box', param: 'P Distance', title: 'Distance', knobSize: 'xl' },
-						{ kind: 'box', param: 'P Symmetry', title: 'Sym', knobSize: 'm' },
-						{ kind: 'box', param: 'P Amp In', title: 'Amp In', knobSize: 'm' },
-						{ kind: 'box', param: 'P Amp Out', title: 'Amp Out', knobSize: 'm' },
-						{ kind: 'box', param: 'P Amp < Key', title: 'Key', knobSize: 's' }
+						{ kind: 'box', param: 'P Distance', title: 'Distance' },
+						{ kind: 'box', param: 'P Symmetry', title: 'Sym' },
+						{ kind: 'box', param: 'P Amp In', title: 'Amp In' },
+						{ kind: 'box', param: 'P Amp Out', title: 'Amp Out' },
+						{ kind: 'box', param: 'P Amp < Key', title: 'Key' }
 					]
 				}
 			]
@@ -104,57 +104,60 @@ const PAGES: PanelPage[] = [
 		title: 'Global',
 		rows: [
 			[
-				{ title: 'Voices', controls: [{ kind: 'step', param: 'Voices', title: 'Voices', labels: VOICES }] },
 				{
 					title: 'Pitch',
 					controls: [
-						{ kind: 'box', param: 'Semitone', title: 'Semi', knobSize: 's' },
-						{ kind: 'box', param: 'Detune', title: 'Detune', knobSize: 's' },
-						{ kind: 'box', param: 'KB Stretch', title: 'Stretch', knobSize: 's' }
+						{ kind: 'box', param: 'Semitone', title: 'Semi' },
+						{ kind: 'box', param: 'Detune', title: 'Detune' }
+					]
+				},
+				{
+					// The keyboard's stretch tuning over how many notes it sounds.
+					title: 'Keyboard',
+					controls: [
+						{ kind: 'box', param: 'KB Stretch', title: 'Stretch' },
+						{ kind: 'step', param: 'Voices', title: 'Voices', labels: VOICES }
 					]
 				},
 				{
 					title: 'Bend',
 					controls: [
-						{ kind: 'box', param: 'PB Range', title: 'PB', knobSize: 's' },
-						{ kind: 'box', param: 'Note PB Range', title: 'Note PB', knobSize: 's' }
+						{ kind: 'box', param: 'PB Range', title: 'PB' },
+						{ kind: 'box', param: 'Note PB Range', title: 'Note PB', whole: true }
 					]
 				},
-				{ title: 'Output', controls: [{ kind: 'box', param: 'Volume', title: 'Volume', knobSize: 'l' }] }
+				{ title: 'Output', controls: [{ kind: 'box', param: 'Volume', title: 'Volume' }] }
 			]
 		]
 	}
 ];
 
-/**
- * How many of each section's controls lead (ADR-515): those stand a column
- * each, the full height, and the rest stack two high beside them. By Live's
- * panel: the hammer's stiffness and force, the tine's color and decay, the
- * damper's amount, the pickup's model and distance and the output lead;
- * their velocity and key amounts, the noise, the tone and the tuning follow.
- */
-const LEADS: Record<string, number> = { Stiffness: 1, Force: 1, Noise: 1, Tine: 2, Damper: 1, Pickup: 2 };
-
-/** A page's groups by title, as board sections: the leads a column each, the rest two high. */
-const groups = (id: string, titles?: readonly string[]) =>
+/** A page's groups by title, as board sections, their cells `stack` high. */
+const groups = (id: string, stack: number, titles?: readonly string[]) =>
 	PAGES.find((p) => p.id === id)!
 		.rows.flat()
 		.filter((g) => !titles || titles.includes(g.title ?? ''))
-		.map((group) => ({ kind: 'group' as const, stack: 2, lead: LEADS[group.title ?? ''] ?? 0, group }));
+		.map((group) => ({ kind: 'group' as const, stack, group }));
 
 /**
- * Electric at full screen (ADR-512, re-laid by ADR-514 and ADR-515): three
- * rows read in the signal's order, the hammer (Stiffness, Force, Noise),
- * the fork and the damper, then the pickup and Global. Each section's
- * leads are large and full height, its secondary controls stacked smaller
- * beside them (ADR-515: by rank, as Live's panel ranks them; every knob
- * large and a column to itself, ADR-514's, left nothing leading).
+ * Electric at full screen (ADR-512): three rows read in the signal's order,
+ * the hammer (Stiffness, Force, Noise), the fork and the damper, then the
+ * pickup and Global. Every knob on the board is one size (ADR-544: knobs
+ * that sit together are one size; ADR-515 had ranked each section's leads
+ * large and stacked the rest small beside them). So the hammer's ten knobs
+ * and the fork's and damper's ten each stand in one row, a column a knob,
+ * on the same ten columns, and the pickup and Global stack two high on a
+ * taller row: the model over its distance, the keyboard's stretch over its
+ * voices, the volume a column of its own.
  */
 const BOARD: PanelBoard = {
 	rows: [
-		{ tiles: [{ id: 'hammer', title: 'Hammer', sections: groups('hammer') }] },
-		{ tiles: [{ id: 'fork', title: 'Fork', sections: groups('fork') }, { id: 'damper', title: 'Damper', sections: groups('damper-pickup', ['Damper']) }] },
-		{ tiles: [{ id: 'pickup', title: 'Pickup', sections: groups('damper-pickup', ['Pickup']) }, { id: 'global', title: 'Global', sections: groups('global') }] }
+		{ tiles: [{ id: 'hammer', title: 'Hammer', sections: groups('hammer', 1) }] },
+		{ tiles: [{ id: 'fork', title: 'Fork', sections: groups('fork', 1) }, { id: 'damper', title: 'Damper', sections: groups('damper-pickup', 1, ['Damper']) }] },
+		{
+			weight: 1.5,
+			tiles: [{ id: 'pickup', title: 'Pickup', sections: groups('damper-pickup', 2, ['Pickup']) }, { id: 'global', title: 'Global', sections: groups('global', 2) }]
+		}
 	]
 };
 
@@ -165,7 +168,7 @@ export const ELECTRIC_PANEL: InstrumentPanel = {
 	// which left the band's height empty above and below each row): the
 	// hammer and the fork two columns of two rows of medium knobs, the
 	// damper one column, the pickup its distance over its symmetry beside
-	// its model, and Global's volume over its voices. The pages hold the rest.
+	// its model, and Global's voices over its volume. The pages hold the rest.
 	frame: [
 		{
 			kind: 'group',
@@ -226,11 +229,14 @@ export const ELECTRIC_PANEL: InstrumentPanel = {
 			group: {
 				title: 'Global',
 				page: 'global',
-				// Volume over Voices, as the other columns stack two.
+				// Voices over Volume, as the other columns stack two: the voices'
+				// count hangs under its name, which wants the room between the
+				// rows (ADR-544; it was the lower knob, its count in the inset),
+				// and the volume ends the face as Operator's and Collision's do.
 				columns: 1,
 				controls: [
-					{ kind: 'box', param: 'Volume', title: 'Volume' },
-					{ kind: 'step', param: 'Voices', title: 'Voices', labels: VOICES }
+					{ kind: 'step', param: 'Voices', title: 'Voices', labels: VOICES },
+					{ kind: 'box', param: 'Volume', title: 'Volume' }
 				]
 			}
 		}

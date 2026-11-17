@@ -5,9 +5,10 @@
 	 * Collision's Resonator 1 · Resonator 2 · LFO · MIDI. One touch row, the
 	 * tabs sharing its width, so six fit where a column of six would fall
 	 * under the touch floor. A tab whose section can be switched off wears
-	 * Sampler's dot: filled while on, hollow while off.
+	 * Sampler's dot: filled while on, hollow while off. The shown tab is ON's
+	 * block and the others' names are labels (ADR-544): the strip takes no
+	 * colour.
 	 */
-	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import type { PanelTab } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
@@ -15,14 +16,13 @@
 		tabs: readonly PanelTab[];
 		selected: number;
 		params: PanelParams;
-		color: DeviceColorScheme;
 		onSelect: (index: number) => void;
 	}
 
-	let { tabs, selected, params, color, onSelect }: Props = $props();
+	let { tabs, selected, params, onSelect }: Props = $props();
 </script>
 
-<div class="device-segmented panel-tabs" style="--btn-tint: {color.primary}; grid-template-columns: repeat({tabs.length}, minmax(0, 1fr));" role="tablist">
+<div class="device-segmented panel-tabs" style="grid-template-columns: repeat({tabs.length}, minmax(0, 1fr));" role="tablist">
 	{#each tabs as tab, i (tab.title)}
 		<button
 			class="device-segment panel-tab"
@@ -73,12 +73,5 @@
 	:global([data-grammar='flat']) .panel-tabs .device-segment + .device-segment {
 		border-top: 0;
 		border-left: 1px solid var(--line-strong);
-	}
-	:global([data-grammar='flat']) .panel-tabs .device-segment.active {
-		background: var(--btn-tint);
-		color: var(--flat-on-fg);
-	}
-	:global([data-grammar='flat']) .panel-tabs .device-segment:not(.active) {
-		color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
 	}
 </style>

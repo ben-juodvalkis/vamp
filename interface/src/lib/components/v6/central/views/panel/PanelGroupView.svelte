@@ -10,12 +10,20 @@
 	 * of that many face columns under its section's header line, which draws
 	 * the eyebrow: a control a column (a tab as many as it wants), and a
 	 * group of knobs in whole columns of knobs, each spanning as many face
-	 * columns as holds its knobs at their size (`faceKnobFit`).
+	 * columns as holds its knobs at their size (`faceKnobFit`). A last row
+	 * short of its columns stands centred under the rows above (three knobs
+	 * over two columns: two, and the third between them), never over an
+	 * empty cell; a group with a `pickRow` draws its picks in one touch row
+	 * across its top and its knobs in one row under them.
+	 *
+	 * On a board (`stack`) the group's knobs are ONE size (ADR-544): the
+	 * largest a stacked cell holds (`boardKnobSize`), measured off the
+	 * group's own box, for a lead or a lone knob too.
 	 */
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { boardCellPlace, controlKnobSize, controlUnits, faceKnobFit, frameColumns, groupFace, groupUnits, isKnobGroup, knobGridFit, pageCells, pageGroupGrid, pagePicks, type PanelControl, type PanelFace, type PanelGroup } from './panelTypes';
+	import { boardGroupStacks, boardKnobSize, controlKnobSize, controlUnits, faceKnobFit, frameColumns, groupFace, groupUnits, isKnobGroup, knobGridFit, pageCells, pageGroupGrid, pagePicks, type KnobSize, type PanelControl, type PanelFace, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -53,9 +61,13 @@
 		lead?: number;
 		/** On a board: a pick of this many values or fewer is a tab, more a `ChoicePicker`. */
 		tabMax?: number;
+		/** On a board: how many high its knobs stack, where fewer than `stack` (a short tile: 1). */
+		knobStack?: number;
+		/** On a board: the largest its knobs draw (the board's `knobSize`). */
+		knobCeiling?: KnobSize;
 	}
 
-	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace, columns, underTabs = false, dataGroup, onPage = false, oneRow = false, stack, lead = 0, tabMax = 2 }: Props = $props();
+	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace, columns, underTabs = false, dataGroup, onPage = false, oneRow = false, stack, lead = 0, tabMax = 2, knobStack, knobCeiling }: Props = $props();
 	// On a board: a pick too long for a tab its cell can hold opens over the view.
 	const boardPick = (c: PanelControl) => (c.kind === 'choice' ? c.options.length > tabMax : c.kind === 'step' && !!c.labels && c.labels.length > tabMax);
 	let pageGrid = $derived(onPage ? pageGroupGrid(group, oneRow) : undefined);
@@ -77,7 +89,7 @@
 	let row = $state<HTMLDivElement>();
 	let size = $state({ w: 0, h: 0 });
 	$effect(() => {
-		if (!row || !knobGrid || typeof ResizeObserver === 'undefined') return;
+		if (!row || !(knobGrid || stack) || typeof ResizeObserver === 'undefined') return;
 		const observer = new ResizeObserver(([entry]) => {
 			size = { w: entry.contentRect.width, h: entry.contentRect.height };
 		});
@@ -101,6 +113,10 @@
 	// addendum); the size the rows give is each knob's ceiling, and a knob
 	// draws the largest size its own cell holds (PanelControlView's `knobFit`).
 	let fit = $derived(!columns && knobGrid && size.w > 0 ? knobGridFit(group.controls.length, size.w, size.h, gap, group.knobSize) : undefined);
+	// On a board: the group's knobs' one size, by the cell a stacked knob has.
+	let boardSize = $derived(
+		stack && columns && size.w > 0 ? boardKnobSize((size.w - faceGap * (columns - 1)) / columns, size.h, knobStack ?? stack, faceGap, knobCeiling) : knobCeiling === 's' ? 's' : 'm'
+	);
 	let rows = $derived(fit?.rows ?? 1);
 	let cols = $derived(Math.ceil(group.controls.length / rows));
 </script>
@@ -109,25 +125,35 @@
 	<!-- On a board (ADR-512): cells `stack` high, column after column; an
 	     envelope's stages a column each, the tile's full height. -->
 	{@const stages = face === 'slider'}
-	<!-- A lone control stands the full height; any more keep the row's
-	     `stack` rows, so their knobs line up with the next section's. -->
-	{@const rowsOf = stages || group.controls.length === 1 ? 1 : stack}
-	{@const placed = !stages && lead > 0 && rowsOf > 1}
-	<div
-		class="panel-group-grid page-cells"
-		class:own-grid={stages && columns !== group.controls.length}
-		data-board-stack={rowsOf}
-		data-board-lead={placed ? lead : undefined}
-		style="grid-column: span {columns}; grid-template-rows: repeat({rowsOf}, minmax(0, 1fr));{stages && columns !== group.controls.length ? ` grid-template-columns: repeat(${group.controls.length}, minmax(0, 1fr));` : ''}{placed ? ' grid-auto-flow: row;' : ''}"
-	>
-		{#each group.controls as control, i (control.param)}
-			{@const at = placed ? boardCellPlace(i, lead, rowsOf) : undefined}
-			{@const own = control.kind === 'box' || control.kind === 'step' ? control.knobSize : undefined}
-			<div class="panel-cell" style={at ? `grid-column: ${at.column}; grid-row: ${at.row};` : undefined}>
-				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} knobSize={own ?? (rowsOf === 1 || (at && i < lead) ? 'l' : 'm')} pick={boardPick(control)} />
-			</div>
-		{/each}
-	</div>
+	{#if stages}
+		<div
+			class="panel-group-grid page-cells"
+			class:own-grid={columns !== group.controls.length}
+			data-board-stack="1"
+			style="grid-column: span {columns}; grid-template-rows: minmax(0, 1fr);{columns !== group.controls.length ? ` grid-template-columns: repeat(${group.controls.length}, minmax(0, 1fr));` : ''}"
+		>
+			{#each group.controls as control (control.param)}
+				<div class="panel-cell">
+					<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} pick={boardPick(control)} />
+				</div>
+			{/each}
+		</div>
+	{:else}
+		<!-- A column a stack, `stack` high (knobs `knobStack`), every cell
+		     one height; a column short of its stack (a lead, the last of an
+		     odd run) centres what it holds. Every knob the group's one size. -->
+		<div class="panel-group-grid" bind:this={row} data-board-stack={stack} data-board-lead={lead || undefined} data-board-knob={boardSize} style="grid-column: span {columns}; grid-template-rows: minmax(0, 1fr);">
+			{#each boardGroupStacks(group.controls, stack, lead, knobStack) as col, c (c)}
+				<div class="board-stack" style="--stack-high: {col.high};">
+					{#each col.cells as control (control.param)}
+						<div class="panel-cell">
+							<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} knobSize={boardSize} pick={boardPick(control)} />
+						</div>
+					{/each}
+				</div>
+			{/each}
+		</div>
+	{/if}
 {:else if pageGrid}
 	<!-- On a page's face grid: a cell a column on a one-row page, else two
 	     high, column after column. -->
@@ -152,12 +178,37 @@
 			{/if}
 		{/each}
 	</div>
+{:else if columns && group.pickRow}
+	<!-- A selector row over a knob row (ADR-516, at band size): the picks one
+	     touch row across the group, its knobs one row under them, a column
+	     each (their own equal cells where their count is not the columns'). -->
+	{@const picks = group.controls.slice(0, group.pickRow)}
+	{@const under = group.controls.slice(group.pickRow)}
+	<div class="panel-group-grid pick-over" class:under-tabs={underTabs} data-group={dataGroup} style="grid-column: span {columns};">
+		<div class="pick-row">
+			{#each picks as control (control.param)}
+				<div class="panel-cell">
+					<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} />
+				</div>
+			{/each}
+		</div>
+		<div class="knob-row" class:own-grid={under.length !== columns} style="grid-template-columns: {under.length === columns ? 'subgrid' : `repeat(${under.length}, minmax(0, 1fr))`};">
+			{#each under as control (control.param)}
+				<div class="panel-cell">
+					<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} knobSize={controlKnobSize(control, group, 1)} />
+				</div>
+			{/each}
+		</div>
+	</div>
 {:else if columns}
 	<!-- On the face grid: a subgrid of the face's columns, no eyebrow. -->
 	{@const span = faceFit ? Math.floor(columns / faceFit.knobCols) : 1}
+	<!-- A last row short of its columns: centred under the rows above. -->
+	{@const tail = faceFit && faceFit.rows > 1 ? group.controls.length % faceFit.knobCols : 0}
 	<div
 		class="panel-group-grid"
 		class:under-tabs={underTabs}
+		class:second-row={underTabs && !!faceFit && faceFit.rows === 1}
 		class:own-grid={frameOwnGrid || knobOwnGrid}
 		bind:this={row}
 		data-group={dataGroup}
@@ -165,7 +216,7 @@
 		style="grid-column: span {columns}; grid-template-rows: repeat({faceFit ? faceFit.rows : 1}, minmax(0, 1fr));{frameOwnGrid ? ` grid-template-columns: repeat(${group.controls.length}, minmax(0, 1fr));` : knobOwnGrid && faceFit ? ` grid-template-columns: repeat(${faceFit.knobCols}, minmax(0, 1fr));` : ''}"
 	>
 		{#if faceFit || frameOwnGrid || !framePlan}
-			{#each group.controls as control (control.param)}
+			{#each group.controls.slice(0, group.controls.length - tail) as control (control.param)}
 				<div class="panel-cell" style="grid-column: span {faceFit && !knobOwnGrid ? span : 1};">
 					<PanelControlView
 						{control}
@@ -177,6 +228,15 @@
 					/>
 				</div>
 			{/each}
+			{#if tail && faceFit}
+				<div class="knob-tail" style="--knob-cols: {faceFit.knobCols};">
+					{#each group.controls.slice(group.controls.length - tail) as control (control.param)}
+						<div class="panel-cell">
+							<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} knobSize={controlKnobSize(control, { ...group, knobSize: faceFit.size }, 1)} />
+						</div>
+					{/each}
+				</div>
+			{/if}
 		{:else}
 			<!-- A mixed group: a control a column, its knobs paired where the
 			     group has fewer columns than controls. -->
@@ -249,13 +309,65 @@
 	.panel-group-grid.own-grid {
 		column-gap: var(--face-gutter, var(--spacing-sm));
 	}
-	/* Two knobs sharing a column, one over the other. */
+	/* Two knobs sharing a column, one over the other; a pick of two values
+	   over a knob takes its two touch rows and the knob the rest. */
 	.panel-cell.panel-stack {
 		flex-direction: column;
 		gap: var(--face-gutter, var(--spacing-sm));
 	}
 	.panel-cell.panel-stack > :global(*) {
 		min-height: 0;
+	}
+	.panel-cell.panel-stack > :global(.panel-choice) {
+		flex: 0 0 auto;
+		align-self: stretch;
+	}
+	/* A board's column: its controls one over another, sharing its height. */
+	.board-stack {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: var(--face-gutter, var(--spacing-sm));
+		min-width: 0;
+		min-height: 0;
+	}
+	.board-stack > .panel-cell {
+		flex: 0 0 calc((100% - (var(--stack-high, 1) - 1) * var(--face-gutter, var(--spacing-sm))) / var(--stack-high, 1));
+	}
+	/* A selector row over a knob row. */
+	.panel-group-grid.pick-over {
+		grid-template-rows: auto minmax(0, 1fr);
+	}
+	.pick-row {
+		grid-column: 1 / -1;
+		display: flex;
+		gap: var(--face-gutter, var(--spacing-sm));
+		min-width: 0;
+	}
+	.pick-row > .panel-cell {
+		flex: 1 1 0;
+	}
+	.knob-row {
+		grid-column: 1 / -1;
+		display: grid;
+		min-width: 0;
+		min-height: 0;
+	}
+	.knob-row.own-grid {
+		column-gap: var(--face-gutter, var(--spacing-sm));
+	}
+	/* A last row short of its columns: its knobs centred, each a knob
+	   column wide, so they draw as the rows above do. */
+	.knob-tail {
+		grid-column: 1 / -1;
+		display: flex;
+		justify-content: center;
+		column-gap: var(--face-gutter, var(--spacing-sm));
+		min-width: 0;
+		min-height: 0;
+	}
+	.knob-tail > .panel-cell {
+		flex: 0 0 calc((100% - (var(--knob-cols) - 1) * var(--face-gutter, var(--spacing-sm))) / var(--knob-cols));
 	}
 	/* An amount over the pick that names it. */
 	.mod-cell {
@@ -278,6 +390,22 @@
 	/* Under a tab strip, which lies over the top of the section (ADR-510). */
 	.panel-group-grid.under-tabs {
 		margin-top: calc(var(--height-touch) + var(--central-gap));
+	}
+	/* A selector row sits a gutter under the tab strip it belongs with, and
+	   its knobs keep a few px under them: a whole-numbered knob's value
+	   hangs under its name (a resonator's Tune), and must clear the inset. */
+	.panel-group-grid.under-tabs.pick-over {
+		margin-top: calc(var(--height-touch) + var(--face-gutter, var(--spacing-sm)));
+	}
+	.panel-group-grid.under-tabs.pick-over > .knob-row,
+	.panel-group-grid.under-tabs.second-row {
+		padding-bottom: 4px;
+	}
+	/* One row of knobs under a tab strip stands where a selector row would
+	   leave it (`pick-over`), so a tab switch moves no knob up or down and
+	   the knobs' names keep the line the sections beside them end on. */
+	.panel-group-grid.under-tabs.second-row {
+		padding-top: calc(var(--height-touch) + 2 * var(--face-gutter, var(--spacing-sm)) - var(--central-gap));
 	}
 	.panel-cell {
 		display: flex;

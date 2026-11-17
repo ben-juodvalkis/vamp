@@ -1,18 +1,18 @@
 <script lang="ts">
   /**
-   * Electric in Live's arrangement (ADR-487): Hammer · Fork · Damper/Pickup ·
-   * Global, two value boxes each as Live's panel has two knobs, and each
-   * section's eyebrow opening its detail, as Live's display does. The panel
-   * is data (`panel/electricPanel.ts`), bound by Live's parameter names.
-   * Until 2026-10-27 the view was two XY pads, Hammer and Fork, bound by
-   * index. At full screen it draws the panel's board (ADR-512): the four
-   * pages at once, two to a row.
+   * Electric in Live's arrangement (ADR-487): Live's five sections, Hammer ·
+   * Fork · Damper · Pickup · Global, each two rows of medium knobs (ADR-517),
+   * the pickup's model a tab beside its knobs. A section's eyebrow is its
+   * name; the band opens no page (ADR-513). The panel is data
+   * (`panel/electricPanel.ts`), bound by Live's parameter names. Until
+   * 2026-10-27 the view was two XY pads, Hammer and Fork, bound by index.
+   * At full screen it draws the panel's board (ADR-512): every section's
+   * detail at once, every knob one size. Its amounts are the selected
+   * track's ink (ADR-544).
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
@@ -28,20 +28,9 @@
   let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
 
-  // Electric color scheme (amber/orange - matches electric piano aesthetic)
-  const electricColor = {
-    primary: '#f59e0b',
-    secondary: 'rgba(245, 158, 11, 0.1)',
-    accent: '#fbbf24'
-  };
-
-  // GRATICULE (§5.5): normalize the per-section palette through trackInk at injection.
-  let trackScheme = $derived(selectedTrackScheme());
-  let electricInk = $derived(trackScheme ?? {
-    primary: trackInk(electricColor.primary, paintModeReactive()),
-    secondary: electricColor.secondary,
-    accent: trackInk(electricColor.accent, paintModeReactive())
-  });
+  // Every amount is the selected track's ink (ADR-544): the view has no
+  // colour of its own.
+  let electricInk = $derived(selectedAmountScheme());
 
   const params = usePanelParams(() => device);
 </script>

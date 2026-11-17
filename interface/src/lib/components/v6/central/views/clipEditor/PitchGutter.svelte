@@ -10,7 +10,11 @@
 <script lang="ts">
 	/**
 	 * The pitch gutter: a mini piano key per lane, named after the Drum
-	 * Rack's pads on a kit. A press on a note name still pans like the
+	 * Rack's pads on a kit. A name is a label (ADR-544): a pitch's quiet,
+	 * as an axis is, a pad's in plain ink beside a chip of its chain colour.
+	 * A row shown alone is lit: a pitch as ON's block, a pad filled with its
+	 * own colour as its tile in the pad grid is, its name in the ink that
+	 * reads on it. A press on a note name still pans like the
 	 * rest of the canvas (the event bubbles to it). Two gestures of its own
 	 * ride on top:
 	 *  - solo: at finger-down the roll shows that row alone, or, on a row
@@ -231,7 +235,11 @@
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
-		padding-right: 2px;
+		padding: 0 5px 0 8px;
+	}
+	/* A pad's row carries a chip of its chain colour down its left edge. */
+	.key:has(.pad-label) {
+		box-shadow: inset 4px 0 0 var(--pad-ink, transparent);
 	}
 	.key.black {
 		background: var(--canvas);
@@ -241,50 +249,47 @@
 	.key.pressed {
 		animation: key-held 1ms linear var(--key-hold-ms, 300ms) forwards;
 	}
-	/* A row shown alone: the key wears the ON ink at a wash, so the way
-	   back to every row (tap it again) is plain. */
-	.key.soloed {
-		background: color-mix(in oklab, var(--phosphor) 30%, var(--secondary));
-		box-shadow: inset 3px 0 0 var(--phosphor);
-	}
-	/* A pad's row lights in its own chain colour, the name kept in it
-	   (2026-10-24, the user's call: the house orange took the colour away). */
-	.key.soloed:has(.pad-label) {
-		/* A lighter wash than the orange's, so the name in the same ink reads
-		   on it; the edge bar carries the lit state. */
-		background: color-mix(in oklab, var(--pad-ink, var(--phosphor)) 18%, var(--secondary));
-		box-shadow: inset 3px 0 0 var(--pad-ink, var(--phosphor));
-	}
-	.key.soloed .key-label.pad-label {
-		color: var(--pad-ink, var(--foreground));
-	}
-	.key.soloed .key-label {
-		color: var(--foreground);
-	}
+	/* A row shown alone is ON's block, so the way back to every row (tap
+	   it again) is plain. */
+	.key.soloed,
 	.key.scaling {
-		background: var(--phosphor);
+		background: var(--on-bg);
 	}
-	.key.scaling:has(.pad-label) {
-		background: var(--pad-ink, var(--phosphor));
-	}
+	.key.soloed .key-label,
 	.key.scaling .key-label {
-		color: var(--flat-on-fg, var(--background));
+		color: var(--on-fg);
+	}
+	/* A pad's row lights in its own chain colour (2026-10-24, the user's
+	   call: the house colour took the pad's away), filled as its tile is in
+	   the pad grid, its name in the ink that reads on that fill (the ink is
+	   a light one in both themes; in the same ink on a wash of it the name
+	   could not be read). */
+	.key.soloed:has(.pad-label),
+	.key.scaling:has(.pad-label) {
+		background: var(--pad-ink, var(--on-bg));
+	}
+	.key.soloed .key-label.pad-label,
+	.key.scaling .key-label.pad-label {
+		color: var(--flat-clip-text, var(--on-fg));
 	}
 	@keyframes key-held {
 		to {
 			background: color-mix(in oklab, var(--pad-ink, var(--phosphor)) 45%, var(--secondary));
 		}
 	}
+	/* An axis's names: quiet, and large enough to find at arm's length
+	   (8px until ADR-544). */
 	.key-label {
-		font-family: var(--font-mono);
-		font-size: 8px;
+		font-size: 11px;
+		font-weight: var(--font-weight-medium);
+		font-variant-numeric: tabular-nums;
 		line-height: 1;
-		color: var(--fg-tertiary);
+		color: var(--value);
 	}
-	/* A pad's name in its chain colour (`padInk`, set on the key so a
-	   soloed or scaling row can light in it too). */
+	/* A pad's name is a label; its colour is the chip on its key
+	   (`padInk`, set on the key so a soloed or scaling row lights in it). */
 	.pad-label {
-		color: var(--pad-ink, var(--fg-tertiary));
+		color: var(--label);
 		min-width: 0;
 		overflow: hidden;
 		white-space: nowrap;
@@ -293,5 +298,21 @@
 
 	:global([data-grammar="flat"]) .pitch-gutter {
 		border-right-color: var(--line-strong);
+	}
+	/* Light: a white key is paper and a black key a step darker, as the
+	   lanes beside them are (the base pair runs the other way on paper). */
+	:global(.light[data-grammar="flat"]) .key {
+		background: var(--surface-well);
+	}
+	:global(.light[data-grammar="flat"]) .key.black {
+		background: var(--secondary);
+	}
+	:global(.light[data-grammar="flat"]) .key.soloed,
+	:global(.light[data-grammar="flat"]) .key.scaling {
+		background: var(--on-bg);
+	}
+	:global(.light[data-grammar="flat"]) .key.soloed:has(.pad-label),
+	:global(.light[data-grammar="flat"]) .key.scaling:has(.pad-label) {
+		background: var(--pad-ink, var(--on-bg));
 	}
 </style>

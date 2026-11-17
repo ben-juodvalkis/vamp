@@ -22,6 +22,11 @@
 	 * no tab strip and no page to open. A matrix section draws twin sections
 	 * as a table (a row each, its name at the left; a column a control, its
 	 * name once over it). Off the board the panel draws exactly as before.
+	 * A row's tiles keep or drop the header line together, so a row's
+	 * controls start on one pixel, and a group's knobs are one size
+	 * (`PanelGroupView`, ADR-544). Every name the view draws (a tile's, a
+	 * section's, a table's rows and columns) is a label, never the amount's
+	 * colour.
 	 */
 	import type { Snippet } from 'svelte';
 	import FaceGrid from '../../FaceGrid.svelte';
@@ -72,6 +77,11 @@
 	const boardTile = (id: string) => panel.board?.rows.flatMap((r) => r.tiles).find((t) => t.id === id);
 	/** A tile's header line: only where a section has a name of its own, or columns to name (a matrix). */
 	const tileHeads = (t: PanelBoardTile) => t.sections.some((s) => (s.kind === 'group' ? !!s.group.title && s.group.title !== t.title : s.kind === 'matrix' || !!s.title));
+	/**
+	 * A row's tiles keep the line together: where one has names to draw, the
+	 * others leave it empty, so a row's controls start on one pixel.
+	 */
+	const rowHeads = (t: PanelBoardTile) => (panel.board?.rows.find((r) => r.tiles.includes(t))?.tiles ?? [t]).some(tileHeads);
 	/** The tile's bar switch: its section's on/off, flipped. */
 	function flipSwitch(name: string) {
 		const r = params.range(name);
@@ -131,7 +141,7 @@
 					switchParam={sw}
 					switchDisabled={!!sw && !params.has(sw)}
 				>
-				<FaceGrid sections={boardTileSections(t)} heads={tileHeads(t)} data-board-face={id}>
+				<FaceGrid sections={boardTileSections(t)} heads={rowHeads(t)} data-board-face={id}>
 					{#each t.sections as section, s (s)}
 						{#if s > 0}<FaceSeam ink={color.primary} />{/if}
 						{#if section.kind === 'group'}
@@ -140,7 +150,7 @@
 								{#snippet head()}
 									{#if section.group.title && section.group.title !== t.title}<PanelEyebrow title={section.group.title} color={color.primary} />{/if}
 								{/snippet}
-								<PanelGroupView group={section.group} {params} {color} boxFace={panel.boxFace} columns={span} stack={section.stack} lead={section.lead} tabMax={section.tabMax} />
+								<PanelGroupView group={section.group} {params} {color} boxFace={panel.boxFace} columns={span} stack={section.stack} lead={section.lead} tabMax={section.tabMax} knobStack={section.knobStack} knobCeiling={panel.board?.knobSize} />
 							</FaceSection>
 						{:else if section.kind === 'slot'}
 							<FaceSection span={section.columns} data-group={section.title ?? section.slot}>
@@ -152,7 +162,7 @@
 										{#each section.below as b, k (k)}
 											<div class="slot-below" style="grid-column: span {b.columns};" data-group={b.group.title ?? ''}>
 												<span class="slot-below-name"><PanelEyebrow title={b.group.title} color={color.primary} /></span>
-												<PanelGroupView group={b.group} {params} {color} boxFace={panel.boxFace} columns={b.columns} stack={b.stack} tabMax={1} />
+												<PanelGroupView group={b.group} {params} {color} boxFace={panel.boxFace} columns={b.columns} stack={b.stack} tabMax={1} knobCeiling={panel.board?.knobSize} />
 											</div>
 										{/each}
 									</div>
@@ -186,9 +196,9 @@
 						<PanelEyebrow title={mg.title} color={color.primary} />
 					{:else}
 						<div class="head-cols" style="grid-template-columns: repeat({span}, minmax(0, 1fr));">
-							{#if g === 0}<span class="matrix-col-name matrix-title" style="grid-column: 1; color: {color.primary};">{m.title ?? ''}</span>{/if}
+							{#if g === 0}<span class="matrix-col-name matrix-title" style="grid-column: 1;">{m.title ?? ''}</span>{/if}
 							{#each mg.columns as col, c (c)}
-								<span class="matrix-col-name" style="grid-column: {starts[c]} / span {col.span ?? 1}; color: {color.primary};">{col.title}</span>
+								<span class="matrix-col-name" style="grid-column: {starts[c]} / span {col.span ?? 1};">{col.title}</span>
 							{/each}
 						</div>
 					{/if}
@@ -196,9 +206,9 @@
 				{@const top = m.groupLine ? 2 : 1}
 				<div class="matrix face-span-all" data-matrix={mg.title} style="grid-template-rows: {m.groupLine ? 'auto ' : ''}repeat({m.rows.length}, minmax(0, 1fr));">
 					{#if m.groupLine}
-						{#if g === 0}<span class="matrix-col-name matrix-title" style="grid-column: 1; grid-row: 1; color: {color.primary};">{m.title ?? ''}</span>{/if}
+						{#if g === 0}<span class="matrix-col-name matrix-title" style="grid-column: 1; grid-row: 1;">{m.title ?? ''}</span>{/if}
 						{#each mg.columns as col, c (c)}
-							<span class="matrix-col-name" style="grid-column: {starts[c]} / span {col.span ?? 1}; grid-row: 1; color: {color.primary};">{col.title}</span>
+							<span class="matrix-col-name" style="grid-column: {starts[c]} / span {col.span ?? 1}; grid-row: 1;">{col.title}</span>
 						{/each}
 					{/if}
 					{#if g === 0}
@@ -207,7 +217,7 @@
 								{#if row.switchParam && !row.quiet}
 									<PanelControlView control={{ kind: 'switch', param: row.switchParam, title: row.title }} {params} {color} switchParam={row.switchParam} face="knob" />
 								{:else}
-									<span class="matrix-row-name" style="color: {color.primary};">{row.title}</span>
+									<span class="matrix-row-name">{row.title}</span>
 								{/if}
 							</div>
 						{/each}
@@ -292,7 +302,7 @@
 					{#if picked === undefined}
 						<!-- Live's tabs, across the region's sections under the header line. -->
 						<div class="face-tabs" style="grid-column: {regionLines[i].start} / {regionLines[i].end};">
-							<PanelTabs tabs={region.tabs} selected={sel} {params} {color} onSelect={(t) => (tabSelected = { ...tabSelected, [i]: t })} />
+							<PanelTabs tabs={region.tabs} selected={sel} {params} onSelect={(t) => (tabSelected = { ...tabSelected, [i]: t })} />
 						</div>
 					{/if}
 				{/if}
@@ -352,12 +362,14 @@
 		text-align: center;
 		white-space: nowrap;
 		min-width: 0;
-		opacity: 0.85;
+		/* Names (ADR-544): a column's is a section's name, quiet as an
+		   eyebrow; a row's is a label. Neither is the amount's colour. */
+		color: var(--value);
 	}
 	.matrix-row-name {
 		align-self: center;
 		font-weight: 700;
-		opacity: 1;
+		color: var(--label);
 	}
 	.matrix-cell {
 		display: flex;

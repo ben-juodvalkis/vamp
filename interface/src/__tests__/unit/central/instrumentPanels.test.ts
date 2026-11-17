@@ -179,3 +179,35 @@ describe.each([
 		}
 	});
 });
+
+/**
+ * A box marked `whole` keeps its value under its name (ADR-544: a discrete
+ * control), read off its raw value, so the mark is only true where Live
+ * counts the parameter in whole semitones and the raw value is that count.
+ * Checked on what a frame or a board draws; the hand-laid faces draw their
+ * own controls.
+ */
+describe('whole-numbered knobs (ADR-544)', () => {
+	type Labelled = { name: string; labels?: { value: number; label: string }[] };
+	const semitones = (p: Labelled | undefined) =>
+		!!p?.labels?.length && p.labels.every((l) => / ?st$/.test(l.label) && parseInt(l.label, 10) === l.value);
+	// An envelope's stages are boxes whose heights are their reading: no knob, no value.
+	const knobs = (g: PanelGroup) => (g.face === 'slider' ? [] : [...g.controls]);
+	const frameControls = (panel: InstrumentPanel): PanelControl[] =>
+		panel.frame.flatMap((r) => (r.kind === 'group' ? knobs(r.group) : r.kind === 'tabs' ? r.tabs.flatMap((t) => t.groups.flatMap(knobs)) : []));
+	const cases: [string, InstrumentPanel, { parameters: Labelled[] }][] = [
+		['Operator', OPERATOR_PANEL, OPERATOR],
+		['Electric', ELECTRIC_PANEL, ELECTRIC],
+		['Collision', COLLISION_PANEL, COLLISION],
+		['Simpler', SIMPLER_PANEL, SIMPLER],
+		['Sampler', SAMPLER_PANEL, SAMPLER]
+	];
+	it.each(cases)('%s: marks every semitone knob it draws, and no other', (_name, panel, dump) => {
+		const byName = new Map(dump.parameters.map((p) => [p.name, p]));
+		const drawn = [...frameControls(panel), ...boardControls(panel)].filter((c) => c.kind === 'box');
+		const marked = [...new Set(drawn.filter((c) => c.kind === 'box' && c.whole).map((c) => c.param))].sort();
+		const counted = [...new Set(drawn.filter((c) => semitones(byName.get(c.param))).map((c) => c.param))].sort();
+		expect(marked).toEqual(counted);
+		expect(marked.length).toBeGreaterThan(0);
+	});
+});

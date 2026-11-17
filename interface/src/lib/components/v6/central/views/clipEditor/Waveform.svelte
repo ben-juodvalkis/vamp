@@ -6,8 +6,8 @@
 
 	import type { PeakData } from '$lib/services/clipWaveformService';
 	import { paintPeaks, peakSpan } from '$lib/utils/waveformPaint';
-	import { paintTokens, paintMode, withAlpha } from '$lib/utils/paintTokens';
-	import { trackInk } from '$lib/utils/formatters/trackFormatters';
+	import { paintTokens, paintMode } from '$lib/utils/paintTokens';
+	import { amountInk } from '$lib/utils/formatters/trackFormatters';
 	import type { BeatWindow } from '$lib/utils/clip/clipEditorGeometry';
 
 	interface Props {
@@ -66,16 +66,12 @@
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		if (!data || !data.peaks.length || total <= 0) return;
 
-		// GRATICULE two-tone (§4.5): inside the loop braces → trackInk; outside →
-		// DIM_GREY @45%. ONE createLinearGradient per repaint for the vertical
-		// alpha falloff (NOT per bin). fillStyle stays canvas-safe strings.
+		// Two-tone (§4.5): inside the loop braces the track's amount ink, flat
+		// (ADR-544: no gradient; a vertical falloff until then), outside
+		// DIM_GREY @45%. fillStyle stays canvas-safe strings.
 		const pt = paintTokens();
-		const ink = colorStyle ? trackInk(colorStyle, paintMode()) : pt.EDITOR_ACCENT;
+		const ink = colorStyle ? amountInk(colorStyle, paintMode()) : pt.EDITOR_ACCENT;
 		const dim = pt.DIM_GREY_45;
-		const inkGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-		inkGrad.addColorStop(0, withAlpha(ink, 0.4));
-		inkGrad.addColorStop(0.5, ink);
-		inkGrad.addColorStop(1, withAlpha(ink, 0.4));
 		const isLooped = looped;
 		const braceStartPx = loopStartX * dpr;
 		const braceEndPx = loopEndX * dpr;
@@ -88,7 +84,7 @@
 			place: warp,
 			amplitude: 'perceptual',
 			headroom: 0.9,
-			ink: (x0) => (!isLooped || (x0 >= braceStartPx && x0 < braceEndPx) ? inkGrad : dim)
+			ink: (x0) => (!isLooped || (x0 >= braceStartPx && x0 < braceEndPx) ? ink : dim)
 		});
 	});
 </script>
