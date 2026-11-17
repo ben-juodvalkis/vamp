@@ -462,6 +462,11 @@ html[data-pitch='2'] .rec-tint {
 	background: transparent;
 	box-shadow: inset 0 0 0 4px var(--act-rec);
 }
+/* While it records, a selected strip's frame is red, not white (Ben). */
+html[data-pitch='2'] .track-selected.is-active {
+	border-color: var(--act-rec) !important;
+	box-shadow: 0 0 0 1px var(--act-rec) !important;
+}
 
 /* ---------- 3 · Dye ------------------------------------------------------ */
 
