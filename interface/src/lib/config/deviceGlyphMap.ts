@@ -111,10 +111,9 @@ export const DEVICE_GLYPHS: Readonly<Record<string, DeviceGlyph>> = {
  * is anyone's guess — and a plug-in the rig does not know is a plug.
  */
 export const INSTRUMENT_GLYPHS: Readonly<Partial<Record<InstrumentType, DeviceGlyph>>> = {
-	// Not the drum: the drum is the Drum CATEGORY's mark (user, 2026-09-18),
-	// and a Drum Rack is in Perc, Inst and FX too. A kit with no category
-	// and no named macro to draw is only "an instrument".
-	drumrack: 'device',
+	// A Drum Rack draws the drum, whatever its preset was filed under
+	// (ADR-545: a strip's mark is its instrument's, as its colour is).
+	drumrack: 'drum',
 	// The pattern rack plays shaker and tambourine loops, and draws this mark
 	// in place of a knob (user, 2026-09-17) — see useTrackDevice's mode rule.
 	'instrument-rack-pattern': 'shaker',

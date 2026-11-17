@@ -2,10 +2,8 @@
  * trackColoring.test.ts — auto-color + auto-role rules and their applies.
  *
  * Three halves, since protocol 3.7.0:
- *   - Pure colour resolution (colorForCategory / resolveAutoColor) — the
- *     role's color (ADR-399), or the audio color for a sample loaded as
- *     audio. The synonym table itself is read in `$lib/utils/presetPath`
- *     and tested beside it (`utils/presetPath.test.ts`).
+ *   - Pure colour resolution: an instrument type's colour (ADR-545), or
+ *     the audio colour for a sample loaded as audio.
  *   - Pure role resolution (`resolveAutoRole`) — a Place's role outright,
  *     else the path's category folder. The Place half is also pinned in
  *     `services/placesBrowser.test.ts`.
@@ -41,8 +39,9 @@ machineStore.update(JSON.stringify({ paths: { instrumentsBase: LIBRARY, m4lDevic
 import {
 	applyAutoColorOnPrepareAck,
 	colorForAudio,
-	colorForCategory,
-	resolveAutoColor,
+	colorForInstrument,
+	applyInstrumentColor,
+	takePendingInstrumentColor,
 	applyAutoRoleOnPrepareAck,
 	resolveAutoRole
 } from '$lib/services/trackColoring';
@@ -57,15 +56,14 @@ import {
 const sendMock = send as unknown as ReturnType<typeof vi.fn>;
 
 // Constants we expect from constants.json:vendors (the ADR-399 role
-// palette). Keeping them inline makes test failures self-explanatory
+// palette for audio, `vendors.devices` / `vendors.brands` for instruments,
+// ADR-545). Keeping them inline makes test failures self-explanatory
 // if the palette changes.
-const COLOR_DRUM = 0xf36fb8;
-const COLOR_BASS = 0x12b2f4;
-const COLOR_FX = 0xd57ce3;
-const COLOR_INST = 0x00cdb9;
-const COLOR_KEY = 0xceb92d;
-const COLOR_PERC = 0xff8244;
-const COLOR_SYNTH = 0x8e90ff;
+const COLOR_DRUM_RACK = 0xf97096;
+const COLOR_DRIFT = 0x3be59d;
+const COLOR_COLLISION = 0x06bfa0;
+const COLOR_MELD = 0xad8dfd;
+const COLOR_OMNI = 0xdd3cdd;
 const COLOR_AUDIO = 0x89ce5f;
 
 // --- fixture helpers ------------------------------------------------------
@@ -129,22 +127,24 @@ function seed(tracks: TrackRecord[]): void {
 	replaceTree(1, tracks);
 }
 
-// --- colorForCategory / colorForAudio -----------------------------------
+// --- colorForInstrument / colorForAudio ---------------------------------
 
-describe('colorForCategory', () => {
-	it('returns the integer for each known category', () => {
-		expect(colorForCategory('drum')).toBe(COLOR_DRUM);
-		expect(colorForCategory('bass')).toBe(COLOR_BASS);
-		expect(colorForCategory('fx')).toBe(COLOR_FX);
-		expect(colorForCategory('inst')).toBe(COLOR_INST);
-		expect(colorForCategory('key')).toBe(COLOR_KEY);
-		expect(colorForCategory('perc')).toBe(COLOR_PERC);
-		expect(colorForCategory('synth')).toBe(COLOR_SYNTH);
+describe('colorForInstrument (ADR-545)', () => {
+	it("is each instrument type's own colour", () => {
+		expect(colorForInstrument('drumrack')).toBe(COLOR_DRUM_RACK);
+		expect(colorForInstrument('drift')).toBe(COLOR_DRIFT);
+		expect(colorForInstrument('collision')).toBe(COLOR_COLLISION);
+		expect(colorForInstrument('meld')).toBe(COLOR_MELD);
 	});
 
-	it('returns null for an unknown category', () => {
-		expect(colorForCategory('vocal')).toBeNull();
-		expect(colorForCategory('')).toBeNull();
+	it("is a plug-in's brand colour where the rig knows the plug-in", () => {
+		expect(colorForInstrument('omnisphere')).toBe(COLOR_OMNI);
+	});
+
+	it('is null for an instrument with no colour of its own: the colour is left alone', () => {
+		expect(colorForInstrument('plugin')).toBeNull();
+		expect(colorForInstrument('unknown')).toBeNull();
+		expect(colorForInstrument(null)).toBeNull();
 	});
 });
 
@@ -154,151 +154,66 @@ describe('colorForAudio', () => {
 	});
 });
 
-// --- resolveAutoColor (combined rule) -----------------------------------
-
-describe('resolveAutoColor', () => {
-	it('an audio load is the audio color, whatever its path or Place', () => {
-		expect(resolveAutoColor('Drum/Samples/Kick.wav', { audio: true })).toBe(COLOR_AUDIO);
-		expect(resolveAutoColor('Drum/Samples/Kick.wav', { audio: true, placeRole: 'drum' })).toBe(COLOR_AUDIO);
-	});
-
-	it("a Place's role is the color outright", () => {
-		expect(resolveAutoColor('Drum/Synth/Kit.aupreset', { placeRole: 'drum' })).toBe(COLOR_DRUM);
-		expect(resolveAutoColor('Key/Grand/Ballad.aupreset', { placeRole: 'key' })).toBe(COLOR_KEY);
-		expect(resolveAutoColor('Found/Thing.adg', { placeRole: null })).toBeNull();
-		expect(resolveAutoColor('Found/Thing.adg', { placeRole: 'vocal' })).toBeNull();
-	});
-
-	it('with no Place behind the load, the path category is the color', () => {
-		expect(resolveAutoColor('Ableton/Drum/Kit.adg')).toBe(COLOR_DRUM);
-		expect(resolveAutoColor('NI/Key/Piano.adg')).toBe(COLOR_KEY);
-		expect(resolveAutoColor('Omni/Bass/x.aupreset')).toBe(COLOR_BASS);
-		expect(resolveAutoColor('UnknownBrand/Keys/x.adg')).toBe(COLOR_KEY);
-	});
-
-	it('returns null when the load names no role — there is no brand fallback', () => {
-		// The Ableton / NI / Omni brand colors were the last resort for an old
-		// `<Brand>/<Type>/…` path with an unknown type; the Places retired it.
-		expect(resolveAutoColor('Ableton/Misc/x.adg')).toBeNull();
-		expect(resolveAutoColor('Vendor/Vocal/x.adg')).toBeNull();
-		expect(resolveAutoColor('')).toBeNull();
-	});
-});
-
-// --- applyAutoColorOnPrepareAck ----------------------------------------
+// --- applyAutoColorOnPrepareAck / applyInstrumentColor ------------------
 
 describe('applyAutoColorOnPrepareAck', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		takePendingInstrumentColor('tracks/0');
 	});
 
-	it('always colors the track on preset load', () => {
-		seed([mkTrack(0, { color: 0x123456 })]); // already has a color
-
-		applyAutoColorOnPrepareAck({
-			trackPath: 'tracks/0',
-			presetPath: 'Bass/Synth/x.aupreset',
-			placeRole: 'bass',
-		});
-
-		expect(v3Store.tracks.get('tracks/0')?.color).toBe(COLOR_BASS);
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/track/color', [
-			'tracks/0',
-			COLOR_BASS
-		]);
-	});
-
-	it('writes clip color for every existing clip on the track', () => {
-		const clip0 = mkClip(0, 0);
-		const clip2 = mkClip(0, 2);
-		seed([
-			mkTrack(0, {
-				color: 0,
-				slots: [mkSlot(0, 0, clip0), mkSlot(0, 1), mkSlot(0, 2, clip2)]
-			})
-		]);
-
-		applyAutoColorOnPrepareAck({
-			trackPath: 'tracks/0',
-			presetPath: 'Synth/Lead/x.aupreset',
-			placeRole: 'synth',
-		});
-
-		// One track-color send + one clip-color send per existing clip
-		// (slot 1 is empty and gets nothing). Synth role color wins.
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/track/color', [
-			'tracks/0',
-			COLOR_SYNTH
-		]);
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/clip/set/color', [
-			'tracks/0/slots/0/clip',
-			COLOR_SYNTH
-		]);
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/clip/set/color', [
-			'tracks/0/slots/2/clip',
-			COLOR_SYNTH
-		]);
-		// Track + 2 clips = 3 sends total.
-		expect(sendMock).toHaveBeenCalledTimes(3);
-	});
-
-	it('uses the audio color for a sample loaded as audio', () => {
+	it('colours an audio load at once', () => {
 		seed([mkTrack(0, { color: 0 })]);
-
-		applyAutoColorOnPrepareAck({
-			trackPath: 'tracks/0',
-			presetPath: 'Drum/Samples/Kick.wav',
-			audio: true,
-		});
-
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/track/color', [
-			'tracks/0',
-			COLOR_AUDIO
-		]);
+		applyAutoColorOnPrepareAck({ trackPath: 'tracks/0', presetPath: 'Drum/Samples/Kick.wav', audio: true });
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/track/color', ['tracks/0', COLOR_AUDIO]);
 	});
 
-	it('skips when no rule matches (no role, not audio)', () => {
-		seed([mkTrack(0, { color: 0 })]);
-
-		applyAutoColorOnPrepareAck({
-			trackPath: 'tracks/0',
-			presetPath: 'Vendor/Vocal/x.adg',
-		});
-
+	it('marks an instrument load pending and writes nothing: the device has not landed', () => {
+		seed([mkTrack(0, { color: 0x123456 })]);
+		applyAutoColorOnPrepareAck({ trackPath: 'tracks/0', presetPath: 'Bass/Synth/x.aupreset', placeRole: 'bass' });
 		expect(sendMock).not.toHaveBeenCalled();
-		expect(v3Store.tracks.get('tracks/0')?.color).toBe(0);
+		expect(takePendingInstrumentColor('tracks/0')).toBe(true);
+		expect(takePendingInstrumentColor('tracks/0')).toBe(false);
 	});
 
 	it('skips master and returns paths', () => {
-		seed([mkTrack(0)]);
-
-		applyAutoColorOnPrepareAck({
-			trackPath: 'master',
-			presetPath: 'x/Bass/y.adg',
-			placeRole: 'bass',
-		});
-		applyAutoColorOnPrepareAck({
-			trackPath: 'returns/0',
-			presetPath: 'x/Bass/y.adg',
-			placeRole: 'bass',
-		});
-
+		applyAutoColorOnPrepareAck({ trackPath: 'master', presetPath: 'x.wav', audio: true });
+		applyAutoColorOnPrepareAck({ trackPath: 'returns/0', presetPath: 'x/Bass/y.adg' });
 		expect(sendMock).not.toHaveBeenCalled();
+		expect(takePendingInstrumentColor('returns/0')).toBe(false);
+	});
+});
+
+describe('applyInstrumentColor', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
 	});
 
-	it('does not advance generation or touch unrelated tracks', () => {
-		const t0 = mkTrack(0, { color: 0 });
-		const t1 = mkTrack(1, { color: 0xabcdef });
-		seed([t0, t1]);
+	it('writes the track and every clip it holds', () => {
+		const clip0 = mkClip(0, 0);
+		const clip2 = mkClip(0, 2);
+		seed([mkTrack(0, { color: 0, slots: [mkSlot(0, 0, clip0), mkSlot(0, 1), mkSlot(0, 2, clip2)] })]);
 
-		applyAutoColorOnPrepareAck({
-			trackPath: 'tracks/0',
-			presetPath: 'V/Drum/k.adg',
-			placeRole: 'drum',
-		});
+		expect(applyInstrumentColor('tracks/0', 'drift')).toBe(true);
 
-		expect(v3Store.tracks.get('tracks/0')?.color).toBe(COLOR_DRUM);
-		// Sibling track untouched.
+		expect(v3Store.tracks.get('tracks/0')?.color).toBe(COLOR_DRIFT);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/track/color', ['tracks/0', COLOR_DRIFT]);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/clip/set/color', ['tracks/0/slots/0/clip', COLOR_DRIFT]);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/clip/set/color', ['tracks/0/slots/2/clip', COLOR_DRIFT]);
+		expect(sendMock).toHaveBeenCalledTimes(3);
+	});
+
+	it('leaves the track alone for an instrument with no colour', () => {
+		seed([mkTrack(0, { color: 0xabcdef })]);
+		expect(applyInstrumentColor('tracks/0', 'plugin')).toBe(false);
+		expect(sendMock).not.toHaveBeenCalled();
+		expect(v3Store.tracks.get('tracks/0')?.color).toBe(0xabcdef);
+	});
+
+	it('touches no other track', () => {
+		seed([mkTrack(0, { color: 0 }), mkTrack(1, { color: 0xabcdef })]);
+		applyInstrumentColor('tracks/0', 'drumrack');
+		expect(v3Store.tracks.get('tracks/0')?.color).toBe(COLOR_DRUM_RACK);
 		expect(v3Store.tracks.get('tracks/1')?.color).toBe(0xabcdef);
 	});
 });
@@ -306,8 +221,7 @@ describe('applyAutoColorOnPrepareAck', () => {
 
 // --- protocol 3.7.0: role resolution + persist ----------------------------
 //
-// `resolveAutoRole` is the value `resolveAutoColor` always computed and
-// then threw away as a colour. Recovering it downstream is what
+// `resolveAutoRole` was computed for the colour and thrown away. Recovering it downstream is what
 // the Drum Buss rail's gate needed a 2.46 MB catalog fetch to do.
 
 describe('resolveAutoRole', () => {
@@ -331,7 +245,7 @@ describe('resolveAutoRole', () => {
 		expect(resolveAutoRole('Omni/Drum/Synth/Boomers/Boom.aupreset')).toBe('drum');
 		expect(resolveAutoRole('Omni/Drum/Synth/Percussion/Clave.aupreset')).toBe('drum');
 		expect(resolveAutoRole('Omni/Bass/Synth/808/Sub.aupreset')).toBe('bass');
-		expect(resolveAutoColor('Omni/Drum/Synth/FX/Riser.aupreset')).toBe(COLOR_DRUM);
+		expect(resolveAutoRole('Omni/Drum/Synth/FX/Riser.aupreset')).toBe('drum');
 	});
 
 	it("reads a Recent load's ABSOLUTE path by its category folder too", () => {

@@ -1,8 +1,10 @@
 # ADR-399: Role-Based Track Coloring with a Gap-Placed Palette
 
 ## Status
-**Accepted** — supersedes the track-coloring decision of ADR-379 (its recents
-persistence part stands).
+**Superseded** by [ADR-545](545-track-colour-is-the-instruments.md) for the
+track's colour (2026-11-17): a track wears its instrument's colour, not its
+preset's role's. The role is still recorded. Superseded the track-coloring
+decision of ADR-379 (its recents persistence part stands).
 
 ## Context
 

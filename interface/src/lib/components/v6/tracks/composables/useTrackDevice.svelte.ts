@@ -15,11 +15,11 @@
  * and {@link TrackDeviceGlance.mode} is the choice of which:
  *
  *   glyph  one mark for what kind of thing this is: for an instrument,
- *          the category its preset came from (a keyboard for Key, a
- *          djembe for Perc, …; see `glyphForCategory`), else the
- *          instrument's own mark (Omnisphere's orb, Drift's saw, …; user,
- *          2026-10-20, in place of a knob on its first control); the
- *          pattern rack's shaker; and every audio track's, from its devices
+ *          its own mark (Omnisphere's orb, Drift's saw, a Drum Rack's
+ *          drum, …), as its track's colour is its instrument's (ADR-545;
+ *          the category its preset came from decided it from 2026-09-18);
+ *          the pattern rack's shaker; and every audio track's, from its
+ *          devices
  *   ghost  nothing on the track at all
  *
  * The name is still here for the band's `title`, which is a tooltip and
@@ -41,12 +41,10 @@ import { DEVICE_PRESETS, type DevicePresetConfig } from '$lib/config/devicePrese
 import { namesDevice } from '$lib/utils/deviceSlotMatch';
 import {
 	CHARACTER_DEVICE_KEYS,
-	glyphForCategory,
 	glyphForInstrument,
 	glyphForPresetKey,
 	type DeviceGlyph
 } from '$lib/config/deviceGlyphMap';
-import { trackCategory } from '$lib/services/trackCategory';
 import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
 
 /**
@@ -97,8 +95,6 @@ export interface TrackDeviceGlance {
 	mode: TrackDeviceMode;
 	/** The mark for `mode: 'glyph'` — see `config/deviceGlyphMap.ts`. */
 	glyph: DeviceGlyph;
-	/** The head's own ink — the device family's, when the rig knows the device. */
-	ink: string | null;
 }
 
 /**
@@ -250,30 +246,15 @@ export function trackDeviceGlance(trackPath: string): TrackDeviceGlance {
 			headPath: null,
 			deviceViewType: null,
 			mode: 'ghost',
-			glyph: 'device',
-			ink: null
+			glyph: 'device'
 		};
 	}
-
-	const ink = presetEntryFor(head)?.[1].color.primary ?? null;
 
 	if (instrument && headPath) {
 		const instrumentType = refineInstrumentType(
 			instrument,
 			instrumentService.identifyInstrumentType(instrument)
 		);
-		const { category, folders } = trackCategory(track);
-		// The pattern rack draws its shaker whatever it was filed under
-		// (user, 2026-09-17), and Simpler and Sampler their own marks
-		// (user, 2026-09-30). Otherwise the category the preset came from
-		// decides the mark (user, 2026-09-18) — the drum included, which a
-		// Drum Rack no longer earns by its class alone — and a track with
-		// no category mark draws the instrument's own (user, 2026-10-20).
-		const ownMark =
-			instrumentType === 'instrument-rack-pattern' ||
-			instrumentType === 'simpler' ||
-			instrumentType === 'sampler';
-		const categoryGlyph = ownMark ? null : glyphForCategory(category, folders);
 		return {
 			kind: 'instrument',
 			name: head.name,
@@ -283,8 +264,7 @@ export function trackDeviceGlance(trackPath: string): TrackDeviceGlance {
 			headPath,
 			deviceViewType: null,
 			mode: 'glyph',
-			glyph: categoryGlyph ?? glyphForInstrument(instrumentType),
-			ink
+			glyph: glyphForInstrument(instrumentType)
 		};
 	}
 
@@ -297,8 +277,7 @@ export function trackDeviceGlance(trackPath: string): TrackDeviceGlance {
 		headPath,
 		deviceViewType: deviceViewTypeFor(head),
 		mode: 'glyph',
-		glyph: glyphFor(glyphDevice(devices, head)),
-		ink
+		glyph: glyphFor(glyphDevice(devices, head))
 	};
 }
 

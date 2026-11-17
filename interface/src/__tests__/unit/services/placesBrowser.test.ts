@@ -14,7 +14,7 @@ vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
 import { PlacesAdapter, _resetPlaceReadsForTests, clearPlacesIndexCache, kindsMatch } from '$lib/services/adapters/placesAdapter';
 import { recentThroughAliases } from '$lib/services/adapters/recentInstrumentsAdapter';
 import { presetSiblings, _resetPresetSwapCatalogForTests } from '$lib/services/presetSwapCatalog';
-import { resolveAutoColor, resolveAutoRole, colorForAudio, colorForCategory } from '$lib/services/trackColoring';
+import { resolveAutoRole } from '$lib/services/trackColoring';
 import { keepRecent, railBands } from '$lib/components/v6/browser/utils/drillDownModel';
 import type { FolderNode, Preset } from '$lib/services/adapters/browserAdapter';
 
@@ -209,16 +209,13 @@ describe('a load from a Place records the Place’s role', () => {
 	it('outright, over what the path’s shape would say', () => {
 		// `Drum/Synth/…` read by shape is the Synth folder — the 2026-09-18 mistake.
 		expect(resolveAutoRole('Drum/Synth/Kit.aupreset', { placeRole: 'drum' })).toBe('drum');
-		expect(resolveAutoColor('Drum/Synth/Kit.aupreset', { placeRole: 'drum' })).toBe(colorForCategory('drum'));
 	});
 
-	it('records nothing, and colors nothing, for a Place with no role', () => {
+	it('records nothing for a Place with no role', () => {
 		expect(resolveAutoRole('Found/Thing.adg', { placeRole: null })).toBeNull();
-		expect(resolveAutoColor('Found/Thing.adg', { placeRole: null })).toBeNull();
 	});
 
-	it('colors a sample from a Place as audio, with no role', () => {
-		expect(resolveAutoColor('Drum/Samples/Kick.wav', { audio: true, placeRole: 'drum' })).toBe(colorForAudio());
+	it('records no role for a sample from a Place', () => {
 		expect(resolveAutoRole('Drum/Samples/Kick.wav', { audio: true, placeRole: 'drum' })).toBeNull();
 	});
 });

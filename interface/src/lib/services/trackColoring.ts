@@ -1,35 +1,28 @@
 /**
- * trackColoring.ts — auto-color tracks (and their existing clips) on
- * preset load.
+ * trackColoring.ts — a track's colour is its instrument's (ADR-545).
  *
- * Triggered from `presetLoader` after every successful
- * `prepare_for_preset/ack`. The color is derived from the preset's
- * **performance role** (ADR-399). A load from the browser says it
- * outright: every item of a Place carries its Place's role
- * (`Preset.role`, browser-places plan §2), and so does a Recent entry
- * whose file lies in a Place. Only a load with no Place behind it — a
- * Recent entry outside every Place — reads the role off its path
- * (`presetCategory`). A sample or clip loaded as audio takes the audio
- * color from `constants.json:vendors.special` and records no role.
+ * Every track wears the colour of the instrument type it holds: Drum
+ * Rack, Drift, Collision, Meld, … each one colour, from
+ * `constants.json:vendors.devices` (the same colours the browser's preset
+ * cards wear), Omnisphere and Komplete Kontrol their brand's
+ * (`vendors.brands`). A sample or clip loaded as audio takes
+ * `vendors.special.audio`.
  *
- * Sources of truth:
- * - `constants.json:vendors.types`   — the seven role colors
- *   (drum/bass/fx/inst/key/perc/synth); gap-placed, ink-envelope hues.
- * - `constants.json:vendors.special` — `audio` and `recent`.
+ * When it is written:
+ * - a load from the app (`applyAutoColorOnPrepareAck`): an audio load at
+ *   once; an instrument load is marked pending, and coloured when the
+ *   track's instrument is seen in the tree (the device lands after the
+ *   ack), even when the type did not change, since a load is intent;
+ * - a track whose instrument TYPE changes while the app watches
+ *   (`useInstrumentTrackColors`, mounted by the root layout), a load in
+ *   Live included.
+ * Opening a set recolours nothing: the first tree is the baseline.
  *
- * Recolor always applies on preset load — choosing an instrument from
- * the UI is an explicit intent signal regardless of the track's current
- * color.
+ * The track's existing clips are recoloured with it; clips born later
+ * take the track's colour from Live.
  *
- * Clips: after writing the track color, every existing clip on the
- * track is recolored to match. New clips born after the recolor
- * inherit the track color from Live automatically — no follow-up
- * needed.
- *
- * Off-by-design: device-chain edits don't trigger recolor (preset
- * load only); there's no manual "recolor" button (preset load only);
- * a sample loaded from the browser gets the audio color, not its
- * Place's.
+ * Until ADR-545 the colour was the preset's ROLE (ADR-399: the Place it
+ * came from). The role is still recorded (`applyAutoRoleOnPrepareAck`).
  */
 
 import { send } from '$lib/api/simpleClient';
@@ -41,6 +34,7 @@ import constants from '$config/constants.json';
 import { machineStore } from '$lib/stores/machineStore.svelte';
 import { logger } from '$lib/utils/logger';
 import { presetCategory } from '$lib/utils/presetPath';
+import type { InstrumentType } from '$lib/services/instrumentService';
 
 const V3_TRACK_COLOR_ADDRESS = '/looping/v3/track/color';
 const V3_CLIP_SET_COLOR_ADDRESS = '/looping/v3/clip/set/color';
@@ -49,6 +43,31 @@ const V3_TRACK_SET_ROLE_ADDRESS = '/looping/v3/track/set_role';
 
 const TYPE_COLORS = constants.vendors.types as Record<string, { color: string }>;
 const SPECIAL_COLORS = constants.vendors.special as Record<string, { color: string }>;
+const DEVICE_COLORS = constants.vendors.devices as Record<string, { color: string }>;
+const BRAND_COLORS = constants.vendors.brands as Record<string, { color: string }>;
+
+/**
+ * Where an instrument type's colour is kept: a `vendors.devices` key (Live's
+ * name for the device) or a `vendors.brands` key. A type with none (a
+ * generic plug-in, an instrument the rig does not know) leaves the colour
+ * alone.
+ */
+const INSTRUMENT_COLOR_KEYS: Readonly<Partial<Record<InstrumentType, { devices?: string; brands?: string }>>> = {
+	drumrack: { devices: 'Drum Rack' },
+	'instrument-rack': { devices: 'Instrument Rack' },
+	'instrument-rack-pattern': { devices: 'Instrument Rack' },
+	operator: { devices: 'Operator' },
+	analog: { devices: 'Analog' },
+	wavetable: { devices: 'Wavetable' },
+	drift: { devices: 'Drift' },
+	collision: { devices: 'Collision' },
+	electric: { devices: 'Electric' },
+	meld: { devices: 'Meld' },
+	sampler: { devices: 'Sampler' },
+	simpler: { devices: 'Simpler' },
+	omnisphere: { brands: 'Omni' },
+	'komplete-kontrol': { brands: 'NI' }
+};
 
 // ---------------------------------------------------------------------------
 // Color resolution
@@ -65,13 +84,6 @@ function hexToInt(hex: string): number | null {
 	const m = /^#?([0-9a-f]{6})$/i.exec(hex);
 	if (!m) return null;
 	return parseInt(m[1], 16);
-}
-
-/** Look up a category color from `constants.json:vendors.types`. */
-export function colorForCategory(category: string): number | null {
-	const entry = TYPE_COLORS[category];
-	if (!entry?.color) return null;
-	return hexToInt(entry.color);
 }
 
 /** Audio color from `constants.json:vendors.special.audio`. */
@@ -93,21 +105,17 @@ export interface AutoColorSource {
 	placeRole?: string | null;
 }
 
-/**
- * Resolve the desired color for a prepare-ack — the role's color
- * (ADR-399), or the audio color for a sample loaded as audio.
- *
- * Returns `null` when the load names no role; the caller leaves color
- * alone.
- */
-export function resolveAutoColor(presetPath: string, source: AutoColorSource = {}): number | null {
-	if (source.audio) return colorForAudio();
-	const role = resolveAutoRole(presetPath, source);
-	return role === null ? null : colorForCategory(role);
+/** An instrument type's track colour (ADR-545), or `null` to leave the colour alone. */
+export function colorForInstrument(type: InstrumentType | null): number | null {
+	if (!type) return null;
+	const key = INSTRUMENT_COLOR_KEYS[type];
+	if (!key) return null;
+	const entry = key.devices ? DEVICE_COLORS[key.devices] : key.brands ? BRAND_COLORS[key.brands] : undefined;
+	return entry?.color ? hexToInt(entry.color) : null;
 }
 
 /**
- * The *role* behind {@link resolveAutoColor} — the rail this preset came
+ * The *role* of a load — the rail this preset came
  * from — or `null` when the load says nothing about it.
  *
  * This was always computed here; it was just immediately converted to a
@@ -162,38 +170,9 @@ interface ApplyOptions extends AutoColorSource {
 	presetPath: string;
 }
 
-/**
- * Auto-color the track and its existing clips after a preset prepare
- * ack. Always applies — choosing an instrument from the UI is an
- * explicit intent to load that preset, and the category color should
- * follow unconditionally.
- *
- * Color resolution: see `resolveAutoColor`. Returns silently when no
- * rule matches the inputs (unknown category, missing constants).
- */
-export function applyAutoColorOnPrepareAck(opts: ApplyOptions): void {
-	const { trackPath, presetPath } = opts;
-
-	if (!trackPath.startsWith('tracks/')) {
-		// Master / returns / unknown shapes — skip silently.
-		return;
-	}
-
-	const color = resolveAutoColor(presetPath, opts);
-	if (color === null) {
-		logger.debug('applyAutoColor: no rule matched, skipping', {
-			component: 'trackColoring', trackPath, presetPath
-		});
-		return;
-	}
-
-	logger.debug('applyAutoColor: writing track color', {
-		component: 'trackColoring', trackPath, color: color.toString(16)
-	});
-
+/** Write a colour onto a track and every clip it holds. */
+function writeTrackColor(trackPath: string, color: number): void {
 	applyTrackMetadata(trackPath, 'color', color);
-	// No generation token — preset load is an unconditional color signal,
-	// stale-write gating doesn't apply here.
 	send(V3_TRACK_COLOR_ADDRESS, [trackPath, color]);
 
 	const track = v3Store.tracks.get(trackPath);
@@ -202,6 +181,50 @@ export function applyAutoColorOnPrepareAck(opts: ApplyOptions): void {
 		if (!slot.clip) continue;
 		send(V3_CLIP_SET_COLOR_ADDRESS, [slot.clip.clipPath, color]);
 	}
+}
+
+/** Tracks an instrument was just loaded onto from the app, waiting for it to land. */
+const pendingInstrumentColor = new Set<string>();
+
+/**
+ * Was an instrument loaded onto this track from the app since it was last
+ * coloured? Clears the mark: the watcher colours the track once.
+ */
+export function takePendingInstrumentColor(trackPath: string): boolean {
+	return pendingInstrumentColor.delete(trackPath);
+}
+
+/**
+ * After a preset prepare ack: an audio load takes the audio colour now; an
+ * instrument load is marked, and coloured by its instrument when the
+ * device lands (`applyInstrumentColor`, from the watcher). The ack comes
+ * before the tree carries the new device, so its type is not known here.
+ */
+export function applyAutoColorOnPrepareAck(opts: ApplyOptions): void {
+	const { trackPath } = opts;
+	if (!trackPath.startsWith('tracks/')) return;
+
+	if (opts.audio) {
+		const color = colorForAudio();
+		if (color !== null) writeTrackColor(trackPath, color);
+		return;
+	}
+	pendingInstrumentColor.add(trackPath);
+}
+
+/**
+ * Colour a track by the instrument it holds. Returns whether it wrote:
+ * an instrument type with no colour of its own leaves the track alone.
+ */
+export function applyInstrumentColor(trackPath: string, type: InstrumentType | null): boolean {
+	if (!trackPath.startsWith('tracks/')) return false;
+	const color = colorForInstrument(type);
+	if (color === null) return false;
+	logger.debug('applyInstrumentColor: writing track color', {
+		component: 'trackColoring', trackPath, type, color: color.toString(16)
+	});
+	writeTrackColor(trackPath, color);
+	return true;
 }
 
 /**

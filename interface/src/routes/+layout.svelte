@@ -24,12 +24,16 @@
 	import PairingBanner from '$lib/components/v6/pairing/PairingBanner.svelte';
 
 	import { useSelectedTrackVars } from '$lib/utils/selectedTrackVars.svelte';
+	import { useInstrumentTrackColors } from '$lib/components/v6/tracks/composables/useInstrumentTrackColors.svelte';
 
 	let { children } = $props();
 
 	// The selected track's colours on the root, for the iPad and the phone
 	// layouts alike (ADR-544).
 	useSelectedTrackVars();
+
+	// Every track wears its instrument's colour (ADR-545).
+	useInstrumentTrackColors();
 
 	// ?perf=1 toggles a small floating overlay showing connection status
 	// and JS heap. Off by default; opt-in via query param so production

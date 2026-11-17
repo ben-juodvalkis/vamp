@@ -106,11 +106,9 @@ describe('trackDeviceGlance', () => {
 		expect(glance.name).toBe('32 Pad Kit Jazz');
 		expect(glance.instrumentType).toBe('drumrack');
 		expect(glance.headPath).toBe('tracks/0/devices/1');
-		// No recorded category, so no drum: the drum is the Drum CATEGORY's
-		// mark, not the Drum Rack's (user, 2026-09-18). With no named macro
-		// to draw either, the kit is only "an instrument".
+		// A Drum Rack draws the drum, its own mark (ADR-545).
 		expect(glance.mode).toBe('glyph');
-		expect(glance.glyph).toBe('device');
+		expect(glance.glyph).toBe('drum');
 	});
 
 	it('never takes a device Vamp hides (REC\'s recorder) as the head', () => {
@@ -234,7 +232,6 @@ describe('trackDeviceGlance', () => {
 		const glance = trackDeviceGlance('tracks/1');
 
 		expect(glance.deviceViewType).toBeNull();
-		expect(glance.ink).toBeNull();
 		expect(glance.glyph).toBe('plug');
 	});
 
@@ -262,8 +259,9 @@ describe('trackDeviceGlance', () => {
 		['Analog', 'UltraAnalog', 'square'],
 		['Komplete Kontrol', 'AuPluginDevice', 'plug'],
 		['Serum', 'AuPluginDevice', 'plug'],
-		['Stack', 'InstrumentGroupDevice', 'device']
-	])('draws %s (%s) with no recorded category as its own mark, the %s', (name, className, glyph) => {
+		['Stack', 'InstrumentGroupDevice', 'device'],
+		['Kit', 'DrumGroupDevice', 'drum']
+	])('draws %s (%s) as its own mark, the %s', (name, className, glyph) => {
 		replaceTree(1, [track('tracks/2', 'midi', [device('tracks/2/devices/0', name, className)])]);
 
 		const glance = trackDeviceGlance('tracks/2');
@@ -359,76 +357,26 @@ describe('trackDeviceGlance', () => {
 		expect(trackDeviceGlance('tracks/9').kind).toBe('empty');
 	});
 
-	describe('the category mark (user, 2026-09-18)', () => {
-		const omni = () => device('tracks/0/devices/0', 'Omnisphere', 'AuPluginDevice');
-		const glanceFor = (recorded: { role?: string; preset?: string }, head = omni()) => {
+	describe("an instrument's own mark, whatever its preset was filed under (ADR-545)", () => {
+		const glanceFor = (recorded: { role?: string; preset?: string }, head: ReturnType<typeof device>) => {
 			replaceTree(1, [track('tracks/0', 'midi', [head], recorded)]);
 			return trackDeviceGlance('tracks/0');
 		};
 		const filed = (rel: string) => ({ preset: `${LIBRARY}/${rel}` });
 
 		it.each([
-			['Ableton/Key/Organs/Organ.adg', 'keyboard'],
-			['Omni/Synth/Pads/Warm.aupreset', 'synth'],
-			['Omni/Bass/Acoustic/Martin/Fingered.aupreset', 'upright-bass'],
-			['Ableton/Perc/Latin/Congas.adg', 'hand-drum'],
-			['Ableton/Drum/Packs/Kit.adg', 'drum'],
-			['Omni/Inst/Guitar/Acoustic/Nylon.aupreset', 'guitar'],
-			['NI/Inst/String/Ensemble/Violins.nksf', 'violin'],
-			['NI/Inst/Vocal/Choir/Aahs.nksf', 'mic'],
-			['Omni/Inst/Plucked/Misc/Koto.aupreset', 'harp'],
-			['Omni/Inst/Mystery/Thing.aupreset', 'device']
-		])('%s draws the %s', (rel, glyph) => {
-			const glance = glanceFor(filed(rel));
+			['Omni/Bass/Synth/808/Sub.aupreset', 'Omnisphere', 'AuPluginDevice', 'orb'],
+			['Ableton/Key/Organs/Organ.adg', 'Drift', 'Drift', 'saw'],
+			['NI/Perc/NI/Cuba/Cuba.adg', 'Cuba', 'DrumGroupDevice', 'drum'],
+			['Ableton/FX/Location/Rain.adg', 'Meld', 'InstrumentMeld', 'meld'],
+			['Ableton/Inst/Wind/Brass/Horns.adg', 'Sampler', 'MultiSampler', 'sampler']
+		])('%s on a %s draws the %s mark, the instrument’s', (rel, name, className, glyph) => {
+			const glance = glanceFor({ role: 'key', ...filed(rel) }, device('tracks/0/devices/0', name, className));
 			expect(glance.mode).toBe('glyph');
 			expect(glance.glyph).toBe(glyph);
 		});
 
-		it('reads the category folder, not the deepest folder that names one', () => {
-			// `categoryFromPresetPath` reads both of these as synth: every
-			// Omnisphere Drum preset and 2,146 of its 2,470 Bass presets sit
-			// under a Synth subfolder.
-			expect(glanceFor(filed('Omni/Drum/Synth/Boomers/Boom.aupreset')).glyph).toBe('drum');
-			expect(glanceFor(filed('Omni/Bass/Synth/808/Sub.aupreset')).glyph).toBe('upright-bass');
-		});
-
-		it('draws brass as a trumpet in Wind/Brass today and in a Brass folder after the split', () => {
-			expect(glanceFor(filed('Ableton/Inst/Wind/Brass/Horns.adg')).glyph).toBe('trumpet');
-			expect(glanceFor(filed('Ableton/Inst/Brass/Horns.adg')).glyph).toBe('trumpet');
-			expect(glanceFor(filed('Ableton/Inst/Wind/Winds/Flute.adg')).glyph).toBe('saxophone');
-			expect(glanceFor(filed('Omni/Inst/Wind/Acoustic/Sax.aupreset')).glyph).toBe('saxophone');
-		});
-
-		it('gives a Perc Drum Rack the hand drum', () => {
-			const kit = device('tracks/0/devices/0', 'Cuba', 'DrumGroupDevice');
-			expect(glanceFor(filed('NI/Perc/NI/Cuba/Cuba.adg'), kit).glyph).toBe('hand-drum');
-		});
-
-		it('draws FX as a sparkle, whatever the instrument', () => {
-			const drift = device('tracks/0/devices/0', 'Drift', 'Drift');
-			expect(glanceFor(filed('Ableton/FX/Location/Rain.adg'), drift).glyph).toBe('fx');
-		});
-
-		it('falls back to the recorded role when no preset is recorded', () => {
-			// A track loaded before protocol 3.9.0, or through a Place.
-			expect(glanceFor({ role: 'key' }).glyph).toBe('keyboard');
-			expect(glanceFor({ role: 'drum', preset: '/Users/x/Packs/Kit.adg' }).glyph).toBe('drum');
-			// Inst by role alone knows no subfolder: "an instrument", not a guess.
-			expect(glanceFor({ role: 'inst' }).glyph).toBe('device');
-		});
-
-		it('believes the category folder over the recorded role', () => {
-			expect(glanceFor({ role: 'synth', ...filed('Omni/Bass/Synth/808/Sub.aupreset') }).glyph).toBe(
-				'upright-bass'
-			);
-		});
-
-		it("draws the instrument's own mark for a track that recorded no category", () => {
-			expect(glanceFor({}).glyph).toBe('orb');
-			expect(glanceFor({}, device('tracks/0/devices/0', 'Drift', 'Drift')).glyph).toBe('saw');
-		});
-
-		it('keeps the shaker on the pattern rack whatever it was filed under', () => {
+		it('keeps the shaker on the pattern rack', () => {
 			const patterns = device('tracks/0/devices/0', 'Patterns', 'InstrumentGroupDevice', [
 				{ name: 'Device On', value: 1 },
 				{ name: 'Pattern 16', value: 0 }
@@ -436,25 +384,7 @@ describe('trackDeviceGlance', () => {
 			expect(glanceFor(filed('Ableton/Perc/Shaker Lite/Shakers.adg'), patterns).glyph).toBe('shaker');
 		});
 
-		it('draws the Sampler mark on a Sampler, filed or not, whatever it was filed under', () => {
-			const sampler = device('tracks/0/devices/0', 'Sampler', 'MultiSampler');
-			for (const recorded of [{}, { role: 'key' }]) {
-				const glance = glanceFor(recorded, sampler);
-				expect(glance.mode).toBe('glyph');
-				expect(glance.glyph).toBe('sampler');
-			}
-		});
-
-		it('draws the Simpler mark on a Simpler, filed or not, whatever it was filed under', () => {
-			const simpler = device('tracks/0/devices/0', 'Simpler', 'OriginalSimpler');
-			for (const recorded of [{}, { role: 'key' }]) {
-				const glance = glanceFor(recorded, simpler);
-				expect(glance.mode).toBe('glyph');
-				expect(glance.glyph).toBe('simpler');
-			}
-		});
-
-		it('never gives an audio track a category mark', () => {
+		it('gives an audio track its devices’ mark, never a recorded role’s', () => {
 			replaceTree(1, [
 				track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Bass Amp', 'AudioEffectGroupDevice')], {
 					role: 'key'

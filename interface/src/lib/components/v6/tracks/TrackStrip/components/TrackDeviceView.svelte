@@ -57,7 +57,7 @@
 	} from './instrumentGlyphNodes';
 	interface Props {
 		glance: TrackDeviceGlance;
-		/** The track's calibrated ink — the head's colour when it is the instrument. */
+		/** The track's calibrated ink: every mark wears it (ADR-545). */
 		color?: string;
 		/** Mirrors the strip: greys out while Live's own mute is on. */
 		dimmed?: boolean;
@@ -65,16 +65,9 @@
 
 	let { glance, color, dimmed = false }: Props = $props();
 
-	// An instrument is the track's own voice and wears the track ink; a
-	// plain device wears its family's, so an audio track's band reads as
-	// the chain it is rather than as a second copy of the track colour.
-	let headInk = $derived(
-		dimmed
-			? 'var(--signal-dim)'
-			: glance.kind === 'instrument'
-				? (color ?? 'var(--signal-dim)')
-				: (glance.ink ?? color ?? 'var(--signal-dim)')
-	);
+	// Every mark is in its own track's colour (ADR-545): an effect's too,
+	// since a device family has no colour of its own any more (ADR-544).
+	let headInk = $derived(dimmed ? 'var(--signal-dim)' : (color ?? 'var(--signal-dim)'));
 
 	// The device's name, as a tooltip. Nothing here is drawn.
 	let title = $derived(glance.mode === 'ghost' ? 'No devices on this track' : (glance.name ?? ''));
