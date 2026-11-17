@@ -10,7 +10,7 @@
 
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import { session } from '$lib/stores/session.svelte';
-import { amountInk, rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
+import { amountInk, registerFinishedInk, rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 import { schemeFromInk, setAmountInkSource, type DeviceColorScheme } from '$lib/config/devicePresets';
 
@@ -41,7 +41,7 @@ export function selectedTrackScheme(): DeviceColorScheme | null {
 }
 
 /** The ink an amount takes with no track selected (the master): a mid grey, clear of ON's white and black. */
-const NO_TRACK_AMOUNT = { dark: '#a8a8a4', light: '#55554f' } as const;
+const NO_TRACK_AMOUNT = { dark: registerFinishedInk('#a8a8a4'), light: registerFinishedInk('#55554f') } as const;
 
 /**
  * The ink every amount is drawn in (ADR-544): the selected track's, a

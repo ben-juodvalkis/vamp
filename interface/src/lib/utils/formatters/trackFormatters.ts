@@ -195,7 +195,20 @@ const trackInkClamp = memoize(
  * recompute on a runtime theme flip.
  */
 export function trackInk(hex: string, _mode: 'dark' | 'light' = 'dark'): string {
+    // An amount ink is finished (ADR-544): on the light theme it sits under
+    // the envelope on purpose, and ~100 views still pass a scheme's colour
+    // through here out of habit. Clamping it again would pale it.
+    if (finishedInks.has(hex)) return hex;
     return trackInkClamp(hex);
+}
+
+/** Inks `trackInk` / `deviceInk` hand back untouched: `amountInk`'s results and the no-track greys. */
+const finishedInks = new Set<string>();
+
+/** Mark an ink as finished, so re-inking it is a no-op. */
+export function registerFinishedInk(hex: string): string {
+    finishedInks.add(hex);
+    return hex;
 }
 
 /**
@@ -222,7 +235,7 @@ export const AMOUNT_INK_LIGHT_L = 0.5;
 /** The ink an amount is drawn in for a track colour: the track ink in dark, a deeper one of the same hue in light. */
 export function amountInk(hex: string, mode: 'dark' | 'light' = 'dark'): string {
     const ink = trackInkClamp(hex);
-    return mode === 'light' ? inkShade(ink, AMOUNT_INK_LIGHT_L) : ink;
+    return registerFinishedInk(mode === 'light' ? inkShade(ink, AMOUNT_INK_LIGHT_L) : ink);
 }
 
 /* ============================================================================
@@ -245,6 +258,7 @@ const DEVICE_INK_NEUTRAL_CAP = 0.03;
 
 /** Device-scheme ink (neutral-preserving). */
 export function deviceInk(color: string, _mode: 'dark' | 'light' = 'dark'): string {
+    if (finishedInks.has(color)) return color;
     const p = parseInkInput(color);
     if (!p) return color; // pass through junk untouched
     // Neutral device inks (the grey utility family) stay neutral; chromatic

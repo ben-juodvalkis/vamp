@@ -13,8 +13,6 @@
 
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-	import { trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import LfoGraph from '../LfoGraph.svelte';
 	import type { PanelParams } from './panel/usePanelParams.svelte';
 	import FaceGrid from '../FaceGrid.svelte';
@@ -24,27 +22,11 @@
 
 	const fx = useFxGridSlot('filter');
 
-	// Match the purple used by the LFO shape buttons (purple-600 / purple-300)
-	const LFO_COLOR = {
-		primary: 'rgb(168, 85, 247)',
-		secondary: 'rgba(168, 85, 247, 0.1)',
-		accent: 'rgb(216, 180, 254)'
-	};
-
-	// GRATICULE (§2.4 / §5.5): normalize the device + LFO palettes through trackInk
-	// at injection — hue preserved, luminance/chroma calibrated. secondary (the
-	// alpha wash) is left untouched. fx.color is normalized too since the slot
-	// config may override the fallback we passed above.
-	let fxInk = $derived({
-		primary: trackInk(fx.color.primary, paintModeReactive()),
-		secondary: fx.color.secondary,
-		accent: trackInk(fx.color.accent, paintModeReactive())
-	});
-	let lfoInk = $derived({
-		primary: trackInk(LFO_COLOR.primary, paintModeReactive()),
-		secondary: LFO_COLOR.secondary,
-		accent: trackInk(LFO_COLOR.accent, paintModeReactive())
-	});
+	// One ink for the whole view (ADR-544): the selected track's, as the
+	// slot's scheme hands it over. The LFO half had a purple of its own; a
+	// second colour in a view now has to mean a second owner.
+	let fxInk = $derived(fx.color);
+	let lfoInk = $derived(fx.color);
 
 	// Initial UI state before the first param echo lands. These four used to
 	// be looked up in data/device-configs.json with these same numbers as the
@@ -188,14 +170,15 @@
 </script>
 
 <!--
-	One face grid (ADR-510), eight columns of ~108px at 1366 x 1024:
-	  LFO 4 (shapes · Morph · the LFO pad over two) | Filter 3 (types over
-	  two · circuit + slope) | Output 1 (Drive over Output over Mix)
-	A column holds a large knob (96px + 8, ADR-509), so Morph and Drive
-	draw at their size.
+	One face grid (ADR-510), nine columns at 1366 x 1024:
+	  LFO 4 (shapes · Time/Sync over Morph · the LFO picture over two) |
+	  Filter 3 (types over two · circuit + slope) | Output 2 (Drive over
+	  Output · Mix)
+	The knobs take the largest size their cells hold (`knobFit`), Drive and
+	Output the same.
 -->
 <div class="h-full w-full min-h-0 relative" class:slot-ghost={fx.isGhost}>
-<FaceGrid sections={[4, 3, 1]}>
+<FaceGrid sections={[4, 3, 2]}>
 	<FaceSection span={4}>
 	{#snippet head()}<PanelEyebrow title="LFO" color={lfoInk.primary} />{/snippet}
 	<!-- The eight LFO shapes, one segmented tab, two columns of
@@ -221,51 +204,50 @@
 		{/each}
 	</div>
 
-	<!-- MORPH: one large knob (ADR-509), one column. -->
-	<div class="min-h-0">
-		<DeviceSlider
-			value={morphAmount}
-			title="Morph"
-			face="knob"
-			knobSize="l"
-			icon="morph"
-			orientation="vertical"
-			isGhost={fx.isGhost}
-			color={lfoInk}
-			readout={fx.paramDisplay(23)}
-			onInteraction={(value) => {
-				fx.sendParam(23, value);
-			}}
-		/>
-	</div>
-
-	<!-- LFO XY pad (two columns) over its Time/Sync switch -->
-	<div class="face-span-2 min-h-0 flex flex-col gap-(--face-gutter)">
-		<div class="flex-1 min-h-0">
-			<!-- The LFO drawn as Live draws it (ADR-514): its shape, as many
-			     cycles as its rate and as tall as its amount; across is the rate
-			     (Time, inverted), up the amount, as the XY it replaces. -->
-			<LfoGraph
-				params={lfoParams}
-				shape={LFO_SHAPE_OPTIONS.find((o) => o.value === Math.round(lfoShape))?.label}
-				rate="Rate"
-				amount="Amount"
-				ink={lfoInk.primary}
-				label={lfoTitle}
-			/>
-		</div>
-		<!-- Time/Sync, one touch row under the pad it switches. It floated
-		     over the pad's top-right corner until 2026-10-27, 8px past it,
-		     which on a small iPad put it across the frame's edge. -->
+	<!-- The LFO's Time/Sync switch over MORPH, one column (Ben, 2026-11-17:
+	     the switch above the knob; it sat under the LFO picture, which now
+	     has its two columns' whole height). A switch is one touch row. -->
+	<div class="min-h-0 flex flex-col gap-(--face-gutter)">
 		<button
 			class="physical-button btn-toggle lfo-sync-toggle text-sm font-medium"
 			class:active={lfoSync >= 3}
-			style="--btn-tint: {lfoInk.primary};"
 			use:press={{ onPress: () => toggleLfoSync() }}
 			title={lfoSync >= 3 ? 'Sync' : 'Time'}
 		>
 			{lfoSync >= 3 ? 'Sync' : 'Time'}
 		</button>
+		<div class="flex-1 min-h-0">
+			<DeviceSlider
+				value={morphAmount}
+				title="Morph"
+				face="knob"
+				knobSize="l"
+				knobFit
+				icon="morph"
+				orientation="vertical"
+				isGhost={fx.isGhost}
+				color={lfoInk}
+				readout={fx.paramDisplay(23)}
+				onInteraction={(value) => {
+					fx.sendParam(23, value);
+				}}
+			/>
+		</div>
+	</div>
+
+	<!-- The LFO drawn as Live draws it (ADR-514), two columns: its shape,
+	     as many cycles as its rate and as tall as its amount; across is the
+	     rate (Time, inverted), up the amount, as the XY it replaces. -->
+	<div class="face-span-2 min-h-0 h-full">
+		<LfoGraph
+			maxAspect={1.4}
+			params={lfoParams}
+			shape={LFO_SHAPE_OPTIONS.find((o) => o.value === Math.round(lfoShape))?.label}
+			rate="Rate"
+			amount="Amount"
+			ink={lfoInk.primary}
+			label={lfoTitle}
+		/>
 	</div>
 
 	</FaceSection>
@@ -335,19 +317,20 @@
 	</FaceSection>
 	<FaceSeam ink={fxInk.primary} />
 
-	<FaceSection span={1}>
+	<FaceSection span={2}>
 	{#snippet head()}<PanelEyebrow title="Output" color={fxInk.primary} />{/snippet}
-	<!-- Drive over Output over Mix (Dry/Wet): a knob over two value boxes,
-	     in the device's own order (Live's panel ends on Output, Soft Clip
-	     and Dry/Wet). Output is its own control, not tied to Drive. -->
+	<!-- Drive over Output, two knobs of one size (set and left), then Mix,
+	     the level that is ridden, a full-height box (ADR-544; a knob over
+	     two short boxes in one column until then, their names cut). In the
+	     device's own order: Live's panel ends on Output and Dry/Wet. -->
 	<div class="h-full min-h-0 flex flex-col gap-(--face-gutter)">
-		<!-- A large knob and its caption: 104 x 150px (ADR-509); Output and Mix share the rest. -->
-		<div class="flex-none h-[9.375rem] min-h-0">
+		<div class="flex-1 min-h-0">
 			<DeviceSlider
 				value={drive}
 				title="Drive"
 				face="knob"
 				knobSize="l"
+				knobFit
 				icon="drive"
 				orientation="vertical"
 				isGhost={fx.isGhost}
@@ -362,6 +345,9 @@
 			<DeviceSlider
 				value={output}
 				title="Output"
+				face="knob"
+				knobSize="l"
+				knobFit
 				icon="output"
 				orientation="vertical"
 				isGhost={fx.isGhost}
@@ -372,20 +358,20 @@
 				}}
 			/>
 		</div>
-		<div class="flex-1 min-h-0">
-			<DeviceSlider
-				value={mix}
-				title="Mix"
-				icon="mix"
-				orientation="vertical"
-				isGhost={fx.isGhost}
-				color={fxInk}
-				readout={fx.paramDisplay(MIX_INDEX)}
-				onInteraction={(value) => {
-					fx.sendParam(MIX_INDEX, value);
-				}}
-			/>
-		</div>
+	</div>
+	<div class="h-full min-h-0">
+		<DeviceSlider
+			value={mix}
+			title="Mix"
+			icon="mix"
+			orientation="vertical"
+			isGhost={fx.isGhost}
+			color={fxInk}
+			readout={fx.paramDisplay(MIX_INDEX)}
+			onInteraction={(value) => {
+				fx.sendParam(MIX_INDEX, value);
+			}}
+		/>
 	</div>
 	</FaceSection>
 </FaceGrid>
