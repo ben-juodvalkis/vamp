@@ -33,6 +33,9 @@ he dragged them around on) and asked for the chevron to go.
 - **The chips are one grid with no gaps**, a hairline between them and no
   seam between families: a sliding finger never falls between two chips,
   and the family washes divide the blocks.
+- **Each family's column wears a stripe** of its ink, 3px across the top
+  of its first-row chips (Ben, the same day), so the blocks read at a
+  glance while the chips stay quiet; the two Distortion columns share one.
 - **Ben's layout** (`services/effectPalette`): one column per family, two
   for Distortion, three rows deep, top to bottom:
   Random, Arp, Wheels · Filter, EQ, Tone Shaper · Glue, Multiband, Gate ·

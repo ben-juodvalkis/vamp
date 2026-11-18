@@ -1293,7 +1293,7 @@
   {#each placed.blocks as { block, start } (block.family)}
     {#each barOpen ? block.rows : block.rows.slice(0, 1) as row, r (r)}
       {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
-        <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family} data-chip-id={fx ? `${r + 1}:${start + i}` : undefined}>
+        <div class="palette-slot" class:blank={!fx} class:family-head={r === 0} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family} data-chip-id={fx ? `${r + 1}:${start + i}` : undefined}>
           {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(block.family)} passive hot={hotChip === `${r + 1}:${start + i}`} />{/if}
         </div>
       {/each}
@@ -1596,6 +1596,14 @@
     border: 0;
     border-radius: 0;
     box-shadow: inset 0 0 0 0.5px var(--line);
+  }
+  /* Each family's column wears a stripe of its ink across the top of its
+     first-row chips, so the blocks read at a glance while the chips stay
+     quiet. */
+  .palette .palette-slot.family-head :global(.palette-chip) {
+    box-shadow:
+      inset 0 3px 0 color-mix(in srgb, var(--chip-ink) 85%, transparent),
+      inset 0 0 0 0.5px var(--line);
   }
   .palette .palette-slot.blank {
     border: 0;
