@@ -5,9 +5,12 @@
 	 *
 	 *   Delay  [Sync over Time] [Filter  Filter]
 	 *   | LFO  [Wave 2x3] [LFO Sync over Rate] [the wave drawn, over LFO > Time  LFO > Filter]
+	 *   | Reverb [Pre/Post/FB] [Level over Decay]
 	 *   | Levels [Input over Output] [Feedback] [Mix]
 	 *
-	 * on one face grid (ADR-510), sections 3 · 4 · 3, in the signal's order.
+	 * on one face grid (ADR-510), sections 3 · 4 · 2 · 3, in the signal's
+	 * order. The reverb (Live's Character tab) joined on 2026-11-18, the
+	 * user's call.
 	 *
 	 * Re-laid for Ink (ADR-544, 2026-11-17). Every knob is one size (medium:
 	 * the column holds no larger). A switch sits over the knob it switches,
@@ -49,6 +52,8 @@
 	import {
 		ECHO,
 		ECHO_LFO,
+		ECHO_REVERB,
+		ECHO_REVERB_LOCS,
 		ECHO_LFO_WAVES,
 		compensatedOutput,
 		freqTFrom,
@@ -101,6 +106,11 @@
 	let lfoLabel = $derived(lfoRateLabel(lfoSynced, lfoFreq, lfoStep));
 	let lfoToTime = $derived(t01(echo.paramValue(ECHO_LFO.toTime)));
 	let lfoToFilter = $derived(t01(echo.paramValue(ECHO_LFO.toFilter)));
+
+	// The reverb (Live's Character tab): where it sits, its level and decay.
+	let reverbLoc = $derived(Math.round(echo.paramValue(ECHO_REVERB.loc) ?? 0));
+	let reverbLevel = $derived(t01(echo.paramValue(ECHO_REVERB.level)));
+	let reverbDecay = $derived(t01(echo.paramValue(ECHO_REVERB.decay) ?? 0.5));
 
 	function toggleLfoSync() {
 		echo.sendParam(ECHO_LFO.sync, lfoSynced ? 0 : 1);
@@ -286,7 +296,7 @@
 {/snippet}
 
 <div class="echo-layout" class:slot-ghost={echo.isGhost}>
-<FaceGrid sections={[3, 4, 3]}>
+<FaceGrid sections={[3, 4, 2, 3]}>
 	<FaceSection span={3}>
 	{#snippet head()}<PanelEyebrow title="Delay" color={echo.color.primary} />{/snippet}
 	<div class="col switch-over-knob">
@@ -365,6 +375,28 @@
 	</FaceSection>
 	<FaceSeam />
 
+	<FaceSection span={2}>
+	{#snippet head()}<PanelEyebrow title="Reverb" color={echo.color.primary} />{/snippet}
+	<!-- Where the reverb sits (Pre, Post or in the Feedback loop), one tab
+	     the column's height, beside its Level over its Decay. -->
+	<ScrubTabs
+		options={ECHO_REVERB_LOCS}
+		selected={reverbLoc}
+		onSelect={(i) => echo.sendParam(ECHO_REVERB.loc, i)}
+		cols={1}
+		label={(l) => `Reverb ${l}`}
+		name="echo-reverb-loc"
+		style="height: 100%; --scrub-font-size: 0.8125rem; --scrub-padding: 0 2px;"
+	>
+		{#snippet item(l)}{l === 'Feedback' ? 'FB' : l}{/snippet}
+	</ScrubTabs>
+	<div class="col knob-pair" data-echo-reverb>
+		{@render knob('Reverb', reverbLevel, 'reverb', (t) => echo.sendParam(ECHO_REVERB.level, t), { readout: echo.paramDisplay(ECHO_REVERB.level) })}
+		{@render knob('Decay', reverbDecay, 'decay', (t) => echo.sendParam(ECHO_REVERB.decay, t), { readout: echo.paramDisplay(ECHO_REVERB.decay) })}
+	</div>
+	</FaceSection>
+	<FaceSeam />
+
 	<FaceSection span={3}>
 	{#snippet head()}<PanelEyebrow title="Levels" color={echo.color.primary} />{/snippet}
 	<!-- Input over Output, set and left (Input drags Output the other way):
@@ -383,8 +415,8 @@
 <style>
 	/* The face is the FaceGrid (ADR-510): Delay (Time, the filter graph
 	   over two columns) | LFO (shapes, rate, the wave over its depths) |
-	   Levels, ten equal columns. A column of ~91px holds a medium knob
-	   (70px + 8) and no larger, so every knob here is medium. */
+	   Reverb (where it sits, Level over Decay) | Levels, twelve equal
+	   columns. Every knob here is medium, fitted to its cell (knobFit). */
 	.echo-layout {
 		height: 100%;
 		width: 100%;

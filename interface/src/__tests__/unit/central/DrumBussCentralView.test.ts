@@ -104,3 +104,19 @@ describe('DrumBussCentralView — the Drum XY is the chain cell\'s alone', () =>
 		}
 	});
 });
+
+describe('DrumBussCentralView — every parameter Live lists (device_dump, 2026-11-18)', () => {
+	it('draws Transients, Boom Freq and Audition, Output and Dry/Wet beside the rest', async () => {
+		seed([drumBuss({ 10: 1 })]);
+		const { container } = render(DrumBussCentralView);
+		await tick();
+		const names = [...container.querySelectorAll('[role="slider"]')].map((el) => el.getAttribute('aria-label') ?? '');
+		for (const name of ['Trim', 'Drive', 'Crunch', 'Damp', 'Transients', 'Freq', 'Output', 'Dry/Wet']) {
+			expect(names.some((n) => n.startsWith(name))).toBe(true);
+		}
+		const audition = [...container.querySelectorAll<HTMLButtonElement>('.comp-toggle')].find((b) => b.textContent?.trim() === 'Audition');
+		expect(audition?.getAttribute('aria-pressed')).toBe('true');
+		await pressTap(audition!);
+		expect(sendMock).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([`${DEVICE}/params/10`, 0]));
+	});
+});

@@ -105,6 +105,20 @@ export const ECHO_LFO = {
 	toFilter: 40
 } as const;
 
+/**
+ * Echo's reverb (Live's Character tab), dumped off a running Echo
+ * (device_dump, 2026-11-18): 42 `Reverb Level` 0..1 (0..100 %), 43
+ * `Reverb Decay` 0..1 (0..100 %), 44 `Reverb Loc` quantized 0..2.
+ */
+export const ECHO_REVERB = {
+	level: 42,
+	decay: 43,
+	loc: 44
+} as const;
+
+/** `Reverb Loc` (44): Live's names via `str_for_value`, value = index. */
+export const ECHO_REVERB_LOCS = ['Pre', 'Post', 'Feedback'] as const;
+
 /** `LFO Wave` (33, quantized 0..5): Live's names via `str_for_value`, value = index. */
 export const ECHO_LFO_WAVES = ['Sine', 'Triangle', 'Saw Up', 'Saw Down', 'Square', 'Random'] as const;
 

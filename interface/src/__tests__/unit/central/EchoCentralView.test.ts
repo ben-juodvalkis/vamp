@@ -13,6 +13,7 @@ vi.mock('$lib/utils/logger', () => ({
 
 import { render, cleanup } from '@testing-library/svelte';
 import { tick } from 'svelte';
+import { scrubPick } from '../../helpers/pressTap';
 import { SvelteMap } from 'svelte/reactivity';
 import { send } from '$lib/api/simpleClient';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -107,5 +108,19 @@ describe('EchoCentralView Input/Output', () => {
 		expect(w.has(ECHO.outputGain)).toBe(true);
 		expect(w.get(ECHO.outputGain)).toBeCloseTo(0.7125, 6); // half speed too
 		expect(w.has(ECHO.inputGain)).toBe(false);
+	});
+});
+
+describe('EchoCentralView Reverb (device_dump, 2026-11-18)', () => {
+	it('draws Live’s three reverb positions beside Level over Decay, and a pick writes Reverb Loc', async () => {
+		const c = await mount({ 44: 0 });
+		const reverb = c;
+		const labels = [...reverb.querySelectorAll('button')].map((b) => b.getAttribute('aria-label')).filter((l) => l?.startsWith('Reverb '));
+		expect(labels).toEqual(['Reverb Pre', 'Reverb Post', 'Reverb Feedback']);
+		expect(slider(c, 'Reverb')).toBeTruthy();
+		expect(slider(c, 'Decay')).toBeTruthy();
+		const post = [...c.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === 'Reverb Post')!;
+		await scrubPick(post);
+		expect(written().get(44)).toBe(1);
 	});
 });
