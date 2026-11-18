@@ -137,15 +137,16 @@ beforeEach(() => {
 });
 
 describe('PedalCentralView — the Pedal alone', () => {
-	it('carries the tone pad and the type tabs, no Drive (the chain cell\'s), and no other device', async () => {
+	it('carries the tone pad, the type tabs, Drive and Mix apart, and no other device', async () => {
 		seed([saturator({}), guitarRack(), wahRack(), pedal()]);
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(container.querySelector('.pedal-tone .eq-panel')).not.toBeNull();
 		expect(container.querySelector('.pedal-tone')?.classList.contains('slot-ghost')).toBe(false);
-		expect(slider(container, 'Drive')).toBeUndefined();
+		expect(slider(container, 'Drive')).toBeDefined();
+		expect(slider(container, 'Mix')).toBeDefined();
 		expect(container.textContent).toContain('Distort');
-		for (const title of ['Output', 'Mix', 'Shifter', 'Wah', 'Gtr']) {
+		for (const title of ['Output', 'Shifter', 'Wah', 'Gtr']) {
 			expect(slider(container, title), title).toBeUndefined();
 		}
 		expect(container.textContent).not.toMatch(/Spring\/Room|Redux|Drum/);

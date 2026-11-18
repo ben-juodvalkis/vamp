@@ -9,11 +9,11 @@
    * `SaturatorCentralView`, `ReduxCentralView`; the chain is the door to
    * the Drum Buss).
    *
-   * On the face grid (ADR-510), sections [1, 4], five equal columns: the
+   * On the face grid (ADR-510), sections [1, 3, 2], six equal columns: the
    * pedal's type, a vertical tab, then the tone stack on the EQ tile's pad
-   * (2026-10-07), the picture that is played, over four. No Drive: the
-   * chain cell's control sets it, Drive and Dry/Wet together (user,
-   * 2026-11-06).
+   * (2026-10-07), the picture that is played, over three, then Drive and
+   * Mix, a box each. The chain cell's slider moves Drive and Dry/Wet
+   * together; here each is set apart (user, 2026-11-17).
    *
    * The pad's three thirds are named at its foot, Bass, Mid and Treble, in
    * plain ink (ADR-544). Until then the pad was titled "Tone" across its
@@ -31,6 +31,7 @@
    * NO {#if device} gate - always renders, handles its own state.
    */
 
+  import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import ToneCurvePad from '$lib/components/v6/device-panel/ToneCurvePad.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import FaceGrid from '../FaceGrid.svelte';
@@ -57,10 +58,16 @@
 
   let pedalType = $derived(fx.paramValue(PEDAL.type) ?? 0);
   let pedalMidFreq = $derived((fx.paramValue(PEDAL.midFreq) ?? 1) / MID_FREQ_STEPS);
+
+  // Index, label, and the value a box rests at before the device answers.
+  const PEDAL_FADERS = [
+    { index: PEDAL.drive, title: 'Drive', fallback: 0, icon: 'drive' },
+    { index: PEDAL.dryWet, title: 'Mix', fallback: 1, icon: 'mix' }
+  ] as const;
 </script>
 
 <div class="pedal-layout" data-view="pedal">
-  <FaceGrid sections={[1, 4]}>
+  <FaceGrid sections={[1, 3, 2]}>
     <FaceSection span={1}>
       {#snippet head()}<PanelEyebrow title="Type" color={pedalInk.primary} />{/snippet}
       <div class="pedal-type-buttons device-segmented seg-grid" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
@@ -77,7 +84,7 @@
     </FaceSection>
     <FaceSeam ink={pedalInk.primary} />
 
-    <FaceSection span={4}>
+    <FaceSection span={3}>
       {#snippet head()}<PanelEyebrow title="Tone" color={pedalInk.primary} />{/snippet}
       <div class="pedal-tone face-span-all" class:slot-ghost={fx.isGhost}>
         <ToneCurvePad
@@ -106,15 +113,49 @@
         </div>
       </div>
     </FaceSection>
+    <FaceSeam ink={pedalInk.primary} />
+
+    <FaceSection span={2}>
+      {#snippet head()}<PanelEyebrow title="Level" color={pedalInk.primary} />{/snippet}
+      {#each PEDAL_FADERS as f (f.index)}
+        <div class="slider-col" class:slot-ghost={fx.isGhost}>
+          <DeviceSlider
+            value={fx.paramValue(f.index) ?? f.fallback}
+            title={f.title}
+            face="slider"
+            icon={f.icon}
+            orientation="vertical"
+            isGhost={fx.isGhost}
+            color={pedalInk}
+            readout={fx.paramDisplay(f.index)}
+            min={0}
+            max={1}
+            onTap={() => fx.loadIfGhost()}
+            onInteraction={(v) => fx.sendParam(f.index, v)}
+          />
+        </div>
+      {/each}
+    </FaceSection>
   </FaceGrid>
 </div>
 
 <style>
-  /* The face is the FaceGrid (ADR-510): five equal columns, Type, then
-     Tone over four. */
+  /* The face is the FaceGrid (ADR-510): six equal columns, Type, Tone
+     over three, then Drive and Mix. */
   .pedal-layout {
     height: 100%;
     width: 100%;
+  }
+
+  .slider-col {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .slider-col > :global(*) {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .pedal-tone {

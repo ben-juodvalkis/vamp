@@ -474,10 +474,20 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 				? null
 				: { [ROAR.drive]: roarDriveFromGain(s.params.Input_InputGain), [ROAR.dryWet]: s.params.Output_DryWet }
 	},
-	// Measured: Pedal (2026-10-26). Gain is Drive (2), 0..1 as saved. Drive
-	// alone (user, 2026-10-26), not the Pedal view's Drive/Mix pair.
+	// Measured: Pedal (2026-10-26). Gain is Drive (2), 0..1 as saved; 9 is
+	// Dry/Wet 0..1. One axis moves both, Drive and Mix together, as the
+	// Saturator's does (user, 2026-11-17); the Pedal view sets each apart.
 	pedal: {
-		control: { kind: 'slider', title: 'Drive', picture: 'stompbox', read: (g) => clamp01(g(2) ?? 0), write: (t) => [[2, clamp01(t)]] },
+		control: {
+			kind: 'slider',
+			title: 'Drive',
+			picture: 'stompbox',
+			read: (g) => clamp01(g(2) ?? 0),
+			write: (t) => [
+				[2, clamp01(t)],
+				[9, clamp01(t)]
+			]
+		},
 		fromPreset: (s) => (s.params.Gain === undefined ? null : { 2: s.params.Gain })
 	},
 	// Measured: Bass - Low Extender. Threshold and Makeup in dB, as the LOM:
