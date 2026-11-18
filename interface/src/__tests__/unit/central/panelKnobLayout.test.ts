@@ -236,13 +236,19 @@ describe('a panel’s frame on the face grid (ADR-510)', () => {
 	it('pairs a mixed group’s knobs where it has fewer columns than controls (Operator’s Filter)', () => {
 		const filter = OPERATOR_PANEL.frame.find((r) => r.kind === 'group' && r.group.title === 'Filter');
 		if (filter?.kind !== 'group') throw new Error('no Filter');
-		expect(frameColumns(filter.group, 2).map((c) => c.controls.map((x) => x.param))).toEqual([['Filter Type'], ['Fe Amount', 'Filter Drive']]);
+		expect(frameColumns(filter.group, 2).map((c) => c.controls.map((x) => x.param))).toEqual([['Filter Type'], ['Filter Freq', 'Filter Res']]);
 	});
 	it('draws no XY the chain cell already plays: Operator’s filter pad is its page’s, not the frame’s', () => {
-		const frameParams = panelParamNames({ ...OPERATOR_PANEL, pages: [] });
-		expect(frameParams).not.toContain('Filter Freq');
-		expect(frameParams).not.toContain('Filter Res');
+		// Cutoff and Res are knobs on the frame (2026-11-18); the PAD is the Filter page's.
+		expect(OPERATOR_PANEL.frame.some((r) => r.kind === 'slot' && r.slot === 'filter')).toBe(false);
 		expect(OPERATOR_PANEL.pages.find((p) => p.id === 'filter')?.aside?.slot).toBe('filter');
+	});
+	it('draws each oscillator’s envelope on the frame as one Time pad: Attack across, Release up (ADR-546)', () => {
+		const osc = OPERATOR_PANEL.frame.find((r) => r.kind === 'tabs');
+		if (osc?.kind !== 'tabs') throw new Error('no tabs');
+		const times = osc.tabs.map((t) => t.groups.find((g) => g.time)?.time);
+		expect(times.slice(0, 4)).toEqual(['A', 'B', 'C', 'D'].map((o) => ({ x: `${o}e Attack`, y: `${o}e Release` })));
+		expect(times.slice(4)).toEqual([{ x: 'Le Attack', y: 'Le Decay' }, { x: 'Pe Attack', y: 'Pe Decay' }]);
 	});
 });
 

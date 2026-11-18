@@ -22,6 +22,7 @@
 	 */
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
+	import DeviceXY from '../../../device-panel/DeviceXY.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
 	import { boardGroupStacks, boardKnobSize, controlKnobSize, controlUnits, faceKnobFit, frameColumns, groupFace, groupUnits, isKnobGroup, knobGridFit, pageCells, pageGroupGrid, pagePicks, type KnobSize, type PanelControl, type PanelFace, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
@@ -177,6 +178,26 @@
 				</div>
 			{/if}
 		{/each}
+	</div>
+{:else if columns && group.time}
+	<!-- On a frame: the envelope as one Time pad (ADR-546), Attack across and
+	     Release (or Decay) up; its page and the board draw the stages. -->
+	{@const time = group.time}
+	<div class="panel-group-grid" class:under-tabs={underTabs} data-group={dataGroup} data-time-pad style="grid-column: span {columns}; grid-template-rows: minmax(0, 1fr);">
+		<div class="panel-cell" style="grid-column: 1 / -1;">
+			<DeviceXY
+				xValue={params.unit(time.x) ?? 0}
+				yValue={params.unit(time.y) ?? 0.5}
+				title={group.title ?? 'Envelope'}
+				icon="envelope"
+				{color}
+				isGhost={!params.has(time.x) || !params.isOn(group.switchParam)}
+				onInteraction={(x, y) => {
+					params.writeUnit(time.x, x, group.switchParam);
+					params.writeUnit(time.y, y, group.switchParam);
+				}}
+			/>
+		</div>
 	</div>
 {:else if columns && group.pickRow}
 	<!-- A selector row over a knob row (ADR-516, at band size): the picks one

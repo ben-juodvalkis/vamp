@@ -5,12 +5,14 @@
  * envelope and oscillator settings in the middle display, then LFO, Filter,
  * Pitch Env and the global Time / Tone / Volume down the right. Here Live's
  * oscillators, its LFO and its pitch envelope are tabs over the middle (the
- * display Live swaps), each showing its main knobs and its envelope; the
- * Filter's type and its Env and Drive; Time, Tone and Volume close the
- * frame. Every eyebrow opens its section's page. The filter pad (Freq
- * across, Res up) is not on the frame: the chain cell's XY is the same two
- * parameters (`INSTRUMENT_CONTROLS.operator`), so it is the Filter page's
- * picture (`aside`) instead.
+ * display Live swaps), each showing its main knobs and its envelope (one
+ * Time pad, ADR-546); the Filter's type and its Cutoff and Res knobs (the
+ * user's call, 2026-11-18, in place of Env and Drive, which are on the
+ * Filter page); Time, Tone and Volume close the frame. Every eyebrow opens
+ * its section's page. The filter PAD (Freq across, Res up) is not on the
+ * frame: the chain cell's XY is the same two parameters
+ * (`INSTRUMENT_CONTROLS.operator`), so it is the Filter page's picture
+ * (`aside`) instead.
  * Names are Live's (docs/reference/instruments/Operator.md); note Live's
  * trailing space in "A Fix On ".
  */
@@ -35,15 +37,19 @@ const ALGORITHMS = Array.from({ length: 11 }, (_, i) => `Alg. ${i + 1}`);
 
 /**
  * The envelope a tab or page shows: four stages under one eyebrow, on three
- * of the frame's columns (a stage needs no knob's width, ADR-510).
+ * of the frame's columns (a stage needs no knob's width, ADR-510). On the
+ * frame it is one Time pad (ADR-546): Attack across, and up Release for an
+ * oscillator's (its amp envelope, on a carrier) or Decay for the LFO's and
+ * the pitch envelope's; their pages and the board keep the four stages.
  */
-function adsr(prefix: string, page: string, switchParam?: string): PanelGroup {
+function adsr(prefix: string, page: string, switchParam?: string, up: 'Release' | 'Decay' = 'Release'): PanelGroup {
 	return {
 		title: 'Envelope',
 		page,
 		switchParam,
 		face: 'slider',
 		columns: 3,
+		time: { x: `${prefix} Attack`, y: `${prefix} ${up}` },
 		controls: [
 			{ kind: 'box', param: `${prefix} Attack`, title: 'A' },
 			{ kind: 'box', param: `${prefix} Decay`, title: 'D' },
@@ -561,7 +567,7 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 								{ kind: 'box', param: 'LFO Amt A', title: 'Amt A' }
 							]
 						},
-						adsr('Le', 'lfo-env', 'LFO On')
+						adsr('Le', 'lfo-env', 'LFO On', 'Decay')
 					]
 				},
 				{
@@ -577,7 +583,7 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 								{ kind: 'box', param: 'Pe Amt A', title: 'Amt A' }
 							]
 						},
-						adsr('Pe', 'pitch', 'Pe On')
+						adsr('Pe', 'pitch', 'Pe On', 'Decay')
 					]
 				}
 			]
@@ -588,12 +594,12 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 				title: 'Filter',
 				page: 'filter',
 				switchParam: 'Filter On',
-				// Two face columns: the type's tab, then Env over Drive (`frameColumns`).
+				// Two face columns: the type's tab, then Cutoff over Res (`frameColumns`).
 				columns: 2,
 				controls: [
 					{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
-					{ kind: 'box', param: 'Fe Amount', title: 'Env' },
-					{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
+					{ kind: 'box', param: 'Filter Freq', title: 'Cutoff' },
+					{ kind: 'box', param: 'Filter Res', title: 'Res' }
 				]
 			}
 		},

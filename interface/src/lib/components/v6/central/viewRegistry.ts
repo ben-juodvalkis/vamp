@@ -211,7 +211,7 @@ export function resolveViewComponent(
  */
 const FULL_SCREEN_BOARDS: Partial<Record<CentralViewType, ReadonlySet<string>>> = {
 	device: new Set(['ott', 'roar']),
-	instrument: new Set(['analog', 'collision', 'drift', 'electric', 'meld', 'operator', 'sampler', 'simpler', 'wavetable']),
+	instrument: new Set(['analog', 'collision', 'drift', 'electric', 'meld', 'omnisphere', 'operator', 'sampler', 'simpler', 'wavetable']),
 };
 
 /**

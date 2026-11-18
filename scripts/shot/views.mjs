@@ -1185,6 +1185,8 @@ function instrumentSwapStates() {
 		// the track's ink, not Amp's orange. (An omnisphere-filter state flipped
 		// the switch that showed one or the other until then.)
 		['omnisphere', 'Omnisphere', 'AuPluginDevice'],
+		// Full screen (ADR-546): both envelopes' four stages, beside the macros.
+		['board-omnisphere', 'Omnisphere', 'AuPluginDevice', undefined, [{ click: '[data-central-expand]' }]],
 		// A plug-in named Komplete Kontrol: eight parameter boxes, two rows (ADR-477).
 		['komplete-kontrol', 'Komplete Kontrol', 'AuPluginDevice'],
 		// The Sampler as the rig lists it (read off a running Sampler,

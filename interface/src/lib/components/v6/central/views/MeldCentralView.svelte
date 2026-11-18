@@ -7,7 +7,6 @@
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { meldEngineStore } from '$lib/stores/v6/meldEngineStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import SectionDivider from '../SectionDivider.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -162,32 +161,13 @@
    */
   let chooser = $state<'osc' | 'filter' | null>(null);
 
-  // ---- envelopes: Amp over Mod, both in view (ADR-477), a stage a
-  // column, so A stands over A and R over R. Each row opens with its name;
-  // the mod envelope's Peak, its one level the amp has no twin of on the
-  // face (the engine's volume is its level knob), stands under its name.
+  // ---- envelopes: Amp beside Mod, each a Time pad on the face (ADR-546):
+  // Attack across, the Amp's Release and the Mod's Decay up, then the mod
+  // envelope's Peak. The board keeps every stage.
 
-  let envelopes = $derived([
-    {
-      name: 'Amp',
-      lead: undefined,
-      stages: [
-        { index: p.ampAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
-        { index: p.ampDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
-        { index: p.ampSustain, title: 'S', icon: 'sustain' as const, atRest: 1 },
-        { index: p.ampRelease, title: 'R', icon: 'release' as const, atRest: 0.19 }
-      ]
-    },
-    {
-      name: 'Mod',
-      lead: { index: p.modPeak, title: 'Peak', icon: 'depth' as const, atRest: 1 },
-      stages: [
-        { index: p.modAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
-        { index: p.modDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
-        { index: p.modSustain, title: 'S', icon: 'sustain' as const, atRest: 0 },
-        { index: p.modRelease, title: 'R', icon: 'release' as const, atRest: 0.19 }
-      ]
-    }
+  let timePads = $derived([
+    { name: 'Amp', x: p.ampAttack, y: p.ampRelease, yAtRest: 0.19 },
+    { name: 'Mod', x: p.modAttack, y: p.modDecay, yAtRest: 0.35 }
   ]);
 
   // ---- shared by both engines
@@ -337,53 +317,40 @@
       </FaceSection>
       <FaceSeam ink={meldInk.primary} />
 
-      <!-- The engine's two envelopes, Amp over Mod, as value boxes
-           (ADR-477): both in view, so there is no Amp/Mod switch, a seam
-           between them. Each row is its name's column, then A D S R on the
-           same four columns in both (2026-11-17; until then Amp's four
-           stood a column left of Mod's, under a name line each, and left
-           the fifth column of its row empty). The mod envelope's Peak
-           stands under its name. -->
+      <!-- The engine's two envelopes as Time pads, Amp beside Mod
+           (ADR-546): Attack across, and up the Amp's Release and the Mod's
+           Decay; then the Mod envelope's Peak, its one level the amp has no
+           twin of on the face. Every stage of both is on the board. -->
       <FaceSection span={5}>
         {#snippet head()}<PanelEyebrow title="Envelopes" color={meldInk.primary} />{/snippet}
-        <div class="env-stack face-span-all">
-          {#each envelopes as envelope, i (envelope.name)}
-            {#if i > 0}<div class="env-seam"><SectionDivider orientation="horizontal" ink={meldInk.primary} /></div>{/if}
-            <div class="env-row" data-envelope={envelope.name}>
-              <div class="env-lead">
-                <span class="env-name">{envelope.name}</span>
-                {#if envelope.lead}
-                  {@const lead = envelope.lead}
-                  <div class="flex-1 min-h-0">
-                    <DeviceSlider
-                      value={read(lead.index, lead.atRest)}
-                      title={lead.title}
-                      icon={lead.icon}
-                      orientation="vertical"
-                      labelSize="small"
-                      color={meldInk}
-                      readout={display(lead.index)}
-                      onInteraction={(v) => write(lead.index, v)}
-                    />
-                  </div>
-                {/if}
-              </div>
-              {#each envelope.stages as stage (stage.index)}
-                <div class="min-h-0 h-full">
-                  <DeviceSlider
-                    value={read(stage.index, stage.atRest)}
-                    title={stage.title}
-                    icon={stage.icon}
-                    orientation="vertical"
-                    labelSize="small"
-                    color={meldInk}
-                    readout={display(stage.index)}
-                    onInteraction={(v) => write(stage.index, v)}
-                  />
-                </div>
-              {/each}
+        <div class="env-pads face-span-all">
+          {#each timePads as pad (pad.name)}
+            <div class="env-pad" data-envelope={pad.name} data-time-pad>
+              <DeviceXY
+                xValue={read(pad.x, 0.07)}
+                yValue={read(pad.y, pad.yAtRest)}
+                title={pad.name}
+                icon="envelope"
+                color={meldInk}
+                onInteraction={(x, y) => {
+                  write(pad.x, x);
+                  write(pad.y, y);
+                }}
+              />
             </div>
           {/each}
+          <div class="min-h-0 h-full" data-envelope-peak>
+            <DeviceSlider
+              value={read(p.modPeak, 1)}
+              title="Peak"
+              icon="depth"
+              orientation="vertical"
+              labelSize="small"
+              color={meldInk}
+              readout={display(p.modPeak)}
+              onInteraction={(v) => write(p.modPeak, v)}
+            />
+          </div>
         </div>
       </FaceSection>
       <FaceSeam ink={meldInk.primary} />
@@ -542,44 +509,18 @@
     min-width: 0;
   }
 
-  /* Amp over Mod, a stage a face column, a seam between. */
-  .env-stack {
-    display: grid;
-    grid-template-columns: subgrid;
-    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
-    row-gap: var(--central-gap);
-    min-width: 0;
-    min-height: 0;
-  }
-  .env-seam {
-    grid-column: 1 / -1;
-  }
-  /* A row: its name's column, then A D S R on the face's columns. */
-  .env-row {
-    grid-column: 1 / -1;
+  /* The two Time pads, two face columns each, then the Peak box. */
+  .env-pads {
     display: grid;
     grid-template-columns: subgrid;
     grid-template-rows: minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
   }
-  /* The row's name, and under it the level that is the envelope's alone. */
-  .env-lead {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: var(--spacing-xs);
+  .env-pad {
+    grid-column: span 2;
     min-width: 0;
     min-height: 0;
-  }
-  /* A section's name, as the eyebrows over the face are (PanelEyebrow). */
-  .env-name {
-    flex: none;
-    font-size: 0.8125rem;
-    font-weight: var(--font-weight-medium);
-    line-height: 1rem;
-    text-align: center;
-    color: var(--value);
   }
   /* The engine the face shows is the chosen one of the two: its letter on
      ON's block (ADR-544), where it wore a colour of its own. */

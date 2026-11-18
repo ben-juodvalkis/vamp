@@ -2,6 +2,7 @@
   import { press } from '$lib/actions/press';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
   import type { ControlGlyphName } from '../../device-panel/ControlGlyph.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
@@ -198,29 +199,14 @@
   /** Live's drive names, for the face's chooser: the value written is the index. */
   const DRIVE_NAMES = [...ANALOG_DRIVES];
 
-  // ---- envelopes: Amp over Filter, both in view (ADR-477), A D S R each.
-  // What each drives sits beside it as a knob since ADR-510's face: the
-  // amp's level in the Osc card, the filter envelope's amount on Filter.
-
-  let envelopes = $derived([
-    {
-      title: 'Amp',
-      stages: [
-        { index: p.aegAttack, title: 'A', icon: 'attack' as const, atRest: 0 },
-        { index: p.aegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6 },
-        { index: p.aegSustain, title: 'S', icon: 'sustain' as const, atRest: 0 },
-        { index: p.aegRelease, title: 'R', icon: 'release' as const, atRest: 0.6 }
-      ]
-    },
-    {
-      title: 'Filter',
-      stages: [
-        { index: p.fegAttack, title: 'A', icon: 'attack' as const, atRest: 0 },
-        { index: p.fegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6 },
-        { index: p.fegSustain, title: 'S', icon: 'sustain' as const, atRest: 0 },
-        { index: p.fegRelease, title: 'R', icon: 'release' as const, atRest: 0.6 }
-      ]
-    }
+  // ---- envelopes: Amp beside Filter, each a Time pad on the face (ADR-546):
+  // Attack across, the Amp's Release and the Filter's Decay up; the board
+  // keeps all four stages. What each drives sits beside it as a knob since
+  // ADR-510's face: the amp's level in the Osc card, the filter envelope's
+  // amount on Filter.
+  let timePads = $derived([
+    { title: 'Amp', x: p.aegAttack, y: p.aegRelease },
+    { title: 'Filter', x: p.fegAttack, y: p.fegDecay }
   ]);
 
   // ---- voicing
@@ -453,30 +439,26 @@
       </FaceSection>
       <FaceSeam ink={analogInk.primary} />
 
-      <!-- The swap pill over the voice's two envelopes, Amp over Filter, as
-           value boxes (ADR-477), a stage a column: their heights draw each
-           envelope. -->
+      <!-- The swap pill over the voice's two envelopes as Time pads, Amp
+           beside Filter (ADR-546): Attack across, and up the Amp's Release
+           and the Filter's Decay. Their four stages are on the board. -->
       <FaceSection span={4}>
         {#snippet head()}<PanelEyebrow title="Envelopes" color={analogInk.primary} />{/snippet}
         <div class="env-grid face-span-all">
           <div class="env-pill"><HostedSwapPill /></div>
-          {#each envelopes as envelope (envelope.title)}
-            <div class="env-row" data-envelope={envelope.title}>
-              <span class="env-label">{envelope.title}</span>
-              {#each envelope.stages as stage (stage.index)}
-                <div class="min-h-0 h-full">
-                  <DeviceSlider
-                    value={norm(stage.index, stage.atRest)}
-                    title={stage.title}
-                    icon={stage.icon}
-                    orientation="vertical"
-                    labelSize="small"
-                    color={analogInk}
-                    readout={display(stage.index)}
-                    onInteraction={(v) => writeNorm(stage.index, v)}
-                  />
-                </div>
-              {/each}
+          {#each timePads as pad (pad.title)}
+            <div class="env-pad" data-envelope={pad.title} data-time-pad>
+              <DeviceXY
+                xValue={norm(pad.x, 0)}
+                yValue={norm(pad.y, 0.6)}
+                title={pad.title}
+                icon="envelope"
+                color={analogInk}
+                onInteraction={(x, y) => {
+                  writeNorm(pad.x, x);
+                  writeNorm(pad.y, y);
+                }}
+              />
             </div>
           {/each}
         </div>
@@ -658,12 +640,11 @@
   .head-col.face-span-3 {
     grid-column: span 3;
   }
-  /* The pill over the two envelopes, a stage a face column; each row
-     named in a line over its boxes. */
+  /* The pill over the two Time pads, each two face columns. */
   .env-grid {
     display: grid;
     grid-template-columns: subgrid;
-    grid-template-rows: var(--height-touch) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: var(--height-touch) minmax(0, 1fr);
     row-gap: var(--spacing-sm);
     min-width: 0;
     min-height: 0;
@@ -672,21 +653,10 @@
     grid-column: 1 / -1;
     min-width: 0;
   }
-  .env-row {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: subgrid;
-    grid-template-rows: auto minmax(0, 1fr);
-    row-gap: 2px;
+  .env-pad {
+    grid-column: span 2;
+    min-width: 0;
     min-height: 0;
-  }
-  /* A row's name: a section name, as the eyebrows over the face are. */
-  .env-label {
-    grid-column: 1 / -1;
-    font-size: 0.75rem;
-    font-weight: var(--font-weight-medium);
-    line-height: 0.75rem;
-    color: var(--value);
   }
 
   /* The Voice switch: one button drawn as a tab of two, 1 | 2, the voice

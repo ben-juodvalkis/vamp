@@ -118,7 +118,10 @@ describe('WavetableCentralView — its face and its own pages (ADR-510)', () => 
 		expect(container.querySelector('[data-page]')).toBeNull();
 		expect(container.querySelector('[data-wavetable-page]')).toBeNull();
 		// The chain cell's XY is Osc 1's Effect 2 / Wave Position: the face draws its wave, not a pad.
-		expect(container.querySelector('.device-xy')).toBeNull();
+		// Its only pads are the two envelopes' Time pads (ADR-546).
+		const pads = [...container.querySelectorAll('.device-xy')];
+		expect(pads).toHaveLength(2);
+		expect(pads.every((pad) => pad.closest('[data-time-pad]'))).toBe(true);
 		expect(container.querySelector('[data-osc-wave]')).not.toBeNull();
 	});
 

@@ -1,9 +1,13 @@
 <script lang="ts">
   /**
    * Omnisphere Central View: the plug-in's macros as the user laid them out
-   * (2026-10-12). The swap pill over four pads (Unison, Space, Filter,
-   * Vibrato: what is played), then both envelopes, Amp over Filter, then
-   * the FX switch over the Filter envelope's Amount.
+   * (2026-10-12). Compact (ADR-546): the swap pill over six pads, three
+   * columns of two: Unison over Filter, Space over Vibrato, and the two
+   * envelopes as Time pads, Amp (Attack across, Release up) over Filter
+   * Env (Attack across, Decay up); then the FX switch over the Filter
+   * envelope's Amount, each level with its envelope. Full screen: the four
+   * macro pads, then both envelopes' four stages, Amp over Filter, then FX
+   * over Env Amt (the compact layout until ADR-546).
    *
    * Ink (ADR-544): everything is the selected track's. The Amp envelope
    * wore the theme's ON colour to tell it from the Filter's (2026-10-01);
@@ -26,6 +30,7 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -65,6 +70,12 @@
   const ENVELOPES = [
     { title: 'Amp Envelope', stages: AMP_ENV },
     { title: 'Filter Envelope', stages: FILTER_ENV }
+  ] as const;
+
+  /** The compact face's Time pads (ADR-546): [title, x param, y param]. */
+  const TIME_PADS = [
+    { title: 'Amp', x: 8, y: 11 },
+    { title: 'Filter Env', x: 13, y: 14 }
   ] as const;
 
   function paramValue(index: number): number {
@@ -125,19 +136,81 @@
   }
 </script>
 
+{#snippet unisonPad()}
+  <DeviceXY
+    xValue={unisonXValue}
+    yValue={unisonYValue}
+    title="Unison"
+    icon="unison"
+    titleClass="text-2xl font-bold"
+    onInteraction={handleUnisonXYInteraction}
+    color={omniInk}
+  />
+{/snippet}
+{#snippet spacePad()}
+  <DeviceXY
+    xValue={ambianceXValue}
+    yValue={ambianceYValue}
+    title="Space"
+    icon="reverb"
+    titleClass="text-2xl font-bold"
+    onInteraction={handleAmbianceXYInteraction}
+    color={omniInk}
+  />
+{/snippet}
+{#snippet filterPad()}
+  <DeviceXY
+    xValue={filterXValue}
+    yValue={filterYValue}
+    title="Filter"
+    icon="filter"
+    titleClass="text-2xl font-bold"
+    onInteraction={handleFilterXYInteraction}
+    color={omniInk}
+  />
+{/snippet}
+{#snippet vibratoPad()}
+  <DeviceXY
+    xValue={vibratoXValue}
+    yValue={vibratoYValue}
+    title="Vibrato"
+    icon="lfo"
+    titleClass="text-2xl font-bold"
+    onInteraction={handleVibratoXYInteraction}
+    color={omniInk}
+  />
+{/snippet}
+{#snippet fxSwitch()}
+  <button
+    class="physical-button btn-toggle omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
+    class:active={fxIsOn}
+    aria-pressed={fxIsOn}
+    use:press={{ onPress: () => handleFxToggle() }}
+  >
+    FX
+  </button>
+{/snippet}
+{#snippet envAmount()}
+  <div class="env-amount w-full min-w-0 min-h-0 h-full" data-param="filter-env-amount">
+    <DeviceSlider
+      value={paramValue(FILTER_ENV_AMOUNT)}
+      title="Env Amt"
+      orientation="vertical"
+      color={omniInk}
+      readout={display(FILTER_ENV_AMOUNT)}
+      onInteraction={(value) => writeParam(FILTER_ENV_AMOUNT, value)}
+    />
+  </div>
+{/snippet}
+
 <div class="h-full w-full">
-  {#if instrument}
-    <!-- Main content grid, the user's layout (2026-10-12): four equal
-         columns in two equal sections, the four XY pads and the envelopes,
-         then the FX switch, the column's full height. Three rows: a header
-         (the swap pill over the pads), then two rows of controls; the
-         envelopes take all three (ADR-477). The ORB that stood between
-         them left at the user's call (2026-10-26), and the seam and the
-         wheels under FX for the MidiWheels device's chain cell (the same
-         day). -->
-    <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
-      <!-- Cols 1-2, header: the swap pill, top-left as in every instrument
-           view (2026-10-06), over the pads. -->
+  {#if instrument && centralDisplayStore.expanded}
+    <!-- Full screen (ADR-546): the four macro pads, then both envelopes'
+         four stages, Amp over Filter, then FX over Env Amt (the compact
+         layout of 2026-10-12 to ADR-546). Three rows: a header (the swap
+         pill over the pads), then two rows of controls; the envelopes take
+         all three (ADR-477). -->
+    <div class="omni-grid omni-board h-full w-full grid gap-(--central-gap) p-(--central-inset)">
       <div class="flex flex-col justify-center min-w-0" style="grid-column: 1 / 3; grid-row: 1;">
         <HostedSwapPill />
       </div>
@@ -171,90 +244,58 @@
         {/each}
       </div>
 
-      <!-- Col 1, top: UNISON XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 1; grid-row: 2;">
-        <DeviceXY
-          xValue={unisonXValue}
-          yValue={unisonYValue}
-          title="Unison"
-          icon="unison"
-          titleClass="text-2xl font-bold"
-          onInteraction={handleUnisonXYInteraction}
-          color={omniInk}
-        />
-      </div>
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 1; grid-row: 2;">{@render unisonPad()}</div>
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 2; grid-row: 2;">{@render spacePad()}</div>
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 1; grid-row: 3;">{@render filterPad()}</div>
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 2; grid-row: 3;">{@render vibratoPad()}</div>
 
-      <!-- Col 2, top: SPACE XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 2; grid-row: 2;">
-        <DeviceXY
-          xValue={ambianceXValue}
-          yValue={ambianceYValue}
-          title="Space"
-          icon="reverb"
-          titleClass="text-2xl font-bold"
-          onInteraction={handleAmbianceXYInteraction}
-          color={omniInk}
-        />
-      </div>
-
-      <!-- Col 1, bottom: FILTER XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 1; grid-row: 3;">
-        <DeviceXY
-          xValue={filterXValue}
-          yValue={filterYValue}
-          title="Filter"
-          icon="filter"
-          titleClass="text-2xl font-bold"
-          onInteraction={handleFilterXYInteraction}
-          color={omniInk}
-        />
-      </div>
-
-      <!-- Col 2, bottom: VIBRATO XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 2; grid-row: 3;">
-        <DeviceXY
-          xValue={vibratoXValue}
-          yValue={vibratoYValue}
-          title="Vibrato"
-          icon="lfo"
-          titleClass="text-2xl font-bold"
-          onInteraction={handleVibratoXYInteraction}
-          color={omniInk}
-        />
-      </div>
-
-      <!-- Col 5: the FX switch over the Filter envelope's Amount, a slider
-           (user, 2026-11-06; a knob past the envelope's stages until then).
-           The column is built like the envelopes beside it — a title line,
-           the control, the seam, a title line, the control — so FX is
-           exactly as tall as the Amp stages and Env Amt as the Filter's. -->
+      <!-- Col 5: the FX switch over the Filter envelope's Amount, built like
+           the envelopes beside it — a title line, the control, the seam, a
+           title line, the control — so FX is exactly as tall as the Amp
+           stages and Env Amt as the Filter's. -->
       <div class="omni-fx-col min-w-0 min-h-0 flex flex-col gap-(--central-gap)" style="grid-column: 5; grid-row: 1 / 4;">
         <EnvelopeGroup ink={omniInk.primary} title={'\u00a0'} edges="none">
-          <button
-            class="physical-button btn-toggle omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
-            class:active={fxIsOn}
-            aria-pressed={fxIsOn}
-            use:press={{ onPress: () => handleFxToggle() }}
-          >
-            FX
-          </button>
+          {@render fxSwitch()}
         </EnvelopeGroup>
         <!-- The seam's 1px, kept so the rows line up, but not drawn: the
              envelopes' seam is the one that reads. -->
         <div class="flex-none" style="height: 1px;" aria-hidden="true"></div>
         <EnvelopeGroup ink={omniInk.primary} title={'\u00a0'} edges="none">
-          <div class="env-amount w-full min-w-0 min-h-0 h-full" data-param="filter-env-amount">
-            <DeviceSlider
-              value={paramValue(FILTER_ENV_AMOUNT)}
-              title="Env Amt"
-              orientation="vertical"
-              color={omniInk}
-              readout={display(FILTER_ENV_AMOUNT)}
-              onInteraction={(value) => writeParam(FILTER_ENV_AMOUNT, value)}
-            />
-          </div>
+          {@render envAmount()}
         </EnvelopeGroup>
       </div>
+    </div>
+  {:else if instrument}
+    <!-- Compact (ADR-546): the swap pill over three columns of two pads,
+         Unison over Filter, Space over Vibrato, Amp's Time over the Filter
+         envelope's; then FX level with Amp and Env Amt level with the
+         Filter envelope it scales. -->
+    <div class="omni-grid omni-face h-full w-full grid gap-(--central-gap) p-(--central-inset)">
+      <div class="flex flex-col justify-center min-w-0" style="grid-column: 1 / 4; grid-row: 1;">
+        <HostedSwapPill />
+      </div>
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 1; grid-row: 2;">{@render unisonPad()}</div>
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 2; grid-row: 2;">{@render spacePad()}</div>
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 1; grid-row: 3;">{@render filterPad()}</div>
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 2; grid-row: 3;">{@render vibratoPad()}</div>
+      {#each TIME_PADS as pad, row (pad.title)}
+        <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 3; grid-row: {row + 2};" data-envelope={pad.title} data-time-pad>
+          <DeviceXY
+            xValue={paramValue(pad.x)}
+            yValue={paramValue(pad.y)}
+            title={pad.title}
+            icon="envelope"
+            titleClass="text-2xl font-bold"
+            onInteraction={(x, y) => {
+              writeParam(pad.x, x);
+              writeParam(pad.y, y);
+            }}
+            color={omniInk}
+          />
+        </div>
+      {/each}
+      <div class="min-w-0 min-h-0" style="grid-column: 4; grid-row: 2;">{@render fxSwitch()}</div>
+      <div class="min-w-0 min-h-0" style="grid-column: 4; grid-row: 3;">{@render envAmount()}</div>
     </div>
   {:else}
     <!-- Default state when no Omnisphere present -->
@@ -270,10 +311,16 @@
      (already the flat field / ChosenDefault ON) whose bold literal settles
      to medium. Graticule is untouched — the rule sits under
      [data-grammar="flat"]. */
-  /* Four equal columns, then the FX switch's column at a fixed width. */
+  /* Full screen: four equal columns, then the FX switch's column at a fixed width. */
   .omni-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) 72px;
     grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .omni-board {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) 72px;
+  }
+  /* Three equal columns of pads, then FX and Env Amt at the same width. */
+  .omni-face {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 72px;
   }
 
 

@@ -81,6 +81,13 @@ export interface PanelGroup {
 	 * struck, over the six knobs that shape it).
 	 */
 	pickRow?: number;
+	/**
+	 * On a frame (the compact view), an envelope drawn as ONE Time pad: `x`
+	 * across (its Attack), `y` up (Release on an amp envelope, Decay on a
+	 * modulation one). Its pages and the full-screen board keep the stages
+	 * (ADR-546). Both names must be among its controls.
+	 */
+	time?: { x: string; y: string };
 }
 
 /** A value box drawn as a box or as a knob (ADR-509). */

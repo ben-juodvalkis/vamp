@@ -6,7 +6,8 @@
    * oscillators' levels (a touch picks the oscillator the section shows),
    * its octaves, its wave drawn over its Position, Effect 1 and Effect 2
    * knobs; the filter pad with its type as a tab of all five, the routing
-   * and the slope; the Amp and Env 2 stages; Time and Global Mod Amount.
+   * and the slope; the Amp and Env 2 envelopes as two Time pads (ADR-546,
+   * their stages on the board); Time and Global Mod Amount.
    * No pitch/mod wheels (user's call, 2026-10-22).
    *
    * One ink (ADR-544, 2026-11-17): every amount is the selected track's.
@@ -301,10 +302,10 @@
     { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 4 }], weight: 1.2 }
   ];
 
-  /** Both envelopes in view, Amp over Envelope 2 (ADR-477). */
-  const ENVELOPES = [
-    { title: 'Amp Envelope', stages: ENVELOPE },
-    { title: 'Envelope 2', stages: ENV2 }
+  /** The face's Time pads (ADR-546): Amp Attack × Release, Env 2 Attack × Decay. */
+  const TIME_PADS = [
+    { title: 'Amp', x: ENVELOPE[0], y: ENVELOPE[3] },
+    { title: 'Env 2', x: ENV2[0], y: ENV2[1] }
   ] as const;
 
   function envelopeValue(stage: { index: number; fallback: { min: number; max: number }; atRest: number }): number {
@@ -423,10 +424,10 @@
     {#snippet face()}
     <!-- One grid, eleven columns (ADR-510, re-laid 2026-11-06): Oscillator
          5 (the levels, the octaves, the wave over Position, Effect 1 and
-         Effect 2), Filter 3, Mod Sources 2 (Amp, Env 2), Global 1, in
+         Effect 2), Filter 3, Envelopes 2 (the Amp and Env 2 Time pads), Global 1, in
          Live's signal order, all in the track's one ink (ADR-544). The swap pill rides over the wave, so the
          face keeps the column the pill would take: ~80px columns, every
-         knob medium (70px) and the envelopes' small (48px). -->
+         knob medium (70px). -->
     <FaceGrid sections={[5, 3, 2, 1]}>
       <FaceSection span={5}>
         {#snippet head()}<PanelEyebrow title="Osc {oscTab}" color={wavetableInk.primary} />{/snippet}
@@ -523,22 +524,28 @@
       </FaceSection>
       <FaceSeam ink={wavetableInk.primary} />
 
-      <!-- The two envelopes, Amp then Env 2, a column each, A over D over
-           S over R: small knobs marked with the stage (Drift's face), their
-           names over the columns. -->
+      <!-- The two envelopes as Time pads, Amp over Env 2 (ADR-546): Attack
+           across, and up the Amp's Release and Env 2's Decay. The four
+           stages of each are on the full-screen board. -->
       <FaceSection span={2}>
-        {#snippet head()}
-          <span class="mod-names">
-            <span>Amp</span><span>Env 2</span>
-          </span>
-        {/snippet}
-        {#each ENVELOPES as envelope (envelope.title)}
-          <div class="knob-stack env-stack min-h-0 min-w-0" data-envelope={envelope.title}>
-            {#each envelope.stages as stage (stage.index)}
-              {@render faceKnob(stage.index, envelopeValue(stage), `${envelope.title} ${stage.title}`, (v) => writeEnv(stage.index, stage.fallback, v), { size: 's', mark: stage.title })}
-            {/each}
-          </div>
-        {/each}
+        {#snippet head()}<PanelEyebrow title="Envelopes" color={wavetableInk.primary} />{/snippet}
+        <div class="time-stack face-span-all">
+          {#each TIME_PADS as pad (pad.title)}
+            <div class="min-h-0 min-w-0" data-envelope={pad.title} data-time-pad>
+              <DeviceXY
+                xValue={envelopeValue(pad.x)}
+                yValue={envelopeValue(pad.y)}
+                title={pad.title}
+                icon="envelope"
+                color={wavetableInk}
+                onInteraction={(x, y) => {
+                  writeEnv(pad.x.index, pad.x.fallback, x);
+                  writeEnv(pad.y.index, pad.y.fallback, y);
+                }}
+              />
+            </div>
+          {/each}
+        </div>
       </FaceSection>
       <FaceSeam ink={wavetableInk.primary} />
 
@@ -579,9 +586,13 @@
     flex: 1 1 0;
     min-height: 0;
   }
-  /* Four small knobs to a column: a tighter gap, so each cell holds 48px. */
-  .env-stack {
-    gap: 0.25rem;
+  /* The two Time pads, one over the other, sharing the section's height. */
+  .time-stack {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: var(--face-gutter, var(--spacing-sm));
+    min-width: 0;
+    min-height: 0;
   }
   .knob-cell {
     height: 100%;
@@ -620,20 +631,6 @@
     border-radius: 2px;
     background: var(--surface-well);
     overflow: hidden;
-  }
-  /* The envelopes' name line: each envelope's name over its column, a
-     section name as the eyebrows beside it are (PanelEyebrow). */
-  .mod-names {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: var(--face-gutter, 0.5rem);
-    width: 100%;
-    font-size: 0.8125rem;
-    font-weight: var(--font-weight-medium);
-    line-height: 1rem;
-    white-space: nowrap;
-    text-align: center;
-    color: var(--value);
   }
   /* The oscillator the section shows is the chosen one of the two: its
      number on ON's block (ADR-544), where it wore a colour of its own. */

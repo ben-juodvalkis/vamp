@@ -170,7 +170,11 @@ describe('AnalogCentralView — the face and its pages (ADR-510)', () => {
 		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		expect(container.querySelector('[data-analog-face]')).toBeTruthy();
-		expect(container.querySelector('.device-xy')).toBeNull();
+		// Its only pads are the two envelopes' Time pads (ADR-546).
+		const pads = [...container.querySelectorAll('.device-xy')];
+		expect(pads).toHaveLength(2);
+		expect(pads.every((pad) => pad.closest('[data-time-pad]'))).toBe(true);
+		expect([...container.querySelectorAll('[data-time-pad]')].map((el) => el.getAttribute('data-envelope'))).toEqual(['Amp', 'Filter']);
 	});
 
 	it('draws the face’s seven knobs in column order', async () => {

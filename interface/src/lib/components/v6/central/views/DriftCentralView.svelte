@@ -153,15 +153,13 @@
     selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, LP_TYPE), value);
   }
   /**
-   * Env 1 (the amp envelope) as four knobs, A D S R (user, 2026-11-06).
-   * Env 2 is on the Envelopes page, which draws both.
+   * The face's envelopes as Time pads (ADR-546): Env 1, the amp's, Attack
+   * across and Release up; Env 2 Attack across and Decay up. The
+   * Envelopes page and the board draw every stage of both.
    */
-  const envTab = 1;
-  const ENV_STAGES = [
-    { stage: 'Attack', mark: 'A' },
-    { stage: 'Decay', mark: 'D' },
-    { stage: 'Sustain', mark: 'S' },
-    { stage: 'Release', mark: 'R' }
+  const TIME_PADS = [
+    { env: 1, up: 'Release' },
+    { env: 2, up: 'Decay' }
   ] as const;
 
   /**
@@ -657,26 +655,28 @@
       </FaceSection>
       <FaceSeam ink={driftInk.primary} />
 
-      <!-- Envelopes: A D S R of Env 1, the amp envelope. Env 2 and the
-           cycling envelope are on the Envelopes page, which shows both. -->
+      <!-- Envelopes as Time pads (ADR-546), Env 1 (the amp's) over Env 2:
+           Attack across, and up Env 1's Release and Env 2's Decay. Env 2
+           ghosts while it cycles. All four stages of both are on the
+           Envelopes page and the board. -->
       <FaceSection span={1}>
         {#snippet head()}<PanelEyebrow title="Envelopes" color={driftInk.primary} />{/snippet}
         <div class="env-col min-h-0 flex flex-col gap-(--spacing-sm)">
-          {#each ENV_STAGES as { stage, mark } (stage)}
-            {@const name = `Env ${envTab} ${stage}`}
-            <div class="flex-1 min-h-0">
-              <DeviceSlider
-                value={panelParams.unit(name) ?? 0}
-                title="Env {envTab} {stage}"
-                face="knob"
-                knobSize="s"
-                knobCaption={false}
-                knobMark={mark}
-                orientation="vertical"
-                labelSize="small"
+          {#each TIME_PADS as pad (pad.env)}
+            {@const x = `Env ${pad.env} Attack`}
+            {@const y = `Env ${pad.env} ${pad.up}`}
+            <div class="flex-1 min-h-0 min-w-0" data-envelope="Env {pad.env}" data-time-pad>
+              <DeviceXY
+                xValue={panelParams.unit(x) ?? 0}
+                yValue={panelParams.unit(y) ?? 0.5}
+                title="Env {pad.env}"
+                icon="envelope"
                 color={driftInk}
-                readout={panelParams.display(name)}
-                onInteraction={(v) => panelParams.writeUnit(name, v)}
+                isGhost={pad.env === 2 && (panelParams.raw('Env 2 Cyc On') ?? 0) >= 0.5}
+                onInteraction={(vx, vy) => {
+                  panelParams.writeUnit(x, vx);
+                  panelParams.writeUnit(y, vy);
+                }}
               />
             </div>
           {/each}
