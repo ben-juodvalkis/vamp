@@ -422,6 +422,13 @@
     return macroGridOf(cell.device) === null;
   }
 
+  /** An open rack with no macros and two chains or more: its chains, which its own cell lists. */
+  function bareChains(cell: Cell): RackChain[] | null {
+    if (!isBareRack(cell) || !rackFold.isOpen(cell.path)) return null;
+    const chains = rackChainsOf(cell.path);
+    return chains && chains.length > 1 ? chains : null;
+  }
+
   function macroValue(device: DeviceRecord, index: number): number {
     return selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, index)) ?? 0;
   }
@@ -536,7 +543,8 @@
     const chains = rackChainsOf(rackPath);
     if (!chains) return;
     const ink = cell.ink;
-    if (chains.length > 1) {
+    // A rack with no macros shows its chain list in its own cell (bareChains).
+    if (chains.length > 1 && !isBareRack(cell)) {
       out.push({ ...listCell(cell), chains, inside: { rackPath, ink, depth, chain: chains[0], chains: chains.length } });
     }
     if (chains.length === 0) return;
@@ -1123,6 +1131,17 @@
           onSelect={(i) => rackFold.selectChain(cell.inside!.rackPath, i)}
           onMute={(i, on) => setChainSwitch(cell.inside!.rackPath, i, 'mute', on)}
           onVolume={(i, v) => setChainVolume(cell.inside!.rackPath, i, v)}
+        /></div>
+      {:else if bareChains(cell)}
+        <!-- A rack with no macros, open, of two chains or more: its own
+             cell is its chain list (Ben, 2026-11-17), in place of the
+             separate list cell. -->
+        <div class="cell-face" role="presentation"><ChainListFace
+          chains={bareChains(cell) ?? []}
+          selected={rackFold.chainOf(cell.path)}
+          onSelect={(i) => rackFold.selectChain(cell.path, i)}
+          onMute={(i, on) => setChainSwitch(cell.path, i, 'mute', on)}
+          onVolume={(i, v) => setChainVolume(cell.path, i, v)}
         /></div>
       {:else if cell.kit}
         <!-- A Drum Rack: the pads its playing clip has notes on. -->

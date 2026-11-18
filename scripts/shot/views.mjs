@@ -563,14 +563,14 @@ export const TOURS = {
 			// as it gets when it is the track's instrument (2026-11-17).
 			{
 				name: 'chain-rack-instrument-view',
-				description: 'A Sampler inside an Instrument Rack, unfolded and tapped: the Sampler view, on that Sampler',
+				description: 'A Keys Rack with no macros, two chains: unfolded, its own cell lists them; the Sampler chain chosen and its Sampler tapped: the Sampler view, on that Sampler',
 				scenePatch: (scene) =>
 					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
 						{
 							name: 'Keys Rack',
 							className: 'InstrumentGroupDevice',
 							params: [['Device On', 'Device On', 0, 1, 1, '']],
-							chains: [{ name: 'Sampler', devices: [{ name: 'Sampler', className: 'MultiSampler', params: [
+							chains: [{ name: 'Piano', color: 0xe0a33a, devices: ['Simpler'] }, { name: 'Sampler', color: 0x7a6cf0, devices: [{ name: 'Sampler', className: 'MultiSampler', params: [
 								['Device On', 0, 1, 1], ['Osc On', 0, 1, 0], ['Spread', 0, 100, 0], ['Transpose', -48, 48, 0],
 								['Pe On', 0, 1, 0], ['Volume', -36, 36, -12], ['Ve Attack', 0, 1, 0], ['Ve Decay', 0, 1, 0.581],
 								['Ve Sustain', 0, 1, 1], ['Ve Release', 0, 1, 0.356], ['F On', 0, 1, 1], ['Filter Freq', 0, 1, 1],
@@ -583,7 +583,9 @@ export const TOURS = {
 					openInstrument(CHAIN_DEMO_TRACK),
 					{ click: `${chainCell(0)} .cell-fold` },
 					{ wait: 400 },
-					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .mark, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .cell-face, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .cell-control` },
+					{ click: `${chainCell(0)} [data-chain-index="1"]` },
+					{ wait: 300 },
+					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/1/devices/0"] .mark, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/1/devices/0"] .cell-face, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/1/devices/0"] .cell-control` },
 					{ wait: 500 }
 				]
 			},
