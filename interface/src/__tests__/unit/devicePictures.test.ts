@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pictureStrokes, type PictureKind } from '$lib/components/v6/browser/devicePictures';
+import { pictureStrokes, type PictureKind, arpRun } from '$lib/components/v6/browser/devicePictures';
 
 describe('device pictures follow their control', () => {
 	it("Echo's rings multiply with feedback and spread with time", () => {
@@ -58,5 +58,31 @@ describe('device pictures follow their control', () => {
 				expect(strokes.every((s) => !s.d.includes('NaN')), k).toBe(true);
 				expect(pictureStrokes(k, x, y)).toEqual(strokes);
 			}
+	});
+});
+
+/** The Arpeggiator's chain picture draws its Style's run (2026-11-17). */
+describe('arpRun', () => {
+	const notes = (style: number, n: number, steps = 0) => arpRun(style, n, steps).map((step) => step.map((h) => Math.round(h * 3)));
+
+	it('plays Up, Down and Pinky Up in Live order over a four-note chord', () => {
+		expect(notes(0, 4)).toEqual([[0], [1], [2], [3]]);
+		expect(notes(1, 4)).toEqual([[3], [2], [1], [0]]);
+		expect(notes(9, 6)).toEqual([[0], [3], [1], [3], [2], [3]]);
+	});
+
+	it('sounds the whole chord on each step for Chord Trigger', () => {
+		expect(notes(14, 2)).toEqual([[0, 1, 2, 3], [0, 1, 2, 3]]);
+	});
+
+	it('climbs an octave a pass with Steps', () => {
+		const run = arpRun(0, 8, 1).map(([h]) => h);
+		expect(run[4]).toBeGreaterThan(run[3]);
+		expect(run[7]).toBe(1);
+	});
+
+	it('repeats its first four for Random Once', () => {
+		const run = arpRun(17, 8, 0);
+		expect(run.slice(4)).toEqual(run.slice(0, 4));
 	});
 });

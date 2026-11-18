@@ -451,11 +451,24 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 				const h = Math.max(8, 50 + (hash(i + 3) - 0.5) * 84 * (0.35 + 0.65 * x));
 				return { d: bar(4 + i * 8, 92 - h, 6, h), o: 0.8, fill: true };
 			});
-		// Arpeggiator: a rising run, faster with the rate, each note as long as the gate.
+		// Arpeggiator (2026-11-17): its pattern's run over a four-note chord,
+		// as Live plays it (`arpRun`), climbing an octave a pass for each of
+		// its Steps; more notes the faster the rate (x: the rate's step,
+		// 1/128 at 0, 1/1 at 1); each note as long as the gate (y: 1..200 %,
+		// touching its neighbour from 100 %). `variant` is the Style index
+		// plus 100 times Steps.
 		case 'arp': {
-			const n = 3 + Math.round(x * 9);
-			const w = (92 / n) * (0.15 + y * 0.85);
-			return Array.from({ length: n }, (_, i) => ({ d: bar(4 + (i * 92) / n, 82 - ((i % 4) / 3) * 60, w, 8), o: 0.85, fill: true }));
+			const style = Math.round(variant) % 100;
+			const steps = Math.max(0, Math.min(2, Math.floor(Math.round(variant) / 100)));
+			const n = 4 + Math.round((1 - x) * 8);
+			const run = arpRun(style, n, steps);
+			const slot = 92 / n;
+			const w = Math.max(1.5, slot * Math.min(1, 0.12 + y * 1.76) - (y >= 0.5 ? 0.6 : 0));
+			const top = 14;
+			const span = 66;
+			return run.flatMap((levels, i) =>
+				levels.map((level) => ({ d: bar(4 + i * slot, top + (1 - level) * span, w, 7), o: 0.85, fill: true }))
+			);
 		}
 		// Chord: an octave of piano keys (the user, 2026-10-26), the played
 		// triad lit brighter as the first note's velocity rises (2026-10-27).
@@ -514,3 +527,54 @@ export function genericPicture(className: string | undefined, name: string): Pic
 
 /** Pictures draw where a provider asks for them (the chain overview, a browser tile), not on the FX grid. */
 export const PICTURE_CONTEXT = Symbol('device-pictures');
+
+/** The Arpeggiator's Style names, by index (Live's order). */
+export const ARP_STYLES = ['Up', 'Down', 'UpDown', 'DownUp', 'Up & Down', 'Down & Up', 'Converge', 'Diverge', 'Con & Diverge', 'Pinky Up', 'Pinky UpDown', 'Thumb Up', 'Thumb UpDown', 'Play Order', 'Chord Trigger', 'Random', 'Random Other', 'Random Once'] as const;
+
+/**
+ * The notes an Arpeggiator Style plays over a four-note chord (0 lowest,
+ * 3 highest), one cycle of it, as Live orders them; Chord Trigger is the
+ * whole chord at once.
+ */
+const ARP_CYCLES: number[][][] = [
+	[[0], [1], [2], [3]], // Up
+	[[3], [2], [1], [0]], // Down
+	[[0], [1], [2], [3], [2], [1]], // UpDown
+	[[3], [2], [1], [0], [1], [2]], // DownUp
+	[[0], [1], [2], [3], [3], [2], [1], [0]], // Up & Down
+	[[3], [2], [1], [0], [0], [1], [2], [3]], // Down & Up
+	[[0], [3], [1], [2]], // Converge
+	[[1], [2], [0], [3]], // Diverge
+	[[0], [3], [1], [2], [1], [3]], // Con & Diverge
+	[[0], [3], [1], [3], [2], [3]], // Pinky Up
+	[[0], [3], [1], [3], [2], [3], [1], [3]], // Pinky UpDown
+	[[0], [1], [0], [2], [0], [3]], // Thumb Up
+	[[0], [1], [0], [2], [0], [3], [0], [2]], // Thumb UpDown
+	[[0], [2], [1], [3]], // Play Order: as the chord was played
+	[[0, 1, 2, 3]] // Chord Trigger
+];
+
+/**
+ * `n` steps of an Arpeggiator Style, each step the chord notes it sounds as
+ * heights 0..1, the chord repeated an octave higher for each of `steps`
+ * passes (Live's Steps transposes each pass up). The Random styles draw a
+ * fixed scatter (Random Once repeats its first four).
+ */
+export function arpRun(style: number, n: number, steps: number): number[][] {
+	const octaves = steps + 1;
+	const height = (note: number, pass: number) => (note + 4 * (pass % octaves)) / (4 * octaves - 1);
+	if (style >= 15) {
+		return Array.from({ length: n }, (_, i) => {
+			const k = style === 17 ? i % 4 : i;
+			const note = Math.floor(hash(k * 3 + style) * 4);
+			const pass = Math.floor(hash(k * 5 + style + 11) * octaves);
+			return [(note + 4 * pass) / (4 * octaves - 1)];
+		});
+	}
+	const cycle = ARP_CYCLES[Math.max(0, style)] ?? ARP_CYCLES[0];
+	return Array.from({ length: n }, (_, i) => {
+		const pass = Math.floor(i / cycle.length);
+		return cycle[i % cycle.length].map((note) => height(note, pass));
+	});
+}
+

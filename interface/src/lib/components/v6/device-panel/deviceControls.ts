@@ -587,6 +587,8 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 		control: {
 			kind: 'xy',
 			title: 'Arp', picture: 'arp',
+			// The run's pattern and octave passes: Style (1) plus 100 × Steps (14).
+			pictureVariant: (g) => Math.round(g(1) ?? 0) + 100 * Math.round(g(14) ?? 0),
 			read: (g) => ({ x: clamp01((g(5) ?? 6) / 13), y: (g(0) ?? 0) < 0.5 ? 0 : clamp01(((g(8) ?? 1) - 1) / 199) }),
 			write: (x, y) => [
 				[5, Math.round(clamp01(x) * 13)],
