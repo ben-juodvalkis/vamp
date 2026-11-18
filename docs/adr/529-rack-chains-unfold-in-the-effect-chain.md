@@ -60,7 +60,10 @@ Live.
   it draws. Unfolding in Vamp turns Show Devices on in Live, and Live's
   chain list (`is_showing_chains`) with it where the rack allows one;
   folding turns both off; toggling Show Devices in Live folds or unfolds
-  the rack here through its listener. Each rack keeps its own state, nested
+  the rack here through its listener. (2026-11-17: the rack reads open
+  while Live shows either one, and the chain list's own listener echoes
+  too, so a fold from Vamp always hides the chain list, even one Live
+  showed with the devices hidden.) Each rack keeps its own state, nested
   ones included, as in Live. Measured on 12.4.25b1: both properties are
   settable from Python; `is_showing_chains` refuses on a one-chain rack
   ("Rack needs at least 2 chains to show in-line mixer", `can_show_chains`

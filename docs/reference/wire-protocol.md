@@ -449,10 +449,12 @@ Key rules:
   song. The chain overview subscribes it while the rack is unfolded.
 - **`show_devices` — a rack's Show Devices toggle (ADR-529, 3.13.0).**
   Writable `0|1` on the same three rack classes, same provider: Live's
-  `RackDevice.View.is_showing_chain_devices`, which the chain overview's
-  fold mirrors. While subscribed its listener echoes a change made in Live;
-  a write sets it, and the rack's `is_showing_chains` (Live's chain list) to
-  the same value where `can_show_chains` allows (two chains or more).
+  `RackDevice.View.is_showing_chain_devices` or the rack's
+  `is_showing_chains` (Live's chain list, where `can_show_chains`: two
+  chains or more), which the chain overview's fold mirrors. Reads 1 while
+  either shows (2026-11-17; Show Devices alone until then). While
+  subscribed both listeners echo it; a write sets both to the same value,
+  the chain list where `can_show_chains` allows.
 - **`selected_chain` — the chain Live shows a rack's devices for (ADR-529,
   3.13.0).** Writable int, the chain's index, on the same three rack
   classes, same provider: `RackDevice.View.selected_chain`. Reads nil when

@@ -24,11 +24,12 @@ a client:
   value listener feeding the mutation fan-out with its composed path, so
   ``param/value`` echoes and writes work exactly as on a top-level device.
 
-A writable ``show_devices`` row (0/1) on the same racks is Live's Show
-Devices toggle (``view.is_showing_chain_devices``), which the chain overview's
-fold mirrors both ways: its listener echoes a change made in Live, and a
-write sets it, and the rack's chain list too where Live allows one (two
-chains or more). A writable ``selected_chain`` row (an index) is the chain
+A writable ``show_devices`` row (0/1) on the same racks is the rack open
+in Live: its Show Devices toggle (``view.is_showing_chain_devices``) or its
+chain list (``is_showing_chains``, two chains or more), which the chain
+overview's fold mirrors both ways: it reads 1 while either shows, both
+listeners echo it, and a write sets both, the chain list where Live allows
+one. So a fold in Vamp hides the chain list in Live as well. A writable ``selected_chain`` row (an index) is the chain
 Live shows the devices of (``view.selected_chain``), which the chain list's
 choice mirrors the same way.
 
@@ -213,12 +214,23 @@ class _RackState:
 
 
 def read_show_devices(rack) -> Optional[int]:
-    """1 while Live shows the rack's chain devices, 0 when not, ``None`` unread."""
+    """1 while Live shows the rack open — its chain devices, or its chain
+    list (a rack with two chains or more) — 0 when neither, ``None`` unread.
+
+    Either one counts, so the fold Vamp draws is open whenever Live shows
+    any of the rack's inside, and a fold from Vamp (which writes both off)
+    is what a tap on an open rack does."""
     view = _read(rack, "view")
     if view is None:
         return None
     value = _read(view, "is_showing_chain_devices")
-    return None if value is None else _flag(value)
+    if value is None:
+        return None
+    if _flag(value):
+        return 1
+    if bool(_read(rack, "can_show_chains", False)) and bool(_read(rack, "is_showing_chains", False)):
+        return 1
+    return 0
 
 
 def write_show_devices(rack, on: bool) -> Tuple[bool, str]:
@@ -317,6 +329,11 @@ _VIEW_ROWS = {
     VARIATIONS_KEY: ("variation_count", read_variations, False),
 }
 
+#: Further listeners on the rack itself that echo the same row.
+_RACK_ROW_EXTRAS = {
+    SHOW_DEVICES_KEY: ("is_showing_chains",),
+}
+
 
 class RackChainDevicesComponent:
     """Provider behind ``chain_devices`` and ``chain.<i>.{mute,solo}``.
@@ -348,7 +365,7 @@ class RackChainDevicesComponent:
         self._states: Dict[str, _RackState] = {}
         # (rack path, row) -> (rack, view, callback) for every rack-view row
         # (Show Devices, the selected chain) a client is following.
-        self._show_watch: Dict[Tuple[str, str], Tuple[object, object, Callable[[], None]]] = {}
+        self._show_watch: Dict[Tuple[str, str], Tuple[object, List[Tuple[object, str]], Callable[[], None]]] = {}
         self._disconnected = False
         self._warned: Set[Tuple[str, str]] = set()
         logger.info(
@@ -490,17 +507,30 @@ class RackChainDevicesComponent:
         except _LOM_ERRORS as e:
             logger.debug("RackChainDevicesComponent: add_%s_listener failed: %s", attr, e)
             return
-        self._show_watch[(device_path, key)] = (rack, view, _on_change)
+        attached = [(view, attr)]
+        # Show Devices reads the chain list too (read_show_devices), so a
+        # chain list shown or hidden in Live echoes the same row.
+        for extra in _RACK_ROW_EXTRAS.get(key, ()):
+            extra_adder = getattr(rack, "add_%s_listener" % extra, None)
+            if not callable(extra_adder):
+                continue
+            try:
+                extra_adder(_on_change)
+                attached.append((rack, extra))
+            except _LOM_ERRORS as e:
+                logger.debug("RackChainDevicesComponent: add_%s_listener failed: %s", extra, e)
+        self._show_watch[(device_path, key)] = (rack, attached, _on_change)
 
     def _unwatch_view_row(self, device_path: str, key: str) -> None:
         entry = self._show_watch.pop((device_path, key), None)
         if entry is None:
             return
-        _rack, view, cb = entry
-        try:
-            getattr(view, "remove_%s_listener" % _VIEW_ROWS[key][0])(cb)
-        except Exception:
-            pass
+        _rack, attached, cb = entry
+        for target, attr in attached:
+            try:
+                getattr(target, "remove_%s_listener" % attr)(cb)
+            except Exception:
+                pass
 
     # --- state ----------------------------------------------------------------
 

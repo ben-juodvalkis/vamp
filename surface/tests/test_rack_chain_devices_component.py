@@ -191,6 +191,18 @@ class ShowingRack(FakeEffectRack):
         if len(self.chains) < 2:
             raise RuntimeError("Rack needs at least 2 chains to show in-line mixer")
         self._showing_chains = bool(v)
+        for cb in list(self.chains_listeners):
+            cb()
+
+    @property
+    def chains_listeners(self):
+        return self.__dict__.setdefault("_chains_listeners", [])
+
+    def add_is_showing_chains_listener(self, cb):
+        self.chains_listeners.append(cb)
+
+    def remove_is_showing_chains_listener(self, cb):
+        self.chains_listeners.remove(cb)
 
 
 def test_show_devices_mirrors_live_both_ways():
@@ -202,11 +214,25 @@ def test_show_devices_mirrors_live_both_ways():
     # Unfolded from Vamp: Live shows the devices and the chain list.
     assert comp.write(rack, "r", SHOW_DEVICES_KEY, 1) == (True, 1, "")
     assert rack.view.is_showing_chain_devices is True and rack.is_showing_chains is True
-    # Live's own toggle echoes to the client.
+    # Live's own toggles echo to the client: open while either shows.
     rack.view.is_showing_chain_devices = False
+    assert emits[-1] == ("/looping/v3/property/value", ("r", SHOW_DEVICES_KEY, 1))
+    rack.is_showing_chains = False
     assert emits[-1] == ("/looping/v3/property/value", ("r", SHOW_DEVICES_KEY, 0))
     comp.unsubscribe("r", SHOW_DEVICES_KEY)
-    assert rack.view.listeners == []
+    assert rack.view.listeners == [] and rack.chains_listeners == []
+
+
+def test_a_fold_from_vamp_hides_a_chain_list_live_shows_without_devices():
+    from components.RackChainDevicesComponent import SHOW_DEVICES_KEY
+    rack = ShowingRack([FakeChain([]), FakeChain([])])
+    rack.is_showing_chains = True  # Live: chain list on, devices off
+    comp, *_ = _component()
+    # Vamp draws it open, so the tap is a fold, and the fold hides both.
+    assert comp.read(rack, "r", SHOW_DEVICES_KEY) == 1
+    assert comp.write(rack, "r", SHOW_DEVICES_KEY, 0) == (True, 0, "")
+    assert rack.view.is_showing_chain_devices is False and rack.is_showing_chains is False
+    assert comp.read(rack, "r", SHOW_DEVICES_KEY) == 0
 
 
 def test_show_devices_on_a_one_chain_rack_leaves_the_chain_list_alone():
