@@ -279,10 +279,6 @@
     return out;
   }
   const isMidiEffectClass = (className: string) => className.startsWith('Midi') || className === 'MxDeviceMidiEffect';
-  /** An audio effect's or an instrument's cell carries its header bar at its
-   *  foot (the user, 2026-11-18); a MIDI effect and a rack's chain list keep it on top. */
-  const isBarAtFootCell = (cell: { kind: string; device: DeviceRecord }) =>
-    cell.kind !== 'chains' && cell.kind !== 'add' && !isMidiEffectClass(cell.device.className);
   const landing = $derived(landingDevices(padScope?.padPath ?? trackPath));
   /** A landing cell's device path → its load's id. */
   const landingIds = $derived(new Map(landing.map((l) => [l.device.devicePath, l.id])));
@@ -1293,7 +1289,6 @@
       class:unfolded={cell.foldable && rackFold.isOpen(cell.path)}
       class:armed={cell.kind !== 'chains' && armedRacks.has(cell.path)}
       class:half={layout.places[position]?.span === 1}
-      class:head-foot={isBarAtFootCell(cell)}
       style="--cell-ink: {cell.ink};{levelOf(cell) ? ` margin-top: ${levelOf(cell) * ARM_STEP}px;` : ''}"
       style:grid-column={layout.places[position] ? `${layout.places[position].col + 1} / span ${layout.places[position].span}` : undefined}
       style:grid-row={layout.places[position] ? `${layout.places[position].row + 1}` : undefined}
@@ -1597,12 +1592,12 @@
   .chain-cell > :global(.cell-size:has(> .cell-head)) {
     flex: none;
   }
-  /* An audio effect's or instrument's bar sits at its foot (the user, 2026-11-18): the
-     face first, the name and its handle under it, nearest the strips. */
-  .chain-cell.head-foot > :global(.cell-size:has(> .cell-head)) {
+  /* Every cell's bar sits at its foot (the user, 2026-11-18): the face
+     first, the name and its handle under it, nearest the strips. */
+  .chain-cell > :global(.cell-size:has(> .cell-head)) {
     order: 1;
   }
-  .chain-cell.head-foot .cell-head {
+  .chain-cell .cell-head {
     border-bottom: none;
   }
   /* Two rows of cells: half that, so the controls keep their height
