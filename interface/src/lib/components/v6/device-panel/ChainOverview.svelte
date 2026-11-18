@@ -1009,6 +1009,20 @@
     if (!browserModeStore.isInstrumentPersistent) untrack(() => chainAddTarget.clear());
   });
 
+  /** The instrument view type of an instrument on a rack's chain, when it has a face; else null. */
+  function innerFaceType(cell: Cell): string | null {
+    const { device } = cell;
+    if (!instrumentService.isInstrumentClass(device.className)) return null;
+    const type = instrumentService.identifyInstrumentType({
+      deviceIndex: 0,
+      className: device.className,
+      name: device.name,
+      type: 'instrument',
+      devicePath: device.devicePath
+    });
+    return FACED_INSTRUMENTS.has(type) ? type : null;
+  }
+
   /** `fromControl`: the press landed on the cell's control, not its frame. */
   function open(cell: Cell, fromControl = false) {
     const { device } = cell;
@@ -1109,6 +1123,12 @@
         <!-- The instrument's signature control, as its view draws it. -->
         <div class="cell-control" role="presentation"><CellSize>
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={trackScheme ?? schemeFromInk(cell.ink)} />
+        </CellSize></div>
+      {:else if !padScope && cell.inside && innerFaceType(cell)}
+        <!-- An instrument on a rack's chain: the same signature control it
+             draws as the track's instrument, on this device. -->
+        <div class="cell-control" role="presentation"><CellSize>
+          <InstrumentFace device={cell.device} type={innerFaceType(cell) ?? ''} color={trackScheme ?? schemeFromInk(cell.ink)} />
         </CellSize></div>
       {:else if !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:

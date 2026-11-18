@@ -583,7 +583,7 @@ export const TOURS = {
 					openInstrument(CHAIN_DEMO_TRACK),
 					{ click: `${chainCell(0)} .cell-fold` },
 					{ wait: 400 },
-					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .mark, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .cell-face` },
+					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .mark, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .cell-face, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .cell-control` },
 					{ wait: 500 }
 				]
 			},

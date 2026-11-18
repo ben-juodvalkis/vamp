@@ -130,5 +130,7 @@ it gets as the track's instrument, on that device: the views find their
 device by its path when it is on a chain (`selectedTrackStore.instrumentDevice`).
 Until then it opened the generic view. The swap pill is left off there: it
 steps the track's own instrument and would replace the whole rack. Effects
-inside a rack already opened their own views.
+inside a rack already opened their own views. Its chain cell draws the
+same signature control as the track's instrument's cell (the Sampler's
+Filter XY, Drift's filter, ...), on that device.
 
