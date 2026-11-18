@@ -214,3 +214,12 @@ Left open, for Ben:
 
 ## Tags
 `visual-system`, `colour`, `tokens`, `central-view`, `controls`, `track-strip`, `chain`
+
+## Addendum (2026-11-17, later): the title band is hidden
+
+Ben, trying the views without it: the central view's title band is hidden
+(`CentralDisplay`, the markup kept with `hidden`), its 40px back to the
+view. The selected strip and the open device's chain cell (which still
+wears the band) say whose view it is. The full-screen icon sits in the
+view's top-right corner in plain ink.
+

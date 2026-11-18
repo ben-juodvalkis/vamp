@@ -255,7 +255,9 @@ import { logger } from '$lib/utils/logger';
 		--zone-accent: {zoneAccent};
 	"
 >
-	<div class="cv-head" data-central-head>
+	<!-- Hidden (Ben, 2026-11-17): the band's 40px go back to the view; the
+	     strip and the chain cell say whose view it is. -->
+	<div class="cv-head" data-central-head hidden>
 		<span class="cv-track">{headTrack}</span>
 		<span class="cv-device">{headDevice}</span>
 	</div>
@@ -342,11 +344,12 @@ import { logger } from '$lib/utils/logger';
 		/* The touch floor's height: 4px past the band, into the view's
 		   inset, where no control sits. The glyph is centred on the band. */
 		height: var(--height-touch, 44px);
-		padding: calc((var(--title-band-h, 40px) - 16px) / 2) 10px 0 0;
+		padding: 14px 10px 0 0;
 		display: inline-flex;
 		align-items: flex-start;
 		justify-content: flex-end;
-		color: var(--sel-track-fg, var(--foreground));
+		/* On the view itself while the band is hidden, so plain ink. */
+		color: var(--foreground);
 		opacity: 1;
 		border: none;
 		background: transparent;
@@ -361,6 +364,9 @@ import { logger } from '$lib/utils/logger';
 	   frame itself was before the band. */
 	.central-frame {
 		flex-direction: column;
+	}
+	.cv-head[hidden] {
+		display: none;
 	}
 	.cv-head {
 		display: flex;
