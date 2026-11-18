@@ -31,12 +31,12 @@
 		align-items: center;
 		justify-content: center;
 		padding: 2px 4px;
-		/* Ink (ADR-544): not on the chain yet, so an outline where a device
-		   on it is a slab. No family colour: a chip is found by its place and
-		   its name. */
-		border: 1px solid var(--line);
+		/* Not on the chain yet, so an outline where a device on it is a
+		   slab. A faint wash of its family's colour (ADR-547) tells the
+		   blocks apart; the name stays plain. */
+		border: 1px solid color-mix(in srgb, var(--chip-ink) 38%, var(--line));
 		border-radius: var(--ghost-radius, 4px);
-		background: transparent;
+		background: color-mix(in srgb, var(--chip-ink) 11%, transparent);
 		color: var(--muted-foreground);
 		font: inherit;
 		text-align: center;
@@ -47,7 +47,7 @@
 	}
 	.palette-chip:active {
 		border-color: var(--foreground);
-		background: var(--secondary);
+		background: color-mix(in srgb, var(--chip-ink) 30%, var(--secondary));
 		color: var(--foreground);
 	}
 	/* A long name (Drum Buss, Pitch Hack) wraps to two lines, between words. */

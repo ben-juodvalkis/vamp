@@ -112,7 +112,7 @@
   import { instrumentService } from '$lib/services/instrumentService';
   import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
   import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
-  import { DEVICE_PRESETS, DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
+  import { DEVICE_PRESETS, DEVICE_FAMILY_INKS, type DeviceFamily } from '$lib/config/devicePresets';
   import ControlGlyph from './ControlGlyph.svelte';
   import { DEVICE_CLASS_GLYPHS, DEVICE_KEY_GLYPHS, glyphForName, type ControlGlyphName } from '$lib/config/controlGlyphMap';
   import { pickSlotDevice } from '$lib/utils/deviceSlotMatch';
@@ -798,9 +798,15 @@
     return { blocks: out, template, tail: col };
   });
   /** A chip's ink: its device's family colour, as the cell it would become wears it. */
-  function chipInk(effect: { preset?: string }): string | undefined {
-    const preset = effect.preset ? DEVICE_PRESETS[effect.preset] : undefined;
-    return preset ? trackInk(preset.color.primary, paint) : undefined;
+  /* A chip's faint wash is its palette block's family colour (ADR-547):
+     the raw table, since a preset's scheme answers with the track's ink. */
+  const BLOCK_FAMILY: Record<string, DeviceFamily> = {
+    midi: 'pitchSeq', guitar: 'guitar', tone: 'filter', dynamics: 'dynamics',
+    distortion: 'distortion', modulation: 'modulation', glitch: 'glitch', time: 'timeSpace'
+  };
+  function chipInk(blockFamily: string): string | undefined {
+    const family = BLOCK_FAMILY[blockFamily];
+    return family ? DEVICE_FAMILY_INKS[family].primary : undefined;
   }
 
   /*
@@ -1224,7 +1230,7 @@
     {#each [block.top, block.bottom] as row, r (r)}
       {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
         <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family}>
-          {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(fx)} />{/if}
+          {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(block.family)} />{/if}
         </div>
       {/each}
     {/each}

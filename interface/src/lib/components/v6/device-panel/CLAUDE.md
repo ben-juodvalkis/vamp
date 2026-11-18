@@ -69,7 +69,7 @@ never in a central view; a control's
 **The FX grid is gone (2026-10-26, the user's call).** The FX section is
 `ChainOverview` alone: the selected track's chain (or a scoped pad's), one
 cell per device, each drawing its tile, across the whole width; above it the palette bar (ADR-523), a fixed set of
-effect chips in family blocks (grouped by family, not coloured by it, ADR-544), the same on every track
+effect chips in family blocks, each a faint wash of its family's colour (ADR-547), the same on every track
 (`services/effectPalette`, `chain/PaletteChip`), closed by a column of its
 own: the + (the browser on Effect) over the Gain chip, the Utility's Gain
 lying flat over the track's meter and ridden up and down, whose first drag

@@ -144,7 +144,8 @@ value once a 0..1 amount about a centre counted as continuous.
 - A view tells two things apart by words or marks, not by two family
   colours. Permute's knobs name their row (Mute length, Pitch rate).
 - The palette's effect names carry no colour: a chip is found by its place
-  and its name.
+  and its name. (Amended by ADR-547: a chip wears a faint wash of its
+  family's colour.)
 - A view that still passes its own colour to a switch or a tab is the
   rollout's to fix; its amounts already follow the track.
 - The title band takes 40px from every central view. A knob's one-line
