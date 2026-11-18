@@ -56,7 +56,6 @@
   import Box from '@lucide/svelte/icons/box';
   import Plug from '@lucide/svelte/icons/plug';
   import Plus from '@lucide/svelte/icons/plus';
-  import XIcon from '@lucide/svelte/icons/x';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChainListFace from './chain/ChainListFace.svelte';
@@ -1287,7 +1286,7 @@
       data-debug="chain-add"
       use:press={{ onPress: togglePalette, touchAction: 'none' }}
     >
-      <span class="chain-add-plus" aria-hidden="true">{#if paletteOpen}<XIcon />{:else}<Plus />{/if}</span>
+      <span class="chain-add-plus" aria-hidden="true"><ChevronDown /></span>
     </button>
   </div>
   {#if UTILITY_TILE}
@@ -1520,6 +1519,13 @@
     stroke-width: 1.5;
   }
   /* The bar's + is a chip's height: its plus sized to the chip. */
+  /* Open, the chevron is lit: on has no hue (ADR-544). */
+  .palette-add.open {
+    border-style: solid;
+    border-color: var(--on-bg);
+    background: var(--on-bg);
+    color: var(--on-fg);
+  }
   .palette-add .chain-add-plus :global(svg) {
     height: min(70%, 32px);
   }

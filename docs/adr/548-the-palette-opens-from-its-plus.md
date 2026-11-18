@@ -34,9 +34,11 @@ extra row, and the bar at one row until the + opens it.
   effect not on this Mac keeps an empty slot. Ring Mod has no device
   type and loads as its file in the effects folder. MidiWheels is left
   out: it is the on-screen wheels, not an effect.
-- **Open, the + is an x** that closes it, and an **All effects** tile under
-  it opens the browser on the effects Place, as the + did. The bar stays
-  open across picks and track changes until the x.
+- **The + is a downward chevron** (Ben, the same day), lit while the bar
+  is open (`--on-bg`, as any switch that is on); a second tap closes it.
+  Open, an **All effects** tile under it opens the browser on the effects
+  Place, as the + did. The bar stays open across picks and track changes
+  until the chevron closes it.
 - **The section is six equal rows**, a row of chips each, on the rail's
   row gap: closed the bar is the first and the chain the other five;
   open, the bar the first three and the chain the last three. A row of

@@ -76,8 +76,8 @@ meter and ridden up and down, whose first drag loads a Utility
 (2026-11-13). One row holds 13 units. The section is six equal rows, a row
 of chips each (ADR-548): closed, the bar is its first row of chips and the
 chain the other five; the + opens it to three rows (the second, and the
-rest of the + menu, `paletteExtras`), the chain the last three, the + an
-x, and an All effects tile under it opening the browser on Effect (the
+rest of the + menu, `paletteExtras`), the chain the last three, the +
+(a downward chevron) lit, and an All effects tile under it opening the browser on Effect (the
 phone keeps a fixed bar, 44px or 140px). A tap on a cell's header bar is Device On (no power button);
 a drag from it reorders.
 `FXGrid.svelte`, the grid/chain switch (`FxPanelSwitch`), the ten-column
