@@ -54,6 +54,11 @@ export const VIEWS = {
 		description: 'As shipped — strips, central view, FX grid.',
 		prefs: {}
 	},
+	'palette-open': {
+		description: 'The FX palette opened by its +: three rows of chips, the chain under them (ADR-548).',
+		prefs: {},
+		steps: [{ click: '[data-debug="chain-add"]' }]
+	},
 	session: {
 		description: 'Session mode on: clip grid under the strips (ADR-415/416).',
 		prefs: { [P.session]: '1' }
@@ -144,6 +149,12 @@ export const VIEWS = {
 		prefs: {},
 		viewport: PHONE_VIEWPORT,
 		steps: [phoneTab('track')]
+	},
+	'phone-track-palette': {
+		description: 'The phone layout, Track tab, the palette opened by its +: three rows of chips.',
+		prefs: {},
+		viewport: PHONE_VIEWPORT,
+		steps: [phoneTab('track'), { click: '[data-debug="chain-add"]' }]
 	},
 	'phone-browse': {
 		description: 'The phone layout, Browse tab: the browser\'s rail, a tap from opening full screen.',

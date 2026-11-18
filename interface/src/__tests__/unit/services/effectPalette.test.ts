@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel } from '$lib/services/effectPalette';
+import { afterEach, beforeEach } from 'vitest';
+import { fitBlocks, paletteBlocks, paletteColumns, paletteExtras, paletteLabel } from '$lib/services/effectPalette';
+import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
 
 const names = (row: ({ name: string } | null)[]) => row.map((e) => e?.name ?? null);
 
@@ -43,5 +45,36 @@ describe('effectPalette', () => {
 	it('fits as many tile columns as the width holds', () => {
 		expect(paletteColumns(166, 80, 6)).toBe(2);
 		expect(paletteColumns(0, 80, 6)).toBe(0);
+	});
+
+	describe('the third row (ADR-548)', () => {
+		beforeEach(() =>
+			_setEffectsFolderForTests({
+				name: '+Effect',
+				source: 'place:+Effect',
+				path: '/fx',
+				devices: { 'Ring Mod': 'Distortion/Ring Mod.adv', 'Tone Shaper': 'Tone/Tone Shaper.amxd' }
+			})
+		);
+		afterEach(() => _setEffectsFolderForTests(null));
+
+		it('is the rest of the + menu, in family order', () => {
+			expect(paletteExtras('instrument').map((e) => e.family)).toEqual([
+				'midi', 'midi', 'midi', 'midi', 'guitar', 'tone', 'dynamics', 'dynamics', 'distortion', 'distortion', 'modulation'
+			]);
+			expect(paletteExtras('instrument').map((e) => (e.fx ? paletteLabel(e.fx) : null))).toEqual([
+				'Chord', 'Velocity', null, null, null, 'Tone Shaper', 'Comp', 'Gate', 'Drive', 'Ring Mod', 'Phaser'
+			]);
+		});
+
+		it('loads Ring Mod as its file in the effects folder', () => {
+			const ring = paletteExtras('audio').find((e) => e.fx?.name === 'Ring Mod')!.fx;
+			expect(ring).toEqual({ name: 'Ring Mod', fullPath: '/fx/Distortion/Ring Mod.adv', source: 'place:+Effect', rel: 'Distortion/Ring Mod.adv', kind: 'audio-effect' });
+		});
+
+		it('drops the MIDI effects on an audio track', () => {
+			expect(paletteExtras('audio').some((e) => e.family === 'midi')).toBe(false);
+			expect(paletteExtras('audio')).toHaveLength(7);
+		});
 	});
 });

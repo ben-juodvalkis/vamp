@@ -56,6 +56,7 @@
   import Box from '@lucide/svelte/icons/box';
   import Plug from '@lucide/svelte/icons/plug';
   import Plus from '@lucide/svelte/icons/plus';
+  import XIcon from '@lucide/svelte/icons/x';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChainListFace from './chain/ChainListFace.svelte';
@@ -78,7 +79,7 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import PaletteChip from './chain/PaletteChip.svelte';
-  import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel, type PaletteKind } from '$lib/services/effectPalette';
+  import { fitBlocks, paletteBlocks, paletteColumns, paletteExtras, paletteLabel, type PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
@@ -782,20 +783,39 @@
         ? 'audio'
         : 'instrument'
   );
+  /*
+   * The + opens the bar (ADR-548): closed, its first row alone, the chain
+   * under it taking the rest; open, the second row and a third (the rest of
+   * the + menu, `paletteExtras`) under it, the chain shorter, and an
+   * All effects tile where the + used to open the browser. It stays open
+   * across picks and tracks until the + (now an x) closes it.
+   */
+  let paletteOpen = $state(false);
+  function togglePalette() {
+    swallowNextClick();
+    paletteOpen = !paletteOpen;
+  }
   /** The blocks that fit, each placed: its first column, after the seams before it. */
   const placed = $derived.by(() => {
     const all = paletteBlocks(paletteKind);
     const room = paletteColumns(paletteWidth - all.length * (PALETTE_SEAM + PALETTE_GAP), PALETTE_TILE_MIN, PALETTE_GAP);
-    // The + and Gain column closes the bar, after a seam of its own.
-    const blocks = paletteWidth > 0 ? fitBlocks(all, room - 1) : all;
+    // The + and Gain close the bar side by side, after a seam of their own,
+    // each three quarters of a chip so the chips keep their width.
+    const blocks = paletteWidth > 0 ? fitBlocks(all, room - 2) : all;
     let col = 1;
+    const chipCols: number[] = [];
     const out = blocks.map((block) => {
       const start = col;
+      for (let i = 0; i < block.cols; i++) chipCols.push(start + i);
       col += block.cols + 1; // its columns, then a seam
       return { block, start };
     });
-    const template = [...blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`), 'minmax(0, 1fr)'].join(` ${PALETTE_SEAM}px `);
-    return { blocks: out, template, tail: col };
+    const template = [...blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`), `minmax(0, 0.75fr) ${PALETTE_GAP}px minmax(0, 0.75fr)`].join(` ${PALETTE_SEAM}px `);
+    // The third row runs along the chip columns, as many as fit.
+    const extras = paletteExtras(paletteKind)
+      .slice(0, chipCols.length)
+      .map((extra, i) => ({ ...extra, col: chipCols[i] }));
+    return { blocks: out, template, tail: col, extras };
   });
   /** A chip's ink: its device's family colour, as the cell it would become wears it. */
   /* A chip's faint wash is its palette block's family colour (ADR-547):
@@ -1214,20 +1234,22 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" class:two-rows={grid.rows > 1} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" class:palette-open={paletteOpen} class:two-rows={grid.rows > 1} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
 <!-- The palette bar: family blocks, a seam between them. Every chip in a
-     fixed place; the + at its end adds anything else, Gain under it. -->
+     fixed place; the + at its end opens the second and third rows, Gain
+     beside it. -->
 <div
   class="palette"
   bind:clientWidth={paletteWidth}
   style:grid-template-columns={placed.template}
   data-debug="chain-palette"
   data-palette-kind={paletteKind}
+  data-palette-open={paletteOpen}
   role="group"
   aria-label="Effects to add"
 >
   {#each placed.blocks as { block, start } (block.family)}
-    {#each [block.top, block.bottom] as row, r (r)}
+    {#each paletteOpen ? [block.top, block.bottom] : [block.top] as row, r (r)}
       {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
         <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family}>
           {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(block.family)} />{/if}
@@ -1235,19 +1257,39 @@
       {/each}
     {/each}
   {/each}
+  {#if paletteOpen}
+    {#each placed.extras as { family, fx, col } (col)}
+      <div class="palette-slot" class:blank={!fx} style:grid-column={col} style:grid-row="3" data-family={family} data-debug="chain-extra">
+        {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(family)} />{/if}
+      </div>
+    {/each}
+    <div class="palette-slot" style:grid-column="{placed.tail} / span 3" style:grid-row="2 / span 2">
+      <button
+        type="button"
+        class="chain-add palette-browse"
+        aria-label="All effects"
+        data-debug="chain-browse"
+        use:press={{ onPress: addEffect, touchAction: 'none' }}
+      >
+        <span>All effects</span>
+      </button>
+    </div>
+  {/if}
   <div class="palette-slot" style:grid-column={placed.tail} style:grid-row="1">
     <button
       type="button"
       class="chain-add palette-add"
-      aria-label="Add an effect"
+      class:open={paletteOpen}
+      aria-label={paletteOpen ? 'Fewer effects' : 'More effects'}
+      aria-expanded={paletteOpen}
       data-debug="chain-add"
-      use:press={{ onPress: addEffect, touchAction: 'none' }}
+      use:press={{ onPress: togglePalette, touchAction: 'none' }}
     >
-      <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
+      <span class="chain-add-plus" aria-hidden="true">{#if paletteOpen}<XIcon />{:else}<Plus />{/if}</span>
     </button>
   </div>
   {#if UTILITY_TILE}
-    <div class="palette-slot palette-gain" style:grid-column={placed.tail} style:grid-row="2" data-debug="chain-gain-chip">
+    <div class="palette-slot palette-gain" style:grid-column={placed.tail + 2} style:grid-row="1" data-debug="chain-gain-chip">
       <UTILITY_TILE.Tile position={UTILITY_TILE.position} device={utilityDevice} chip />
     </div>
   {/if}
@@ -1365,20 +1407,28 @@
     height: 100%;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    /* Thirds, on the browser rail's pitch (ADR-535): the palette is the
-       first, level with the rail's first button (Record), and the chain
-       the other two, level with the two under it. Same row gap as the
-       rail's buttons, so every edge lands on one of theirs. */
-    grid-template-rows: repeat(3, minmax(0, 1fr));
+    /* Sixths (ADR-548, after ADR-535's thirds): a row of chips is one,
+       half the rail's Record tile, as the two rows were. Closed, the
+       palette is the first and the chain the other five; open, the
+       palette the first three and the chain the last three. Same row gap
+       as the rail's buttons, so the open bar ends on the seam under
+       Record's neighbour. */
+    grid-template-rows: repeat(6, minmax(0, 1fr));
     row-gap: var(--spacing-xs);
     column-gap: 8px;
     min-width: 0;
   }
   /* The phone has no rail to line up with, and a whole tab of height: the
-     palette keeps its two rows of chips at a fixed height. */
+     palette's rows of chips are a fixed height, one or three. */
   :global([data-phone-layout]) .chain-wrap {
-    grid-template-rows: 94px repeat(2, minmax(0, 1fr));
+    grid-template-rows: 44px repeat(2, minmax(0, 1fr));
     row-gap: 8px;
+  }
+  :global([data-phone-layout]) .chain-wrap.palette-open {
+    grid-template-rows: 140px repeat(2, minmax(0, 1fr));
+  }
+  :global([data-phone-layout]) .chain-wrap .chain {
+    grid-row: 2 / span 2;
   }
   .chain-wrap.pad-scoped {
     outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));
@@ -1387,7 +1437,7 @@
   }
   .chain {
     grid-column: 1;
-    grid-row: 2 / span 2;
+    grid-row: 2 / span 5;
     min-width: 0;
     min-height: 0;
     display: grid;
@@ -1510,8 +1560,30 @@
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-rows: minmax(0, 1fr);
+    /* The section's row gap, so an open bar's rows sit on its sixths. */
+    row-gap: var(--spacing-xs);
+    column-gap: 6px;
+  }
+  .chain-wrap.palette-open .palette {
+    grid-row: 1 / span 3;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+  .chain-wrap.palette-open .chain {
+    grid-row: 4 / span 3;
+  }
+  :global([data-phone-layout]) .chain-wrap.palette-open .palette {
+    grid-row: 1;
+  }
+  :global([data-phone-layout]) .chain-wrap.palette-open .chain {
+    grid-row: 2 / span 2;
+  }
+  /* All effects: the browser, for anything the bar does not hold. */
+  .palette-browse {
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
   }
   .palette-slot {
     min-width: 0;

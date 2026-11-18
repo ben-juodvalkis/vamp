@@ -11,14 +11,14 @@
  * Vamp's effects by name from the user's effects folder (`effectSources`).
  */
 import { DEVICE_PRESETS, deviceLoadArgs } from '$lib/config/devicePresets';
-import { effectAvailable } from '$lib/services/effectSources.svelte';
+import { effectAvailable, effectSource } from '$lib/services/effectSources.svelte';
 import type { ChainEffect } from '$lib/services/chainEffects.svelte';
 
 export type PaletteKind = 'kit' | 'instrument' | 'audio';
 
 /** What a chip in the palette bar says: short, so a row holds many. */
 const LABELS: Record<string, string> = {
-	arpeggiator: 'Arp', chance: 'Chance', velocity: 'Vel', chord: 'Chord', random: 'Random',
+	arpeggiator: 'Arp', chance: 'Chance', velocity: 'Velocity', chord: 'Chord', random: 'Random',
 	filter: 'Filter', eq: 'EQ', saturator: 'Drive', squash: 'Glue', compressor: 'Comp', echo: 'Echo',
 	reverb: 'Reverb', chorus: 'Chorus', phaser: 'Phaser', tremolo: 'Trem', drum: 'Drum Buss',
 	redux: 'Redux', gate: 'Gate', ott: 'Multiband', shifter: 'Shifter', pedal: 'Pedal', roar: 'Roar',
@@ -107,4 +107,47 @@ export function fitBlocks(blocks: readonly PaletteBlock[], columns: number): Pal
 /** How many tile columns a palette `width` px wide holds, tiles at least `minTile` px and `gap` apart. */
 export function paletteColumns(width: number, minTile: number, gap: number): number {
 	return Math.max(0, Math.floor((width + gap) / (minTile + gap)));
+}
+
+/**
+ * The palette's third row (ADR-548): the rest of the + menu, the user's
+ * effects folder less what the two rows above already hold (Utility is
+ * the Gain chip), shown only while the + is open. Not under the family
+ * columns, since the families have one to four each: a row in family
+ * order, each chip in its own family's wash. A Live device or a type
+ * loads as the chips above do; Ring Mod has no type and loads as its file.
+ */
+type ExtraSpec = { family: string; key?: string; file?: string };
+const EXTRA_ROW: readonly ExtraSpec[] = [
+	{ family: 'midi', key: 'chord' },
+	{ family: 'midi', key: 'velocity' },
+	{ family: 'midi', key: 'chance' },
+	{ family: 'midi', key: 'randomOctave' },
+	{ family: 'guitar', key: 'wah' },
+	{ family: 'tone', key: 'toneShaper' },
+	{ family: 'dynamics', key: 'compressor' },
+	{ family: 'dynamics', key: 'gate' },
+	{ family: 'distortion', key: 'saturator' },
+	{ family: 'distortion', file: 'Ring Mod' },
+	{ family: 'modulation', key: 'phaser' }
+];
+
+export interface PaletteExtra {
+	family: string;
+	/** `null` where the effect is not on this Mac (its slot stays). */
+	fx: ChainEffect | null;
+}
+
+function fileEntry(name: string): ChainEffect | null {
+	const found = effectSource({ defaultName: name });
+	if (!found) return null;
+	return { name, fullPath: found.presetPath, source: found.source, rel: found.rel, kind: 'audio-effect' };
+}
+
+/** The third row for a track: all of it, but the MIDI effects on an audio track. */
+export function paletteExtras(kind: PaletteKind): PaletteExtra[] {
+	return EXTRA_ROW.filter((e) => !(kind === 'audio' && e.family === 'midi')).map(({ family, key, file }) => ({
+		family,
+		fx: key ? slot(key) : fileEntry(file ?? '')
+	}));
 }

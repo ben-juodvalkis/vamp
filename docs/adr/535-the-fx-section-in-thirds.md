@@ -2,7 +2,9 @@
 
 ## Status
 **Accepted** (2026-11-13). Amends ADR-523 (the palette bar's height and
-row count). Interface only; no Live restart.
+row count). Interface only; no Live restart. Amended by ADR-548: the
+section is in sixths, and the palette is one row until its + opens it
+to three.
 
 ## Context
 ADR-523 put the palette bar over the chain at a fixed height: two rows of
