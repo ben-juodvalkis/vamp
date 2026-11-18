@@ -1054,9 +1054,9 @@
         </span>
         {#if cell.kind === 'instrument' && !cell.inside && glance.instrumentViewType === 'operator'}<span class="head-end"><OperatorHeadAlgorithm device={cell.device} /></span>{/if}
         {#if cell.foldable && cell.kind !== 'chains'}
-          <!-- Fold / unfold the rack's chains (ADR-529): right while folded,
-               down while open, as a group strip's chevron. At the bar's
-               left end, ahead of the name (Ben, 2026-11-17). -->
+          <!-- Fold / unfold the rack's chains (ADR-529): down while folded,
+               right while open, toward the chains it has opened (Ben,
+               2026-11-17), at the bar's left end, ahead of the name. -->
           <span
             class="cell-fold"
             role="button"
@@ -1064,7 +1064,7 @@
             aria-label="{rackFold.isOpen(cell.path) ? 'Fold' : 'Unfold'} {cell.device.name}"
             aria-expanded={rackFold.isOpen(cell.path)}
             data-debug="chain-fold"
-          >{#if rackFold.isOpen(cell.path)}<ChevronDown />{:else}<ChevronRight />{/if}</span>
+          >{#if rackFold.isOpen(cell.path)}<ChevronRight />{:else}<ChevronDown />{/if}</span>
         {/if}
       </div></CellSize>
 
@@ -1544,7 +1544,7 @@
   }
   /* A rack's fold button (ADR-529): the bar's left end, ahead of the name
      (Ben, 2026-11-17; the right end until then), a 40px target, a chevron
-     pointing where the chains open. */
+     down while folded and right, toward the chains, while open. */
   .cell-fold {
     order: -1;
     flex: 0 0 40px;
@@ -1765,8 +1765,14 @@
   :global([data-skin='hybrid']) .chain-cell.appointed .cell-head {
     background: var(--sel-track, var(--secondary));
   }
-  :global([data-skin='hybrid']) .chain-cell.appointed .cell-head .name {
+  :global([data-skin='hybrid']) .chain-cell.appointed .cell-head .name,
+  :global([data-skin='hybrid']) .chain-cell.appointed .cell-fold {
     color: var(--sel-track-fg, var(--foreground));
+  }
+  /* The fold's chevron and hairline are the name's ink on the open band:
+     in the track's colour, they vanished into a bar filled with it. */
+  :global([data-skin='hybrid']) .chain-cell.appointed .cell-fold {
+    border-right-color: color-mix(in oklab, var(--sel-track-fg, var(--foreground)) 35%, transparent);
   }
   /* One frame round a tile's field: the tile's, in its ink; the control's
      own hairline inside it goes. */

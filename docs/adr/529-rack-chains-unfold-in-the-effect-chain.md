@@ -36,8 +36,9 @@ Live.
   Three writable rows per chain: `chain.<i>.mute`, `chain.<i>.solo` and
   `chain.<i>.volume` (the chain's mixer volume, 0..1, 0.85 = 0 dB).
 - **The chain overview unfolds a rack as Live's device view does.** A
-  rack's cell carries a chevron at the right end of its header bar, right
-  while folded and down while open (the rest of the bar's tap stays Device
+  rack's cell carries a chevron at the left end of its header bar (the right
+  end until 2026-11-17), down while folded and right, toward its chains,
+  while open (the reverse until the same day, Ben; the rest of the bar's tap stays Device
   On). Unfolded, the rack's cell is followed by its **chain list** — one
   cell, "Chains", a row per chain in its colour — when the rack has two or
   more chains, one unit wide (a slider's width), and then **the chosen

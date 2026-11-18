@@ -102,7 +102,8 @@ as a lit state. The rest value is only the cold read.
 ### Racks unfold, as in Live's device view (ADR-529)
 
 An Audio Effect, Instrument or MIDI Effect Rack's cell has a fold chevron
-(right folded, down open). The fold is Live's own Show Devices toggle (the
+at the left of its header bar
+(down folded, right open, toward its chains). The fold is Live's own Show Devices toggle (the
 rack's `show_devices` row, held for every rack drawn), so it mirrors Live
 both ways. Open, the rack is followed by its chain list (`chain/ChainListFace`,
 one cell, when it has two or more chains) and the chosen chain's devices,
