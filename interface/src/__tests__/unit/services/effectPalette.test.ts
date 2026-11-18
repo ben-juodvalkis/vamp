@@ -31,7 +31,7 @@ describe('effectPalette', () => {
 	it('fits whole blocks, dropping from the end', () => {
 		const all = paletteBlocks('kit');
 		const cols = all.reduce((n, b) => n + b.cols, 0);
-		expect(cols).toBe(11);
+		expect(cols).toBe(12);
 		expect(fitBlocks(all, cols)).toHaveLength(all.length);
 		expect(fitBlocks(all, cols - 1)).toHaveLength(all.length - 1);
 	});
@@ -61,10 +61,10 @@ describe('effectPalette', () => {
 
 		it('is the rest of the + menu, in family order', () => {
 			expect(paletteExtras('instrument').map((e) => e.family)).toEqual([
-				'midi', 'midi', 'midi', 'midi', 'guitar', 'dynamics', 'dynamics', 'distortion', 'distortion', 'modulation', 'glitch', 'glitch'
+				'midi', 'midi', 'midi', 'midi', 'guitar', 'dynamics', 'dynamics', 'distortion', 'distortion', 'glitch', 'glitch'
 			]);
 			expect(paletteExtras('instrument').map((e) => (e.fx ? paletteLabel(e.fx) : null))).toEqual([
-				'Chord', 'Velocity', null, null, null, 'Comp', 'Gate', 'Drive', 'Ring Mod', 'Phaser', null, null
+				'Chord', 'Velocity', null, null, null, 'Comp', 'Gate', 'Drive', 'Ring Mod', null, null
 			]);
 		});
 
@@ -75,7 +75,7 @@ describe('effectPalette', () => {
 
 		it('drops the MIDI effects on an audio track', () => {
 			expect(paletteExtras('audio').some((e) => e.family === 'midi')).toBe(false);
-			expect(paletteExtras('audio')).toHaveLength(8);
+			expect(paletteExtras('audio')).toHaveLength(7);
 		});
 	});
 });

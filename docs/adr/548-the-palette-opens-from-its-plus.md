@@ -17,16 +17,16 @@ extra row, and the bar at one row until the + opens it.
 - **Closed, the palette is its first row** of chips, the Gain chip and
   then the + at its end, every chip the + and Gain included one width,
   and the chain has the rest of the section. The first row (Ben, the
-  same day): Random, Guitar, Filter, EQ, Glue, Drum Buss, Roar, Trem,
-  Stutter, Echo, Reverb. EQ came up from the second row and Glitch went
-  down to it; the Tone block is two columns now, Tone Shaper under
-  Filter, and the Glitch block one, Stutter over Glitch, Pitch Hack and
-  Pitch Shift in the third row. Multiband's label carries a soft hyphen, so on a
+  same day): Random, Guitar, Filter, EQ, Glue, Drum Buss, Pedal, Trem,
+  Chorus, Stutter, Echo, Reverb. EQ came up from the second row and
+  Glitch went down to it; the Tone block is two columns now, Tone Shaper
+  under Filter; Pedal and Roar swapped rows; Chorus came up beside Trem,
+  Phaser under it; and the Glitch block is one column, Stutter over
+  Glitch, Pitch Hack and Pitch Shift in the third row. Multiband's label carries a soft hyphen, so on a
   narrow chip it breaks as Multi-band.
 - **The + opens the bar**: the second row as before, and a **third row**,
   the rest of the + menu (`paletteExtras`): Chord, Velocity, Chance,
-  Rand Oct, Wah, Comp, Gate, Drive, Ring Mod, Phaser, Pitch Hack, Pitch
-  Shift. It runs on under Gain and the +, so All effects is the second
+  Rand Oct, Wah, Comp, Gate, Drive, Ring Mod, Pitch Hack, Pitch Shift. It runs on under Gain and the +, so All effects is the second
   row's tail. The
   families hold one to four of these each, so the row is not under the
   family columns: it runs along the chip columns in family order, each

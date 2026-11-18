@@ -59,8 +59,8 @@ const BLOCKS: readonly BlockSpec[] = [
 	{ family: 'guitar', top: ['guitar'], bottom: ['bass'] },
 	{ family: 'tone', top: ['filter', 'eq'], bottom: ['toneShaper'] },
 	{ family: 'dynamics', top: ['squash'], bottom: ['ott'] },
-	{ family: 'distortion', top: ['drum', 'roar'], bottom: ['pedal', 'redux'] },
-	{ family: 'modulation', top: ['tremolo'], bottom: ['chorus'] },
+	{ family: 'distortion', top: ['drum', 'pedal'], bottom: ['roar', 'redux'] },
+	{ family: 'modulation', top: ['tremolo', 'chorus'], bottom: ['phaser'] },
 	{ family: 'glitch', top: ['variation'], bottom: ['glitchLoop'] },
 	{ family: 'time', top: ['echo', 'reverb'], bottom: ['comb', 'smudge'] }
 ];
@@ -128,7 +128,6 @@ const EXTRA_ROW: readonly ExtraSpec[] = [
 	{ family: 'dynamics', key: 'gate' },
 	{ family: 'distortion', key: 'saturator' },
 	{ family: 'distortion', file: 'Ring Mod' },
-	{ family: 'modulation', key: 'phaser' },
 	{ family: 'glitch', key: 'pitchHack' },
 	{ family: 'glitch', key: 'octave' }
 ];
