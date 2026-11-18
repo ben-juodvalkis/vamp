@@ -40,6 +40,7 @@ describe('effectPalette', () => {
 		expect(paletteBlocks('kit')[0].bottom[0]).toMatchObject({ kind: 'midi-effect', preset: 'arpeggiator', fullPath: 'default:arpeggiator' });
 		expect(paletteLabel({ name: 'Glue Compressor', preset: 'squash' })).toBe('Glue');
 		expect(paletteLabel({ name: 'Blur', preset: 'smudge' })).toBe('Blur');
+		expect(paletteLabel({ name: 'Multiband Dynamics', preset: 'ott' })).toBe('Multi\u00adband');
 	});
 
 	it('fits as many tile columns as the width holds', () => {
@@ -53,17 +54,17 @@ describe('effectPalette', () => {
 				name: '+Effect',
 				source: 'place:+Effect',
 				path: '/fx',
-				devices: { 'Ring Mod': 'Distortion/Ring Mod.adv', 'Tone Shaper': 'Tone/Tone Shaper.amxd' }
+				devices: { 'Ring Mod': 'Distortion/Ring Mod.adv' }
 			})
 		);
 		afterEach(() => _setEffectsFolderForTests(null));
 
 		it('is the rest of the + menu, in family order', () => {
 			expect(paletteExtras('instrument').map((e) => e.family)).toEqual([
-				'midi', 'midi', 'midi', 'midi', 'guitar', 'tone', 'dynamics', 'dynamics', 'distortion', 'distortion', 'modulation'
+				'midi', 'midi', 'midi', 'midi', 'guitar', 'dynamics', 'dynamics', 'distortion', 'distortion', 'modulation', 'glitch', 'glitch'
 			]);
 			expect(paletteExtras('instrument').map((e) => (e.fx ? paletteLabel(e.fx) : null))).toEqual([
-				'Chord', 'Velocity', null, null, null, 'Tone Shaper', 'Comp', 'Gate', 'Drive', 'Ring Mod', 'Phaser'
+				'Chord', 'Velocity', null, null, null, 'Comp', 'Gate', 'Drive', 'Ring Mod', 'Phaser', null, null
 			]);
 		});
 
@@ -74,7 +75,7 @@ describe('effectPalette', () => {
 
 		it('drops the MIDI effects on an audio track', () => {
 			expect(paletteExtras('audio').some((e) => e.family === 'midi')).toBe(false);
-			expect(paletteExtras('audio')).toHaveLength(7);
+			expect(paletteExtras('audio')).toHaveLength(8);
 		});
 	});
 });

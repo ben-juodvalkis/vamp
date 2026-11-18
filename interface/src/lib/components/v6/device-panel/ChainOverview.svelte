@@ -799,8 +799,8 @@
   const placed = $derived.by(() => {
     const all = paletteBlocks(paletteKind);
     const room = paletteColumns(paletteWidth - all.length * (PALETTE_SEAM + PALETTE_GAP), PALETTE_TILE_MIN, PALETTE_GAP);
-    // The + and Gain close the bar side by side, after a seam of their own,
-    // each three quarters of a chip so the chips keep their width.
+    // Gain and the + close the bar side by side (the + last), after a seam
+    // of their own, each a chip's width.
     const blocks = paletteWidth > 0 ? fitBlocks(all, room - 2) : all;
     let col = 1;
     const chipCols: number[] = [];
@@ -810,11 +810,13 @@
       col += block.cols + 1; // its columns, then a seam
       return { block, start };
     });
-    const template = [...blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`), `minmax(0, 0.75fr) ${PALETTE_GAP}px minmax(0, 0.75fr)`].join(` ${PALETTE_SEAM}px `);
-    // The third row runs along the chip columns, as many as fit.
+    const template = [...blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`), `minmax(0, 1fr) ${PALETTE_GAP}px minmax(0, 1fr)`].join(` ${PALETTE_SEAM}px `);
+    // The third row runs along the chip columns and on under Gain and the +,
+    // as many as fit.
+    const rowCols = [...chipCols, col, col + 2];
     const extras = paletteExtras(paletteKind)
-      .slice(0, chipCols.length)
-      .map((extra, i) => ({ ...extra, col: chipCols[i] }));
+      .slice(0, rowCols.length)
+      .map((extra, i) => ({ ...extra, col: rowCols[i] }));
     return { blocks: out, template, tail: col, extras };
   });
   /** A chip's ink: its device's family colour, as the cell it would become wears it. */
@@ -1263,7 +1265,7 @@
         {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(family)} />{/if}
       </div>
     {/each}
-    <div class="palette-slot" style:grid-column="{placed.tail} / span 3" style:grid-row="2 / span 2">
+    <div class="palette-slot" style:grid-column="{placed.tail} / span 3" style:grid-row="2">
       <button
         type="button"
         class="chain-add palette-browse"
@@ -1275,7 +1277,7 @@
       </button>
     </div>
   {/if}
-  <div class="palette-slot" style:grid-column={placed.tail} style:grid-row="1">
+  <div class="palette-slot" style:grid-column={placed.tail + 2} style:grid-row="1">
     <button
       type="button"
       class="chain-add palette-add"
@@ -1289,7 +1291,7 @@
     </button>
   </div>
   {#if UTILITY_TILE}
-    <div class="palette-slot palette-gain" style:grid-column={placed.tail + 2} style:grid-row="1" data-debug="chain-gain-chip">
+    <div class="palette-slot palette-gain" style:grid-column={placed.tail} style:grid-row="1" data-debug="chain-gain-chip">
       <UTILITY_TILE.Tile position={UTILITY_TILE.position} device={utilityDevice} chip />
     </div>
   {/if}

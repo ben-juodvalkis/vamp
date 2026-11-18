@@ -16,12 +16,12 @@ import type { ChainEffect } from '$lib/services/chainEffects.svelte';
 
 export type PaletteKind = 'kit' | 'instrument' | 'audio';
 
-/** What a chip in the palette bar says: short, so a row holds many. */
+/** What a chip in the palette bar says: short, so a row holds many. Multiband's soft hyphen breaks it as Multi-band only on a narrow chip. */
 const LABELS: Record<string, string> = {
 	arpeggiator: 'Arp', chance: 'Chance', velocity: 'Velocity', chord: 'Chord', random: 'Random',
 	filter: 'Filter', eq: 'EQ', saturator: 'Drive', squash: 'Glue', compressor: 'Comp', echo: 'Echo',
 	reverb: 'Reverb', chorus: 'Chorus', phaser: 'Phaser', tremolo: 'Trem', drum: 'Drum Buss',
-	redux: 'Redux', gate: 'Gate', ott: 'Multiband', shifter: 'Shifter', pedal: 'Pedal', roar: 'Roar',
+	redux: 'Redux', gate: 'Gate', ott: 'Multi\u00adband', shifter: 'Shifter', pedal: 'Pedal', roar: 'Roar',
 	guitar: 'Guitar', bass: 'Bass', wah: 'Wah', delay: 'Delay', limiter: 'Limiter', eq8: 'EQ Eight',
 	toneShaper: 'Tone Shaper', comb: 'Comb', glitchLoop: 'Glitch', pitchHack: 'Pitch Hack', smudge: 'Blur',
 	octave: 'Pitch Shift', variation: 'Stutter', randomOctave: 'Rand Oct', grainDelay: 'Grain'
@@ -57,11 +57,11 @@ type BlockSpec = { family: string; top: readonly string[]; bottom: readonly stri
 const BLOCKS: readonly BlockSpec[] = [
 	{ family: 'midi', top: ['random'], bottom: ['arpeggiator'] },
 	{ family: 'guitar', top: ['guitar'], bottom: ['bass'] },
-	{ family: 'tone', top: ['filter'], bottom: ['eq'] },
+	{ family: 'tone', top: ['filter', 'eq'], bottom: ['toneShaper'] },
 	{ family: 'dynamics', top: ['squash'], bottom: ['ott'] },
 	{ family: 'distortion', top: ['drum', 'roar'], bottom: ['pedal', 'redux'] },
 	{ family: 'modulation', top: ['tremolo'], bottom: ['chorus'] },
-	{ family: 'glitch', top: ['glitchLoop', 'variation'], bottom: ['pitchHack', 'octave'] },
+	{ family: 'glitch', top: ['variation'], bottom: ['glitchLoop'] },
 	{ family: 'time', top: ['echo', 'reverb'], bottom: ['comb', 'smudge'] }
 ];
 
@@ -124,12 +124,13 @@ const EXTRA_ROW: readonly ExtraSpec[] = [
 	{ family: 'midi', key: 'chance' },
 	{ family: 'midi', key: 'randomOctave' },
 	{ family: 'guitar', key: 'wah' },
-	{ family: 'tone', key: 'toneShaper' },
 	{ family: 'dynamics', key: 'compressor' },
 	{ family: 'dynamics', key: 'gate' },
 	{ family: 'distortion', key: 'saturator' },
 	{ family: 'distortion', file: 'Ring Mod' },
-	{ family: 'modulation', key: 'phaser' }
+	{ family: 'modulation', key: 'phaser' },
+	{ family: 'glitch', key: 'pitchHack' },
+	{ family: 'glitch', key: 'octave' }
 ];
 
 export interface PaletteExtra {

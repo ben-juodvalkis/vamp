@@ -70,8 +70,8 @@ never in a central view; a control's
 `ChainOverview` alone: the selected track's chain (or a scoped pad's), one
 cell per device, each drawing its tile, across the whole width; above it the palette bar (ADR-523), a fixed set of
 effect chips in family blocks, each a faint wash of its family's colour (ADR-547), the same on every track
-(`services/effectPalette`, `chain/PaletteChip`), closed by the + and the
-Gain chip side by side, the Utility's Gain lying flat over the track's
+(`services/effectPalette`, `chain/PaletteChip`), closed by the Gain chip
+and the + side by side, each a chip's width, the Utility's Gain lying flat over the track's
 meter and ridden up and down, whose first drag loads a Utility
 (2026-11-13). One row holds 13 units. The section is six equal rows, a row
 of chips each (ADR-548): closed, the bar is its first row of chips and the
