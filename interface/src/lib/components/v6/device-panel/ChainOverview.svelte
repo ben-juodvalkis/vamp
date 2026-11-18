@@ -1055,7 +1055,8 @@
         {#if cell.kind === 'instrument' && !cell.inside && glance.instrumentViewType === 'operator'}<span class="head-end"><OperatorHeadAlgorithm device={cell.device} /></span>{/if}
         {#if cell.foldable && cell.kind !== 'chains'}
           <!-- Fold / unfold the rack's chains (ADR-529): right while folded,
-               down while open, as a group strip's chevron. -->
+               down while open, as a group strip's chevron. At the bar's
+               left end, ahead of the name (Ben, 2026-11-17). -->
           <span
             class="cell-fold"
             role="button"
@@ -1541,17 +1542,19 @@
     align-items: center;
     gap: 4px;
   }
-  /* A rack's fold button (ADR-529): the bar's right end, a 40px target,
-     a chevron pointing where the chains open. */
+  /* A rack's fold button (ADR-529): the bar's left end, ahead of the name
+     (Ben, 2026-11-17; the right end until then), a 40px target, a chevron
+     pointing where the chains open. */
   .cell-fold {
+    order: -1;
     flex: 0 0 40px;
     align-self: stretch;
-    margin-right: -8px;
+    margin-left: -8px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--cell-ink);
-    border-left: 1px solid var(--cell-line);
+    border-right: 1px solid var(--cell-line);
     cursor: pointer;
   }
   .cell-fold :global(svg) {
@@ -1561,7 +1564,7 @@
   }
   .chain-wrap.two-rows .cell-fold {
     flex-basis: 32px;
-    margin-right: -6px;
+    margin-left: -6px;
   }
   .chain-cell.unfolded .cell-fold {
     background: color-mix(in oklab, var(--cell-ink) 30%, transparent);
