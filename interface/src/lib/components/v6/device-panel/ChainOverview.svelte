@@ -382,6 +382,8 @@
     // The chain list is a slider's width (the user, 2026-11-12).
     if (cell.kind === 'chains' || cell.kind === 'add') return 1;
     if (cell.kit || isMidiWheels(cell.device)) return 1;
+    // A rack with no macro assigned is its header and mark alone (Ben, 2026-11-17).
+    if (isBareRack(cell)) return 1;
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
   }
 
@@ -407,6 +409,17 @@
     const visible = selectedTrackStore.propertyValue(device.devicePath, VISIBLE_MACROS);
     const grid = liveMacroSlots(names, typeof visible === 'number' ? visible : undefined);
     return grid.slots.some((m) => m && !m.dim) ? grid : null;
+  }
+
+  /**
+   * A rack none of whose visible macros is named (every one still "Macro N"),
+   * a pattern rack aside (its first macro is the chooser its view draws).
+   */
+  function isBareRack(cell: Cell): boolean {
+    if (!cell.foldable || cell.kind === 'chains') return false;
+    const names = selectedTrackStore.paramNamesForDevice(cell.device as never);
+    if (isPatternRackMacroName(names[1])) return false;
+    return macroGridOf(cell.device) === null;
   }
 
   function macroValue(device: DeviceRecord, index: number): number {
@@ -1119,7 +1132,7 @@
       {:else if cell.presetKey === 'sequencer'}
         <!-- Permute: its mute and pitch steps, on this device. -->
         <div class="cell-control" role="presentation"><CellSize><PermuteStepsFace device={cell.device} color={cell.ink} /></CellSize></div>
-      {:else if !padScope && !cell.inside && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
+      {:else if !padScope && !cell.inside && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType) && !isBareRack(cell)}
         <!-- The instrument's signature control, as its view draws it. -->
         <div class="cell-control" role="presentation"><CellSize>
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={trackScheme ?? schemeFromInk(cell.ink)} />
