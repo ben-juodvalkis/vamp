@@ -16,8 +16,13 @@ gesture; Ben then laid the chips out himself in a planner page (a grid
 he dragged them around on) and asked for the chevron to go.
 
 ## Decision
-- **The bar is one row**: the first row of chips and the Gain chip at its
-  end, every chip one width, and the chain has the rest of the section.
+- **The bar is one row**: the first row of chips and a downward chevron
+  at its end, every chip one width, and the chain has the rest of the
+  section. **The chevron opens the bar** to three rows and closes it, lit
+  while open; a latched bar stays open across picks and tracks. (The
+  same day it went, then came back on Ben's word, with the Gain chip's
+  place; the Gain chip, a Utility's Gain lying flat, became an ordinary
+  chip named Utility under it.)
 - **A finger on a chip opens it to three rows** for as long as it is
   down: after a 120ms hold, or at once when the finger slides. The chip
   under the finger lights; letting go on a chip loads that one, letting
@@ -30,16 +35,17 @@ he dragged them around on) and asked for the chevron to go.
   and the family washes divide the blocks.
 - **Ben's layout** (`services/effectPalette`): one column per family, two
   for Distortion, three rows deep, top to bottom:
-  Random, Arp, Wheels · Guitar, Bass, Wah · Filter, EQ, Tone Shaper ·
-  Glue, Multiband, Gate · Drum Buss, Roar, Drive · Pedal, Redux, Shifter ·
-  Trem, Chorus, Phaser · Stutter, Glitch, Pitch Hack · Echo, Reverb, Comb;
-  Blur and Pitch Shift under Gain. Off the bar (the browser only): Chord,
-  Velocity, Chance, Rand Oct, Compressor. Shifter is Live's own, loaded by
+  Random, Arp, Wheels · Filter, EQ, Tone Shaper · Glue, Multiband, Gate ·
+  Drum Buss, Roar, Saturator · Pedal, Redux, Shifter · Guitar, Bass, Wah ·
+  Trem, Chorus, Blur · Stutter, Glitch, Pitch Hack · Echo, Reverb, Comb;
+  Utility and Pitch Shift under the chevron. Blur wears the modulation
+  wash, as the column it sits in. Off the bar (the browser only): Chord,
+  Velocity, Chance, Rand Oct, Compressor, Phaser. Shifter is Live's own, loaded by
   name (it stood in for the folder's Ring Mod preset); Wheels has no type
   and loads as its file in the effects folder. Multiband's label carries a
   soft hyphen, so on a narrow chip it breaks as Multi-band.
-- **No + and no chevron**: the bar has no way to the browser. The browser
-  rail and a rack chain's own + still open it on Effect.
+- **The bar has no way to the browser.** The browser rail and a rack
+  chain's own + still open it on Effect.
 - **The section is six equal rows**, a row of chips each, on the rail's
   row gap: the bar is the first and the chain the other five; held open,
   the bar the first three and the chain the last three. The phone keeps

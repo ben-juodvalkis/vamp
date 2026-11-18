@@ -782,11 +782,18 @@
         : 'instrument'
   );
   /*
-   * The bar is one row (ADR-548): its first row of chips and the Gain chip,
-   * the chain under it taking the rest. A finger on a chip opens it to
-   * three rows for as long as it is down: slide to any chip and let go to
-   * load it, and the bar closes again. There is no + or chevron; the bar
-   * has no way to the browser (Ben, 2026-11-18). A tap loads the chip it lands on; a release off the
+   * The bar is one row (ADR-548): its first row of chips and the chevron,
+   * the chain under it taking the rest. The chevron opens it to three rows
+   * and closes it, lit while open; a finger on a chip opens it for as long
+   * as it is down: slide to any chip and let go to load it, and the bar
+   * closes again. The bar has no way to the browser (Ben, 2026-11-18).
+   */
+  let paletteOpen = $state(false);
+  function togglePalette() {
+    swallowNextClick();
+    paletteOpen = !paletteOpen;
+  }
+  /* A tap loads the chip it lands on; a release off the
    * chips loads nothing. It opens on a short hold (a quick tap only loads)
    * or at once on a slide; 300ms felt laggy (Ben, 2026-11-18). One gesture
    * on the whole bar, so the chips take no press of their own and the
@@ -796,7 +803,7 @@
   let palettePeek = $state(false);
   let hotChip = $state<string | null>(null);
   let chipGesture = false;
-  const barOpen = $derived(palettePeek);
+  const barOpen = $derived(paletteOpen || palettePeek);
   const chipById = $derived.by(() => {
     const map = new Map<string, ChainEffect>();
     for (const { block, start } of placed.blocks) {
@@ -823,7 +830,7 @@
   const placed = $derived.by(() => {
     const all = paletteBlocks(paletteKind);
     const room = paletteColumns(paletteWidth, PALETTE_TILE_MIN, 0);
-    // The Gain chip closes the bar, a chip's width, two more under it.
+    // The chevron closes the bar, a chip's width, two chips under it.
     const blocks = paletteWidth > 0 ? fitBlocks(all, room - 1) : all;
     // One grid, no seams between the families: their washes divide them.
     let col = 1;
@@ -841,22 +848,14 @@
      the raw table, since a preset's scheme answers with the track's ink. */
   const BLOCK_FAMILY: Record<string, DeviceFamily> = {
     midi: 'pitchSeq', guitar: 'guitar', tone: 'filter', dynamics: 'dynamics',
-    distortion: 'distortion', modulation: 'modulation', glitch: 'glitch', time: 'timeSpace'
+    distortion: 'distortion', modulation: 'modulation', glitch: 'glitch', time: 'timeSpace',
+    utility: 'utility'
   };
   function chipInk(blockFamily: string): string | undefined {
     const family = BLOCK_FAMILY[blockFamily];
     return family ? DEVICE_FAMILY_INKS[family].primary : undefined;
   }
 
-  /*
-   * The Gain chip (the user, 2026-11-13; the ghost Utility column of
-   * 2026-11-05 before it): the bar's last chip under its +, the track's
-   * meter lying flat under the Utility's Gain, ridden up and down. Its
-   * first drag adds a Utility to the chain; after that it is that
-   * Utility's Gain, the same as its cell.
-   */
-  const UTILITY_TILE = TILE_COMPONENTS.utility;
-  const utilityDevice = $derived(cells.find((c) => c.presetKey === 'utility')?.device ?? null);
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -1294,11 +1293,19 @@
       </div>
     {/each}
   {/if}
-  {#if UTILITY_TILE}
-    <div class="palette-slot palette-gain" style:grid-column={placed.tail} style:grid-row="1" data-debug="chain-gain-chip">
-      <UTILITY_TILE.Tile position={UTILITY_TILE.position} device={utilityDevice} chip />
-    </div>
-  {/if}
+  <div class="palette-slot" style:grid-column={placed.tail} style:grid-row="1">
+    <button
+      type="button"
+      class="chain-add palette-add"
+      class:open={paletteOpen}
+      aria-label={paletteOpen ? 'Fewer effects' : 'More effects'}
+      aria-expanded={paletteOpen}
+      data-debug="chain-add"
+      use:press={{ onPress: togglePalette, touchAction: 'none', stopPropagation: true }}
+    >
+      <span class="chain-add-plus" aria-hidden="true"><ChevronDown /></span>
+    </button>
+  </div>
 </div>
 <div
   class="chain"
@@ -1523,14 +1530,16 @@
     aspect-ratio: 1;
     stroke-width: 1.5;
   }
-  /* The Gain chip: the Utility's slider lying flat, filling its slot. */
-  .palette-gain {
-    display: flex;
+  /* The chevron: a chip's height, its mark sized to the chip; lit while
+     the bar is open (on has no hue, ADR-544). */
+  .palette-add .chain-add-plus :global(svg) {
+    height: min(70%, 32px);
   }
-  .palette-gain > :global(*) {
-    flex: 1 1 auto;
-    min-width: 0;
-    min-height: 0;
+  .palette-add.open {
+    border-style: solid;
+    border-color: var(--on-bg);
+    background: var(--on-bg);
+    color: var(--on-fg);
   }
 
   /* A cell is a panel: the strips' own surface on the page, a hairline,
@@ -1580,7 +1589,7 @@
     border-radius: 0;
     box-shadow: inset 0 0 0 0.5px var(--line);
   }
-  .palette-gain > :global(*) {
+  .palette .chain-add {
     border-radius: 0;
   }
   /* Three rows and the two gaps they replace, so the bar still ends on
@@ -1950,14 +1959,6 @@
   :global([data-grammar='flat']) .cell-control :global(.device-control .slider-container) {
     border-color: transparent;
     border-radius: 3px;
-  }
-  /* The Gain chip before a Utility loads: the ghosts' dashed line and no
-     fill, not a tile's slab (BaseDeviceControl's ghost is a solid-framed
-     module; !important because that rule is). */
-  :global([data-grammar='flat']) .palette-gain :global(.device-control.device-ghost) {
-    background: transparent !important;
-    border: 1px dashed var(--ghost-line) !important;
-    border-radius: var(--ghost-radius);
   }
 
 </style>

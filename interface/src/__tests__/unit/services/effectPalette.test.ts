@@ -8,11 +8,11 @@ const names = (row: ({ name: string } | null)[]) => row.map((e) => e?.name ?? nu
 describe('effectPalette', () => {
 	it('is one layout on every MIDI track', () => {
 		expect(paletteBlocks('kit')).toEqual(paletteBlocks('instrument'));
-		expect(paletteBlocks('kit').map((b) => b.family)).toEqual(['midi', 'guitar', 'tone', 'dynamics', 'distortion', 'modulation', 'glitch', 'time']);
+		expect(paletteBlocks('kit').map((b) => b.family)).toEqual(['midi', 'tone', 'dynamics', 'distortion', 'guitar', 'modulation', 'glitch', 'time']);
 	});
 
 	it('drops only the MIDI block on an audio track, the rest in the same order', () => {
-		expect(paletteBlocks('audio').map((b) => b.family)).toEqual(['guitar', 'tone', 'dynamics', 'distortion', 'modulation', 'glitch', 'time']);
+		expect(paletteBlocks('audio').map((b) => b.family)).toEqual(['tone', 'dynamics', 'distortion', 'guitar', 'modulation', 'glitch', 'time']);
 		expect(paletteBlocks('audio')).toEqual(paletteBlocks('kit').slice(1));
 	});
 
@@ -69,7 +69,12 @@ describe('effectPalette', () => {
 		expect(paletteLabel(dist.rows[2][1]!)).toBe('Shifter');
 	});
 
-	it('puts Blur and Pitch Shift under Gain', () => {
-		expect(paletteTail().map((t) => t.family)).toEqual(['time', 'glitch']);
+	it('puts Utility and Pitch Shift under the chevron, Blur with modulation', () => {
+		expect(paletteTail().map((t) => t.family)).toEqual(['utility', 'glitch']);
+		expect(paletteLabel(paletteTail()[0].fx!)).toBe('Utility');
+		const mod = paletteBlocks('kit').find((b) => b.family === 'modulation')!;
+		// Blur is a file in the effects folder, absent here: its slot stays.
+		expect(mod.rows.map((r) => r[0] && paletteLabel(r[0]))).toEqual(['Trem', 'Chorus', null]);
+		expect(paletteLabel({ name: 'Saturator', preset: 'saturator' })).toBe('Saturator');
 	});
 });

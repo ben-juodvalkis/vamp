@@ -537,17 +537,28 @@ const SCENARIOS = [
 	},
 
 	{
-		name: 'palette-gain-tap-loads-utility',
+		name: 'palette-chevron-opens-utility-loads',
 		view: 'default',
-		description: 'a tap on the palette\'s Gain chip loads a Utility when the track has none',
+		description: 'the palette chevron latches the bar open, a tap on its Utility chip loads one, and the chevron closes it',
 		async run({ page, fingers, sent, reset }) {
-			const gain = await centreOf(page, '[data-debug="chain-gain-chip"]');
-			reset();
-			await fingers.tap(gain.x, gain.y);
+			const chev = await centreOf(page, '[data-debug="chain-add"]');
+			await fingers.tap(chev.x, chev.y);
 			await wait(300);
-			const loads = sent().filter((m) => m.address === '/looping/v3/device/load' || m.address.includes('utility'));
-			log(`gain tap sent: ${JSON.stringify(sent().map((m) => m.address))}`);
-			expect(loads.length >= 1, 'a tap on Gain must load a Utility');
+			const open = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(open === 'true', 'the chevron must open the bar');
+			const util = await centreOf(page, '[data-debug="chain-chip"][aria-label="Add Utility"]');
+			reset();
+			await fingers.tap(util.x, util.y);
+			await wait(300);
+			const loads = sent().filter((m) => m.address === '/looping/v3/device/load');
+			log(`utility tap: ${JSON.stringify(loads.map((m) => m.args))}`);
+			expect(loads.length === 1 && JSON.stringify(loads[0].args).includes('Utility'), 'a tap on Utility must load a Utility');
+			const still = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(still === 'true', 'a latched bar stays open after a pick');
+			await fingers.tap(chev.x, chev.y);
+			await wait(300);
+			const closed = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(closed === 'false', 'a second chevron tap must close the bar');
 		}
 	},
 

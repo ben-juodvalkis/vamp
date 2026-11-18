@@ -20,11 +20,11 @@ export type PaletteKind = 'kit' | 'instrument' | 'audio';
 /** What a chip in the palette bar says: short, so a row holds many. Multiband's soft hyphen breaks it as Multi-band only on a narrow chip. */
 const LABELS: Record<string, string> = {
 	arpeggiator: 'Arp', chance: 'Chance', velocity: 'Velocity', chord: 'Chord', random: 'Random',
-	filter: 'Filter', eq: 'EQ', saturator: 'Drive', squash: 'Glue', compressor: 'Comp', echo: 'Echo',
+	filter: 'Filter', eq: 'EQ', saturator: 'Saturator', squash: 'Glue', compressor: 'Comp', echo: 'Echo',
 	reverb: 'Reverb', chorus: 'Chorus', phaser: 'Phaser', tremolo: 'Trem', drum: 'Drum Buss',
 	redux: 'Redux', gate: 'Gate', ott: 'Multi\u00adband', shifter: 'Shifter', pedal: 'Pedal', roar: 'Roar',
 	guitar: 'Guitar', bass: 'Bass', wah: 'Wah', delay: 'Delay', limiter: 'Limiter', eq8: 'EQ Eight',
-	toneShaper: 'Tone Shaper', comb: 'Comb', glitchLoop: 'Glitch', pitchHack: 'Pitch Hack', smudge: 'Blur',
+	toneShaper: 'Tone Shaper', utility: 'Utility', comb: 'Comb', glitchLoop: 'Glitch', pitchHack: 'Pitch Hack', smudge: 'Blur',
 	octave: 'Pitch Shift', variation: 'Stutter', randomOctave: 'Rand Oct', grainDelay: 'Grain'
 };
 
@@ -61,21 +61,21 @@ type BlockSpec = { family: string; rows: readonly (readonly SlotSpec[])[] };
  */
 const BLOCKS: readonly BlockSpec[] = [
 	{ family: 'midi', rows: [['random'], ['arpeggiator'], [{ file: 'MidiWheels', kind: 'midi-effect' }]] },
-	{ family: 'guitar', rows: [['guitar'], ['bass'], ['wah']] },
 	{ family: 'tone', rows: [['filter'], ['eq'], ['toneShaper']] },
 	{ family: 'dynamics', rows: [['squash'], ['ott'], ['gate']] },
 	{ family: 'distortion', rows: [['drum', 'pedal'], ['roar', 'redux'], ['saturator', 'shifter']] },
-	{ family: 'modulation', rows: [['tremolo'], ['chorus'], ['phaser']] },
+	{ family: 'guitar', rows: [['guitar'], ['bass'], ['wah']] },
+	{ family: 'modulation', rows: [['tremolo'], ['chorus'], ['smudge']] },
 	{ family: 'glitch', rows: [['variation'], ['glitchLoop'], ['pitchHack']] },
 	{ family: 'time', rows: [['echo'], ['reverb'], ['comb']] }
 ];
 
 /**
- * Under the Gain chip, rows two and three: two more, each in its own
- * family's wash.
+ * Under the chevron, rows two and three: Utility, a chip like the others,
+ * and Pitch Shift, each in its own family's wash.
  */
 const TAIL: readonly { family: string; spec: SlotSpec }[] = [
-	{ family: 'time', spec: 'smudge' },
+	{ family: 'utility', spec: 'utility' },
 	{ family: 'glitch', spec: 'octave' }
 ];
 

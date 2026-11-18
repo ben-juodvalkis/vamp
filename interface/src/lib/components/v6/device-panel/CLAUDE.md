@@ -71,14 +71,14 @@ never in a central view; a control's
 cell per device, each drawing its tile, across the whole width; above it the palette bar (ADR-523), a fixed set of
 effect chips in family blocks, each a faint wash of its family's colour (ADR-547), the same on every track
 (`services/effectPalette`, `chain/PaletteChip`), one grid with no gaps,
-closed by the Gain chip, the Utility's Gain lying flat over the track's
-meter and ridden up and down, whose first drag loads a Utility
-(2026-11-13). The section is six equal rows, a row of chips each
-(ADR-548): the bar is its first row of chips and the chain the other
-five. A finger on a chip opens the bar to three rows for as long as it
-is down (a 120ms hold, or at once on a slide); letting go on a chip loads
-it, a quick tap loads without opening. There is no + and no way to the
-browser from the bar (the phone keeps a fixed bar, 44px or 140px). A tap on a cell's header bar is Device On (no power button);
+closed by a downward chevron (ADR-548), with Utility and Pitch Shift
+under it as ordinary chips. The section is six equal rows, a row of chips
+each: the bar is its first row and the chain the other five. The chevron
+latches the bar open to three rows (lit) and closes it; a finger on a
+chip opens it for as long as it is down (a 120ms hold, or at once on a
+slide), letting go on a chip loads it, and a quick tap loads without
+opening. The bar has no way to the browser (the phone keeps a fixed bar,
+44px or 140px). A tap on a cell's header bar is Device On (no power button);
 a drag from it reorders.
 `FXGrid.svelte`, the grid/chain switch (`FxPanelSwitch`), the ten-column
 placement (`col` / `row` / `span`, `cellFor`, the `*_CELL`s) and the Drum
