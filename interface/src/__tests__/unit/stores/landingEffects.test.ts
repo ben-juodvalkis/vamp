@@ -12,6 +12,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import { flushSync } from 'svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { landingEffects, LANDING_TIMEOUT_MS } from '$lib/stores/v6/landingEffects.svelte';
+import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 import { _resetForTests, replaceTree, type DeviceRecord, type ParamRecord, type TrackRecord } from '$lib/stores/v3/normalized.svelte';
 import type { OSCArg } from '$lib/types/osc';
 
@@ -109,5 +110,34 @@ describe('a load on its way', () => {
 		const b = landingEffects.start({ ...reverbLoad, type: 'echo', loadKey: 'native:Echo' });
 		landingEffects.start({ ...reverbLoad, trackPath: 'tracks/2' });
 		expect(landingEffects.inChain(TRACK).map((l) => l.id)).toEqual([a, b]);
+	});
+
+	it('stops naming a load in its chain the moment its device is there, before the record is finished', () => {
+		const id = landingEffects.start(reverbLoad);
+		expect(landingEffects.inChain(TRACK).map((l) => l.id)).toEqual([id]);
+		// The second Reverb arrives; read before any effect has run, as a
+		// render in the same tick would. Its ghost must already be gone, or
+		// the chain draws the Reverb twice for a frame.
+		replaceTree(4, [track(REVERB, COMP, REVERB)]);
+		expect(landingEffects.inChain(TRACK)).toEqual([]);
+	});
+
+	it('moves the hand put on a ghost onto the device it becomes, and back if it never lands', () => {
+		fxChainStore.observeAppointed(`${TRACK}/devices/1`);
+		const id = landingEffects.start(reverbLoad);
+		const ghost = landingEffects.ghostPath(TRACK, id);
+		fxChainStore.observeAppointed(ghost);
+		expect(landingEffects.resolve(ghost)).toBe(ghost);
+		replaceTree(4, [track(REVERB, COMP, REVERB)]);
+		// Resolved in the same tick the device arrives, before the record finishes.
+		expect(landingEffects.resolve(ghost)).toBe(`${TRACK}/devices/2`);
+		flushSync();
+		expect(fxChainStore.appointed).toBe(`${TRACK}/devices/2`);
+
+		fxChainStore.observeAppointed(`${TRACK}/devices/1`);
+		const lost = landingEffects.start(reverbLoad);
+		fxChainStore.observeAppointed(landingEffects.ghostPath(TRACK, lost));
+		landingEffects.cancel(lost);
+		expect(fxChainStore.appointed).toBe(`${TRACK}/devices/1`);
 	});
 });

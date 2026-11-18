@@ -16,6 +16,7 @@ import { chainAddTarget } from '$lib/services/rackChains.svelte';
 import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
 import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
+import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { landingEffects } from '$lib/stores/v6/landingEffects.svelte';
 import type { DeviceTypeKey } from '$lib/config/fxGridLayout';
@@ -83,6 +84,9 @@ export async function addEffectToChain(effect: ChainEffect): Promise<void> {
 		// with it (ADR-540); one record per load, so a second Reverb is its own.
 		if (effect.preset && effect.preset !== 'sequencer' && config) {
 			landing = landingEffects.start({ trackPath, target, type: effect.preset as DeviceTypeKey, loadKey: file || source });
+			// The highlight moves to the ghost at once, as the hand will once
+			// Live has it (a second on the rig): drawn only, nothing is sent.
+			if (!trackHoldScope.active) fxChainStore.observeAppointed(landingEffects.ghostPath(target || trackPath, landing));
 		}
 		await addPresetToChain(trackPath, target, file, source, rel);
 	} catch (err) {

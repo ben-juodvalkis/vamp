@@ -19,6 +19,7 @@
  * (`LANDING_TIMEOUT_MS`) drops its record and the values it held.
  */
 
+import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { untrack } from 'svelte';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
@@ -45,6 +46,8 @@ export interface Landing {
 	startedAt: number;
 	/** Values written to it before it landed, by parameter index. */
 	pending: ReadonlyMap<number, number>;
+	/** Where the blue hand was when it was asked for: it goes back there if the load never lands. */
+	handBefore: string | null;
 }
 
 const RACK_CHAIN = /\/chains\/\d+$/;
@@ -86,6 +89,7 @@ function finish(id: string): void {
 function drop(id: string): void {
 	const l = landings.get(id);
 	if (!l) return;
+	if (fxChainStore.appointed === landingEffects.ghostPath(l.target || l.trackPath, l.id)) fxChainStore.observeAppointed(l.handBefore);
 	finish(id);
 	for (const other of [...landings.values()]) {
 		if (sameSpot(other, l) && other.before > l.before) landings.set(other.id, { ...other, before: other.before - 1 });
@@ -93,6 +97,8 @@ function drop(id: string): void {
 }
 
 function land(l: Landing, device: DeviceRecord): void {
+	// A hand put on the ghost (a chip's pick) is the device's now.
+	if (fxChainStore.appointed === landingEffects.ghostPath(l.target || l.trackPath, l.id)) fxChainStore.observeAppointed(device.devicePath);
 	for (const [index, value] of l.pending) {
 		void selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, index), value);
 	}
@@ -118,7 +124,8 @@ export const landingEffects = {
 			...opts,
 			before: matching(opts).length + onTheWay,
 			startedAt: Date.now(),
-			pending: new Map()
+			pending: new Map(),
+			handBefore: fxChainStore.appointed
 		});
 		timers.set(id, setTimeout(() => drop(id), LANDING_TIMEOUT_MS));
 		// A pad's chain is fresh only while its row is held: hold it until
@@ -147,9 +154,15 @@ export const landingEffects = {
 		return [...landings.values()].sort((a, b) => a.startedAt - b.startedAt || Number(a.id.slice(1)) - Number(b.id.slice(1)));
 	},
 
-	/** The loads on their way into one chain: a track's, a pad's or a rack chain's path. */
+	/**
+	 * The loads on their way into one chain: a track's, a pad's or a rack
+	 * chain's path. A load whose device is already in the chain is not one:
+	 * the effect above finishes it a tick later, and until then the chain
+	 * would draw the device twice, its ghost and itself (a second cell for a
+	 * frame, the chain jumping as it came and went).
+	 */
 	inChain(chainPath: string): Landing[] {
-		return this.all().filter((l) => (l.target || l.trackPath) === chainPath);
+		return this.all().filter((l) => (l.target || l.trackPath) === chainPath && !matching(l)[l.before]);
 	},
 
 	get(id: string): Landing | undefined {
@@ -166,6 +179,23 @@ export const landingEffects = {
 
 	pendingValue(id: string, paramIndex: number): number | undefined {
 		return landings.get(id)?.pending.get(paramIndex);
+	},
+
+	/** The device path a load's ghost cell draws under, in its chain. */
+	ghostPath(chainPath: string, id: string): string {
+		return `${chainPath}/landing/${id}`;
+	},
+
+	/**
+	 * A device path with a ghost's resolved: the device it became once that
+	 * has landed, else the path as given. The chain's highlight reads the
+	 * blue hand through this, so a hand put on a ghost (a chip's pick, at
+	 * once) moves onto the device the frame it lands, before Live reports it.
+	 */
+	resolve(devicePath: string | null): string | null {
+		const m = devicePath?.match(/\/landing\/(l\d+)$/);
+		const l = m ? landings.get(m[1]) : undefined;
+		return (l && matching(l)[l.before]?.devicePath) ?? devicePath;
 	},
 
 	/** Drop every record (tests). */

@@ -257,7 +257,7 @@
       return {
         id: l.id,
         device: {
-          devicePath: `${chainPath}/landing/${l.id}`,
+          devicePath: landingEffects.ghostPath(chainPath, l.id),
           name: config.defaultName,
           className: config.expectedClassName,
           params: new Map(),
@@ -282,6 +282,8 @@
   }
   const isMidiEffectClass = (className: string) => className.startsWith('Midi') || className === 'MxDeviceMidiEffect';
   const landing = $derived(landingDevices(padScope?.padPath ?? trackPath));
+  /** The blue hand, a ghost's resolved to the device it became (a chip's pick shows at once). */
+  const appointedPath = $derived(landingEffects.resolve(fxChainStore.appointed));
   /** A landing cell's device path → its load's id. */
   const landingIds = $derived(new Map(landing.map((l) => [l.device.devicePath, l.id])));
   const devices = $derived(withLanding(liveDevices, landing));
@@ -888,7 +890,12 @@
   }
 
   // FLIP: on a change of order, each cell starts where it was drawn and
-  // slides to its new place. Measured only when the order changes.
+  // slides to its new place. Measured only when the order changes, and run
+  // only for a reorder: the same cells in another order. A cell added or
+  // removed (a chip's load, its ghost giving way to the device) or the
+  // chain resized under them (the palette opening or closing) snaps in one
+  // frame; sliding every cell from where the old layout had it read as the
+  // chain jumping twice on every load (Ben, 2026-11-18).
   const orderKey = $derived(shown.map((c) => c.key).join('\n'));
   let before = new Map<string, DOMRect>();
   $effect.pre(() => {
@@ -902,6 +909,12 @@
   $effect(() => {
     void orderKey;
     if (!chainEl || before.size === 0) return;
+    const now = [...chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')].map((el) => el.dataset.cellKey!);
+    const reorder = now.length === before.size + (dragNode ? 1 : 0) && now.every((k) => before.has(k) || dragNode?.dataset.cellKey === k);
+    if (!reorder) {
+      before = new Map();
+      return;
+    }
     for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
       const from = before.get(el.dataset.cellKey!);
       if (!from) continue;
@@ -1337,8 +1350,8 @@
       class:off={!isOn(cell)}
       class:landing={!!cell.landing}
       class:dragging={drag?.key === cell.key}
-      class:appointed={fxChainStore.appointed === cell.device.devicePath}
-      aria-current={fxChainStore.appointed === cell.device.devicePath ? 'true' : undefined}
+      class:appointed={appointedPath === cell.device.devicePath}
+      aria-current={appointedPath === cell.device.devicePath ? 'true' : undefined}
       class:instrument={cell.kind === 'instrument' && !cell.inside}
       class:inside={!!cell.inside}
       class:unfolded={cell.foldable && rackFold.isOpen(cell.path)}
