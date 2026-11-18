@@ -15,9 +15,10 @@ describe('effectPalette', () => {
 	});
 
 	it('keeps a slot for an effect not on this Mac', () => {
-		// No effects folder in tests: Random Octave (a file there) is an empty slot over Arpeggiator.
+		// Live's own Random over Arpeggiator: both load by name, no file needed.
 		const midi = paletteBlocks('kit')[0];
-		expect(names(midi.top)).toEqual([null]);
+		expect(names(midi.top)).toEqual(['Random']);
+		expect(midi.top[0]).toMatchObject({ kind: 'midi-effect', preset: 'random', fullPath: 'default:random' });
 		expect(names(midi.bottom)).toEqual(['Arpeggiator']);
 		const time = paletteBlocks('kit').find((b) => b.family === 'time')!;
 		expect(names(time.top)).toEqual(['Echo', 'Reverb']);

@@ -562,7 +562,8 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   randomOctave: {
     // The user's Random preset (Random Octave.adv), found by name in the
-    // effects folder (ADR-498) for the palette chip (2026-11-11). Live names
+    // effects folder (ADR-498). The palette chip loaded it from 2026-11-11
+    // to 2026-11-18; it loads Live's own Random now. Live names
     // the device after the file; once on a chain it is a MidiRandom, which
     // `random` matches by class first, so its cell is Random's control.
     padScoped: true,

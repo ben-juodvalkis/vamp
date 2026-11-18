@@ -55,7 +55,7 @@ type BlockSpec = { family: string; top: readonly string[]; bottom: readonly stri
  * block goes on an audio track, and the rest stretch to fill the row.
  */
 const BLOCKS: readonly BlockSpec[] = [
-	{ family: 'midi', top: ['randomOctave'], bottom: ['arpeggiator'] },
+	{ family: 'midi', top: ['random'], bottom: ['arpeggiator'] },
 	{ family: 'guitar', top: ['guitar'], bottom: ['bass'] },
 	{ family: 'tone', top: ['filter'], bottom: ['eq'] },
 	{ family: 'dynamics', top: ['squash'], bottom: ['ott'] },
