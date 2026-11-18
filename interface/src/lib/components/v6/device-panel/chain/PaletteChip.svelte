@@ -9,16 +9,19 @@
 	import { press } from '$lib/actions/press';
 
 	// Not `effect`: a variable of that name turns `$effect` into a store read.
-	let { fx, label, ink }: { fx: ChainEffect; label: string; ink?: string } = $props();
+	// `passive`: the palette's own gesture reads the chip (ADR-548's hold),
+	// so the chip takes no press of its own; `hot` is the one under the finger.
+	let { fx, label, ink, passive = false, hot = false }: { fx: ChainEffect; label: string; ink?: string; passive?: boolean; hot?: boolean } = $props();
 </script>
 
 <button
 	type="button"
 	class="palette-chip"
+	class:hot
 	style:--chip-ink={ink ?? 'var(--fg-tertiary)'}
 	aria-label="Add {fx.name}"
 	data-debug="chain-chip"
-	use:press={{ onPress: () => void addEffectToChain(fx), touchAction: 'none', stopPropagation: true }}
+	use:press={{ onPress: () => void addEffectToChain(fx), touchAction: 'none', stopPropagation: true, disabled: passive }}
 >
 	<span class="chip-name">{label}</span>
 </button>
@@ -45,6 +48,7 @@
 		-webkit-tap-highlight-color: transparent;
 		transition: background-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise);
 	}
+	.palette-chip.hot,
 	.palette-chip:active {
 		border-color: var(--foreground);
 		background: color-mix(in srgb, var(--chip-ink) 30%, var(--secondary));

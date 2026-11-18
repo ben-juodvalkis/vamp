@@ -13,6 +13,7 @@
 import { DEVICE_PRESETS, deviceLoadArgs } from '$lib/config/devicePresets';
 import { effectAvailable, effectSource } from '$lib/services/effectSources.svelte';
 import type { ChainEffect } from '$lib/services/chainEffects.svelte';
+import type { ItemKind } from '$lib/utils/placeKinds';
 
 export type PaletteKind = 'kit' | 'instrument' | 'audio';
 
@@ -27,42 +28,55 @@ const LABELS: Record<string, string> = {
 	octave: 'Pitch Shift', variation: 'Stutter', randomOctave: 'Rand Oct', grainDelay: 'Grain'
 };
 
+/** A chip loaded as a file, by its file's name. */
+const FILE_LABELS: Record<string, string> = { MidiWheels: 'Wheels' };
+
 /** A palette entry's short name, else its device's. */
 export function paletteLabel(effect: Pick<ChainEffect, 'name' | 'preset'>): string {
-	return (effect.preset && LABELS[effect.preset]) || effect.name;
+	return (effect.preset && LABELS[effect.preset]) || FILE_LABELS[effect.name] || effect.name;
 }
 
 /**
  * The palette is laid out in family blocks (the user, 2026-11-11): each
- * family a few columns, its main effects on the first row and its others
- * under them, so when the second row goes (a chain on two rows) every
- * family keeps its main ones, and the colours read as blocks.
+ * family a column or two, three rows deep (ADR-548, laid out by Ben in the
+ * Palette Planner, 2026-11-18): its main effects on the first row, the one
+ * that shows while the bar is closed, and its others under them.
  */
 export interface PaletteBlock {
 	family: string;
-	/** Columns: the longer of its two rows. */
+	/** Columns: the longest of its rows. */
 	cols: number;
-	/** Each row, `null` where an effect is not on this Mac (its slot stays). */
-	top: (ChainEffect | null)[];
-	bottom: (ChainEffect | null)[];
+	/** Each row, top first, `null` where an effect is not on this Mac (its slot stays). */
+	rows: (ChainEffect | null)[][];
 }
 
-type BlockSpec = { family: string; top: readonly string[]; bottom: readonly string[] };
+/** A chip: a `DEVICE_PRESETS` type, or a file in the effects folder by name (no type of its own). */
+type SlotSpec = string | { file: string; kind: ItemKind };
+type BlockSpec = { family: string; rows: readonly (readonly SlotSpec[])[] };
 
 /**
- * One layout on every track (the user, 2026-11-11, from the chip picker):
- * the same blocks in the same columns, for muscle memory. Only the MIDI
- * block goes on an audio track, and the rest stretch to fill the row.
+ * One layout on every track: the same blocks in the same columns, for
+ * muscle memory. Only the MIDI block goes on an audio track, and the rest
+ * stretch to fill the row.
  */
 const BLOCKS: readonly BlockSpec[] = [
-	{ family: 'midi', top: ['random'], bottom: ['arpeggiator'] },
-	{ family: 'guitar', top: ['guitar'], bottom: ['bass'] },
-	{ family: 'tone', top: ['filter', 'eq'], bottom: ['toneShaper'] },
-	{ family: 'dynamics', top: ['squash'], bottom: ['ott'] },
-	{ family: 'distortion', top: ['drum', 'pedal'], bottom: ['roar', 'redux'] },
-	{ family: 'modulation', top: ['tremolo', 'chorus'], bottom: ['phaser'] },
-	{ family: 'glitch', top: ['variation'], bottom: ['glitchLoop'] },
-	{ family: 'time', top: ['echo', 'reverb'], bottom: ['comb', 'smudge'] }
+	{ family: 'midi', rows: [['random'], ['arpeggiator'], [{ file: 'MidiWheels', kind: 'midi-effect' }]] },
+	{ family: 'guitar', rows: [['guitar'], ['bass'], ['wah']] },
+	{ family: 'tone', rows: [['filter'], ['eq'], ['toneShaper']] },
+	{ family: 'dynamics', rows: [['squash'], ['ott'], ['gate']] },
+	{ family: 'distortion', rows: [['drum', 'pedal'], ['roar', 'redux'], ['saturator', 'shifter']] },
+	{ family: 'modulation', rows: [['tremolo'], ['chorus'], ['phaser']] },
+	{ family: 'glitch', rows: [['variation'], ['glitchLoop'], ['pitchHack']] },
+	{ family: 'time', rows: [['echo'], ['reverb'], ['comb']] }
+];
+
+/**
+ * Under the Gain chip, rows two and three: two more, each in its own
+ * family's wash.
+ */
+const TAIL: readonly { family: string; spec: SlotSpec }[] = [
+	{ family: 'time', spec: 'smudge' },
+	{ family: 'glitch', spec: 'octave' }
 ];
 
 const MIDI_KEYS = new Set(['arpeggiator', 'chance', 'velocity', 'chord', 'random', 'randomOctave']);
@@ -80,16 +94,34 @@ function entry(key: string): ChainEffect {
 	};
 }
 
-const slot = (key: string) => (DEVICE_PRESETS[key] && effectAvailable(key) ? entry(key) : null);
+/** A file in the effects folder that has no type: it loads as its file. */
+function fileEntry(name: string, kind: ItemKind): ChainEffect | null {
+	const found = effectSource({ defaultName: name });
+	if (!found) return null;
+	return { name, fullPath: found.presetPath, source: found.source, rel: found.rel, kind };
+}
+
+const slot = (spec: SlotSpec): ChainEffect | null =>
+	typeof spec === 'string' ? (DEVICE_PRESETS[spec] && effectAvailable(spec) ? entry(spec) : null) : fileEntry(spec.file, spec.kind);
 
 /** The blocks for a track: all of them, but the MIDI block on an audio track. */
 export function paletteBlocks(kind: PaletteKind): PaletteBlock[] {
-	return BLOCKS.filter((b) => !(kind === 'audio' && b.family === 'midi')).map(({ family, top, bottom }) => ({
+	return BLOCKS.filter((b) => !(kind === 'audio' && b.family === 'midi')).map(({ family, rows }) => ({
 		family,
-		cols: Math.max(top.length, bottom.length),
-		top: top.map(slot),
-		bottom: bottom.map(slot)
+		cols: Math.max(...rows.map((r) => r.length)),
+		rows: rows.map((r) => r.map(slot))
 	}));
+}
+
+export interface PaletteExtra {
+	family: string;
+	/** `null` where the effect is not on this Mac (its slot stays). */
+	fx: ChainEffect | null;
+}
+
+/** The chips under Gain, rows two and three. */
+export function paletteTail(): PaletteExtra[] {
+	return TAIL.map(({ family, spec }) => ({ family, fx: slot(spec) }));
 }
 
 /** The blocks that fit `columns` chip columns: whole blocks, dropped from the end. */
@@ -107,47 +139,4 @@ export function fitBlocks(blocks: readonly PaletteBlock[], columns: number): Pal
 /** How many tile columns a palette `width` px wide holds, tiles at least `minTile` px and `gap` apart. */
 export function paletteColumns(width: number, minTile: number, gap: number): number {
 	return Math.max(0, Math.floor((width + gap) / (minTile + gap)));
-}
-
-/**
- * The palette's third row (ADR-548): the rest of the + menu, the user's
- * effects folder less what the two rows above already hold (Utility is
- * the Gain chip), shown only while the + is open. Not under the family
- * columns, since the families have one to four each: a row in family
- * order, each chip in its own family's wash. A Live device or a type
- * loads as the chips above do; Ring Mod has no type and loads as its file.
- */
-type ExtraSpec = { family: string; key?: string; file?: string };
-const EXTRA_ROW: readonly ExtraSpec[] = [
-	{ family: 'midi', key: 'chord' },
-	{ family: 'midi', key: 'velocity' },
-	{ family: 'midi', key: 'chance' },
-	{ family: 'midi', key: 'randomOctave' },
-	{ family: 'guitar', key: 'wah' },
-	{ family: 'dynamics', key: 'compressor' },
-	{ family: 'dynamics', key: 'gate' },
-	{ family: 'distortion', key: 'saturator' },
-	{ family: 'distortion', file: 'Ring Mod' },
-	{ family: 'glitch', key: 'pitchHack' },
-	{ family: 'glitch', key: 'octave' }
-];
-
-export interface PaletteExtra {
-	family: string;
-	/** `null` where the effect is not on this Mac (its slot stays). */
-	fx: ChainEffect | null;
-}
-
-function fileEntry(name: string): ChainEffect | null {
-	const found = effectSource({ defaultName: name });
-	if (!found) return null;
-	return { name, fullPath: found.presetPath, source: found.source, rel: found.rel, kind: 'audio-effect' };
-}
-
-/** The third row for a track: all of it, but the MIDI effects on an audio track. */
-export function paletteExtras(kind: PaletteKind): PaletteExtra[] {
-	return EXTRA_ROW.filter((e) => !(kind === 'audio' && e.family === 'midi')).map(({ family, key, file }) => ({
-		family,
-		fx: key ? slot(key) : fileEntry(file ?? '')
-	}));
 }

@@ -89,6 +89,9 @@
         // Update central display (follows standard pattern)
         openView();
         handleTap();
+        // The palette's Gain chip loads its Utility on a tap too, as a
+        // palette chip does (ADR-548; a tile loads only on a drag, ADR-167).
+        if (chip && isGhost && !isLoading) triggerLoad();
       }}
       onInteraction={(value) => {
         // Update central display

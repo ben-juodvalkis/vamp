@@ -453,6 +453,104 @@ const SCENARIOS = [
 		}
 	},
 
+	// ---- The FX palette's hold (ADR-548) ----------------------------------
+	{
+		name: 'palette-hold-slides-to-load',
+		view: 'default',
+		description: 'a short hold on a palette chip opens the bar; sliding to a third-row chip and letting go loads that one, and the bar closes',
+		async run({ page, fingers, sent, reset }) {
+			const first = await centreOf(page, '[aria-label="Add Glue Compressor"]');
+			reset();
+			const id = await fingers.down(first.x, first.y);
+			// PEEK_HOLD_MS is 120.
+			await wait(250);
+			const open = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(open === 'true', `a held chip must open the bar (data-palette-open=${open})`);
+			const comp = await centreOf(page, '[data-debug="chain-chip"][aria-label="Add Gate"]');
+			for (let i = 1; i <= 6; i++) {
+				await fingers.move(id, first.x + ((comp.x - first.x) * i) / 6, first.y + ((comp.y - first.y) * i) / 6);
+				await wait(16);
+			}
+			await fingers.up(id);
+			await wait(300);
+			const loads = sent().filter((m) => m.address === '/looping/v3/device/load');
+			log(`loads: ${JSON.stringify(loads.map((m) => m.args))}`);
+			expect(loads.length === 1, `one load, the chip let go on (got ${loads.length})`);
+			expect(JSON.stringify(loads[0]?.args ?? []).includes('Gate') && !JSON.stringify(loads[0]?.args ?? []).includes('Glue'), 'the load must be the Gate, not the chip first pressed');
+			const after = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(after === 'false', 'the bar must close on release');
+		}
+	},
+	{
+		name: 'palette-hold-release-in-place',
+		view: 'default',
+		description: 'a palette chip held and let go without moving loads that chip',
+		async run({ page, fingers, sent, reset }) {
+			const glue = await centreOf(page, '[aria-label="Add Glue Compressor"]');
+			reset();
+			const id = await fingers.down(glue.x, glue.y);
+			await wait(600);
+			await fingers.up(id);
+			await wait(300);
+			const loads = sent().filter((m) => m.address === '/looping/v3/device/load');
+			log(`loads: ${JSON.stringify(loads.map((m) => m.args))}`);
+			expect(loads.length === 1, `one load (got ${loads.length})`);
+		}
+	},
+	{
+		name: 'palette-tap-loads',
+		view: 'default',
+		description: 'a quick tap on a palette chip loads it and never opens the bar',
+		async run({ page, fingers, sent, reset }) {
+			const chip = await centreOf(page, '[aria-label="Add Glue Compressor"]');
+			reset();
+			const id = await fingers.down(chip.x, chip.y);
+			await wait(40);
+			const during = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(during === 'false', 'a quick tap must not open the bar');
+			await fingers.up(id);
+			await wait(300);
+			const loads = sent().filter((m) => m.address === '/looping/v3/device/load');
+			expect(loads.length === 1, `a tap loads one (got ${loads.length})`);
+			const open = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(open === 'false', 'the bar must be closed after a tap');
+		}
+	},
+	{
+		name: 'palette-hold-release-off-cancels',
+		view: 'default',
+		description: 'a held palette chip let go over the chain loads nothing',
+		async run({ page, fingers, sent, reset }) {
+			const chip = await centreOf(page, '[aria-label="Add Glue Compressor"]');
+			reset();
+			const id = await fingers.down(chip.x, chip.y);
+			await wait(600);
+			const chain = await centreOf(page, '[data-debug="chain-overview"]');
+			for (let i = 1; i <= 6; i++) {
+				await fingers.move(id, chip.x, chip.y + ((chain.y + chain.h / 3 - chip.y) * i) / 6);
+				await wait(16);
+			}
+			await fingers.up(id);
+			await wait(300);
+			expect(!sent().some((m) => m.address === '/looping/v3/device/load'), 'a release off the chips loads nothing');
+		}
+	},
+
+	{
+		name: 'palette-gain-tap-loads-utility',
+		view: 'default',
+		description: 'a tap on the palette\'s Gain chip loads a Utility when the track has none',
+		async run({ page, fingers, sent, reset }) {
+			const gain = await centreOf(page, '[data-debug="chain-gain-chip"]');
+			reset();
+			await fingers.tap(gain.x, gain.y);
+			await wait(300);
+			const loads = sent().filter((m) => m.address === '/looping/v3/device/load' || m.address.includes('utility'));
+			log(`gain tap sent: ${JSON.stringify(sent().map((m) => m.address))}`);
+			expect(loads.length >= 1, 'a tap on Gain must load a Utility');
+		}
+	},
+
 	// ---- Concurrent fingers. Chromium only (CDP). -------------------------
 	{
 		name: 'two-mutes',

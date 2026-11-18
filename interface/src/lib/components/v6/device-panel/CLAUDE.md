@@ -70,15 +70,15 @@ never in a central view; a control's
 `ChainOverview` alone: the selected track's chain (or a scoped pad's), one
 cell per device, each drawing its tile, across the whole width; above it the palette bar (ADR-523), a fixed set of
 effect chips in family blocks, each a faint wash of its family's colour (ADR-547), the same on every track
-(`services/effectPalette`, `chain/PaletteChip`), closed by the Gain chip
-and the + side by side, each a chip's width, the Utility's Gain lying flat over the track's
+(`services/effectPalette`, `chain/PaletteChip`), one grid with no gaps,
+closed by the Gain chip, the Utility's Gain lying flat over the track's
 meter and ridden up and down, whose first drag loads a Utility
-(2026-11-13). One row holds 13 units. The section is six equal rows, a row
-of chips each (ADR-548): closed, the bar is its first row of chips and the
-chain the other five; the + opens it to three rows (the second, and the
-rest of the + menu, `paletteExtras`), the chain the last three, the +
-(a downward chevron) lit, and an All effects tile under it opening the browser on Effect (the
-phone keeps a fixed bar, 44px or 140px). A tap on a cell's header bar is Device On (no power button);
+(2026-11-13). The section is six equal rows, a row of chips each
+(ADR-548): the bar is its first row of chips and the chain the other
+five. A finger on a chip opens the bar to three rows for as long as it
+is down (a 120ms hold, or at once on a slide); letting go on a chip loads
+it, a quick tap loads without opening. There is no + and no way to the
+browser from the bar (the phone keeps a fixed bar, 44px or 140px). A tap on a cell's header bar is Device On (no power button);
 a drag from it reorders.
 `FXGrid.svelte`, the grid/chain switch (`FxPanelSwitch`), the ten-column
 placement (`col` / `row` / `span`, `cellFor`, the `*_CELL`s) and the Drum

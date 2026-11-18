@@ -55,9 +55,9 @@ export const VIEWS = {
 		prefs: {}
 	},
 	'palette-open': {
-		description: 'The FX palette opened by its +: three rows of chips, the chain under them (ADR-548).',
+		description: 'The FX palette held open by a finger on Glue: three rows of chips, the chain under them (ADR-548).',
 		prefs: {},
-		steps: [{ click: '[data-debug="chain-add"]' }]
+		steps: [{ hold: '[aria-label="Add Glue Compressor"]', ms: 400 }]
 	},
 	session: {
 		description: 'Session mode on: clip grid under the strips (ADR-415/416).',
@@ -151,10 +151,10 @@ export const VIEWS = {
 		steps: [phoneTab('track')]
 	},
 	'phone-track-palette': {
-		description: 'The phone layout, Track tab, the palette opened by its +: three rows of chips.',
+		description: 'The phone layout, Track tab, the palette held open by a finger: three rows of chips.',
 		prefs: {},
 		viewport: PHONE_VIEWPORT,
-		steps: [phoneTab('track'), { click: '[data-debug="chain-add"]' }]
+		steps: [phoneTab('track'), { hold: '[aria-label="Add Glue Compressor"]', ms: 400 }]
 	},
 	'phone-browse': {
 		description: 'The phone layout, Browse tab: the browser\'s rail, a tap from opening full screen.',

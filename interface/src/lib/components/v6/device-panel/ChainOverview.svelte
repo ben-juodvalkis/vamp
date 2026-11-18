@@ -78,7 +78,9 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import PaletteChip from './chain/PaletteChip.svelte';
-  import { fitBlocks, paletteBlocks, paletteColumns, paletteExtras, paletteLabel, type PaletteKind } from '$lib/services/effectPalette';
+  import { addEffectToChain, type ChainEffect } from '$lib/services/chainEffects.svelte';
+  import { drag as dragGesture } from '$lib/actions/drag';
+  import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel, paletteTail, type PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
@@ -771,9 +773,6 @@
    * `PALETTE_TILE_MIN` wide (whole blocks, dropped from the end).
    */
   const PALETTE_TILE_MIN = 60;
-  const PALETTE_GAP = 6;
-  /** The seam between two family blocks, a column of its own. */
-  const PALETTE_SEAM = 4;
   let paletteWidth = $state(0);
   const paletteKind = $derived<PaletteKind>(
     padScope || cells.some((c) => c.kind === 'instrument' && c.device.className === 'DrumGroupDevice')
@@ -783,40 +782,59 @@
         : 'instrument'
   );
   /*
-   * The + opens the bar (ADR-548): closed, its first row alone, the chain
-   * under it taking the rest; open, the second row and a third (the rest of
-   * the + menu, `paletteExtras`) under it, the chain shorter, and an
-   * All effects tile where the + used to open the browser. It stays open
-   * across picks and tracks until the + (now an x) closes it.
+   * The bar is one row (ADR-548): its first row of chips and the Gain chip,
+   * the chain under it taking the rest. A finger on a chip opens it to
+   * three rows for as long as it is down: slide to any chip and let go to
+   * load it, and the bar closes again. There is no + or chevron; the bar
+   * has no way to the browser (Ben, 2026-11-18). A tap loads the chip it lands on; a release off the
+   * chips loads nothing. It opens on a short hold (a quick tap only loads)
+   * or at once on a slide; 300ms felt laggy (Ben, 2026-11-18). One gesture
+   * on the whole bar, so the chips take no press of their own and the
+   * finger can cross them.
    */
-  let paletteOpen = $state(false);
-  function togglePalette() {
-    swallowNextClick();
-    paletteOpen = !paletteOpen;
+  const PEEK_HOLD_MS = 120;
+  let palettePeek = $state(false);
+  let hotChip = $state<string | null>(null);
+  let chipGesture = false;
+  const barOpen = $derived(palettePeek);
+  const chipById = $derived.by(() => {
+    const map = new Map<string, ChainEffect>();
+    for (const { block, start } of placed.blocks) {
+      block.rows.forEach((row, r) => row.forEach((fx, i) => fx && map.set(`${r + 1}:${start + i}`, fx)));
+    }
+    for (const { fx, row } of placed.tailChips) if (fx) map.set(`${row}:${placed.tail}`, fx);
+    return map;
+  });
+  function chipAt(x: number, y: number): string | null {
+    const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-chip-id]');
+    return el?.dataset.chipId ?? null;
+  }
+  function loadChip(id: string | null) {
+    const fx = id ? chipById.get(id) : undefined;
+    if (fx) void addEffectToChain(fx);
+  }
+  function endChipGesture(load: boolean) {
+    if (chipGesture && load) loadChip(hotChip);
+    chipGesture = false;
+    palettePeek = false;
+    hotChip = null;
   }
   /** The blocks that fit, each placed: its first column, after the seams before it. */
   const placed = $derived.by(() => {
     const all = paletteBlocks(paletteKind);
-    const room = paletteColumns(paletteWidth - all.length * (PALETTE_SEAM + PALETTE_GAP), PALETTE_TILE_MIN, PALETTE_GAP);
-    // Gain and the + close the bar side by side (the + last), after a seam
-    // of their own, each a chip's width.
-    const blocks = paletteWidth > 0 ? fitBlocks(all, room - 2) : all;
+    const room = paletteColumns(paletteWidth, PALETTE_TILE_MIN, 0);
+    // The Gain chip closes the bar, a chip's width, two more under it.
+    const blocks = paletteWidth > 0 ? fitBlocks(all, room - 1) : all;
+    // One grid, no seams between the families: their washes divide them.
     let col = 1;
-    const chipCols: number[] = [];
     const out = blocks.map((block) => {
       const start = col;
-      for (let i = 0; i < block.cols; i++) chipCols.push(start + i);
-      col += block.cols + 1; // its columns, then a seam
+      col += block.cols;
       return { block, start };
     });
-    const template = [...blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`), `minmax(0, 1fr) ${PALETTE_GAP}px minmax(0, 1fr)`].join(` ${PALETTE_SEAM}px `);
-    // The third row runs along the chip columns and on under Gain and the +,
-    // as many as fit.
-    const rowCols = [...chipCols, col, col + 2];
-    const extras = paletteExtras(paletteKind)
-      .slice(0, rowCols.length)
-      .map((extra, i) => ({ ...extra, col: rowCols[i] }));
-    return { blocks: out, template, tail: col, extras };
+    const template = `repeat(${col}, minmax(0, 1fr))`;
+    const tailChips = paletteTail().map((chip, i) => ({ ...chip, row: i + 2 }));
+    return { blocks: out, template, tail: col, tailChips };
   });
   /** A chip's ink: its device's family colour, as the cell it would become wears it. */
   /* A chip's faint wash is its palette block's family colour (ADR-547):
@@ -1033,19 +1051,6 @@
     return deviceTypeLabel(cell.device.className, cell.device.name);
   }
 
-  /**
-   * + Effect: the browser on its Effect segment. Under a pad scope the pad
-   * is latched first (user, 2026-10-26): the browser covers the Drum Rack
-   * view, a held pad's tile unmounts and its hold ends, and the pick must
-   * still land in the pad the chain was showing.
-   */
-  function addEffect() {
-    swallowNextClick();
-    chainAddTarget.clear();
-    if (padScope) drumPadScope.latch(padScope.rackPath, padScope.note);
-    browserModeStore.openEffectsBrowser();
-  }
-
   /** The chain's own +: the browser on Effect, its picks into that chain (ADR-529). */
   function addToChain(chainPath: string) {
     swallowNextClick();
@@ -1235,7 +1240,7 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" class:palette-open={paletteOpen} class:two-rows={grid.rows > 1} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" class:palette-open={barOpen} class:two-rows={grid.rows > 1} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
 <!-- The palette bar: family blocks, a seam between them. Every chip in a
      fixed place; the + at its end opens the second and third rows, Gain
      beside it. -->
@@ -1245,50 +1250,50 @@
   style:grid-template-columns={placed.template}
   data-debug="chain-palette"
   data-palette-kind={paletteKind}
-  data-palette-open={paletteOpen}
+  data-palette-open={barOpen}
   role="group"
   aria-label="Effects to add"
+  use:dragGesture={{
+    commit: 'either',
+    holdMs: PEEK_HOLD_MS,
+    onDown: ({ downX, downY }) => {
+      hotChip = chipAt(downX, downY);
+      chipGesture = hotChip !== null;
+    },
+    onHold: () => {
+      if (chipGesture) palettePeek = true;
+    },
+    onStart: () => {
+      if (chipGesture) palettePeek = true;
+    },
+    onMove: ({ x, y }) => {
+      if (chipGesture) hotChip = chipAt(x, y);
+    },
+    onTap: () => endChipGesture(true),
+    onEnd: ({ reason }) => endChipGesture(reason === 'up'),
+    onPressEnd: ({ mode, event }) => {
+      // A hold let go without moving: the release is here, not in onEnd.
+      if (mode === 'undecided' && palettePeek && event?.type === 'pointerup') endChipGesture(true);
+      else if (mode === 'undecided' && event?.type === 'pointercancel') endChipGesture(false);
+    }
+  }}
 >
   {#each placed.blocks as { block, start } (block.family)}
-    {#each paletteOpen ? [block.top, block.bottom] : [block.top] as row, r (r)}
+    {#each barOpen ? block.rows : block.rows.slice(0, 1) as row, r (r)}
       {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
-        <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family}>
-          {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(block.family)} />{/if}
+        <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family} data-chip-id={fx ? `${r + 1}:${start + i}` : undefined}>
+          {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(block.family)} passive hot={hotChip === `${r + 1}:${start + i}`} />{/if}
         </div>
       {/each}
     {/each}
   {/each}
-  {#if paletteOpen}
-    {#each placed.extras as { family, fx, col } (col)}
-      <div class="palette-slot" class:blank={!fx} style:grid-column={col} style:grid-row="3" data-family={family} data-debug="chain-extra">
-        {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(family)} />{/if}
+  {#if barOpen}
+    {#each placed.tailChips as { family, fx, row } (row)}
+      <div class="palette-slot" class:blank={!fx} style:grid-column={placed.tail} style:grid-row={row} data-family={family} data-chip-id={fx ? `${row}:${placed.tail}` : undefined}>
+        {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(family)} passive hot={hotChip === `${row}:${placed.tail}`} />{/if}
       </div>
     {/each}
-    <div class="palette-slot" style:grid-column="{placed.tail} / span 3" style:grid-row="2">
-      <button
-        type="button"
-        class="chain-add palette-browse"
-        aria-label="All effects"
-        data-debug="chain-browse"
-        use:press={{ onPress: addEffect, touchAction: 'none' }}
-      >
-        <span>All effects</span>
-      </button>
-    </div>
   {/if}
-  <div class="palette-slot" style:grid-column={placed.tail + 2} style:grid-row="1">
-    <button
-      type="button"
-      class="chain-add palette-add"
-      class:open={paletteOpen}
-      aria-label={paletteOpen ? 'Fewer effects' : 'More effects'}
-      aria-expanded={paletteOpen}
-      data-debug="chain-add"
-      use:press={{ onPress: togglePalette, touchAction: 'none' }}
-    >
-      <span class="chain-add-plus" aria-hidden="true"><ChevronDown /></span>
-    </button>
-  </div>
   {#if UTILITY_TILE}
     <div class="palette-slot palette-gain" style:grid-column={placed.tail} style:grid-row="1" data-debug="chain-gain-chip">
       <UTILITY_TILE.Tile position={UTILITY_TILE.position} device={utilityDevice} chip />
@@ -1518,17 +1523,6 @@
     aspect-ratio: 1;
     stroke-width: 1.5;
   }
-  /* The bar's + is a chip's height: its plus sized to the chip. */
-  /* Open, the chevron is lit: on has no hue (ADR-544). */
-  .palette-add.open {
-    border-style: solid;
-    border-color: var(--on-bg);
-    background: var(--on-bg);
-    color: var(--on-fg);
-  }
-  .palette-add .chain-add-plus :global(svg) {
-    height: min(70%, 32px);
-  }
   /* The Gain chip: the Utility's slider lying flat, filling its slot. */
   .palette-gain {
     display: flex;
@@ -1562,6 +1556,9 @@
   /* The palette bar: the MIDI chips, a seam, the audio chips and +, one
      row of chips of one size, each placed by its slot. */
   /* The bar runs to the right edge, its + and Gain chips last. */
+  /* One grid with no gaps (ADR-548, the experiment): a finger sliding
+     across it never falls between two chips. Each chip draws half a
+     hairline on its own edges, so two together make one line. */
   .palette {
     grid-column: 1 / -1;
     grid-row: 1;
@@ -1569,10 +1566,25 @@
     min-height: 0;
     display: grid;
     grid-template-rows: minmax(0, 1fr);
-    /* The section's row gap, so an open bar's rows sit on its sixths. */
-    row-gap: var(--spacing-xs);
-    column-gap: 6px;
+    gap: 0;
+    border-radius: var(--ghost-radius);
+    overflow: hidden;
   }
+  .palette :global(.palette-chip) {
+    border: 0;
+    border-radius: 0;
+    box-shadow: inset 0 0 0 0.5px var(--line);
+  }
+  .palette .palette-slot.blank {
+    border: 0;
+    border-radius: 0;
+    box-shadow: inset 0 0 0 0.5px var(--line);
+  }
+  .palette-gain > :global(*) {
+    border-radius: 0;
+  }
+  /* Three rows and the two gaps they replace, so the bar still ends on
+     the section's third sixth. */
   .chain-wrap.palette-open .palette {
     grid-row: 1 / span 3;
     grid-template-rows: repeat(3, minmax(0, 1fr));
@@ -1585,13 +1597,6 @@
   }
   :global([data-phone-layout]) .chain-wrap.palette-open .chain {
     grid-row: 2 / span 2;
-  }
-  /* All effects: the browser, for anything the bar does not hold. */
-  .palette-browse {
-    font: inherit;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--muted-foreground);
   }
   .palette-slot {
     min-width: 0;
