@@ -181,7 +181,9 @@ Rules the rollout added or settled:
   range of whole numbers is not a sign of it (a gain of +-15 dB is
   continuous). A transpose says `discrete`; a panel's data marks a knob
   Live counts in semitones `whole`.
-- **A box's label is always at its head**, a column, however wide the box.
+- ~~**A box's label is always at its head**~~. Reversed the same day (Ben):
+  a box's mark and name are a column **centred in the box**, however wide
+  it is.
 - **Beside a knob, its name starts at one x**, so knobs stacked in a column
   line up whatever their names' lengths. A knob with a value under its name
   sits level with one without.

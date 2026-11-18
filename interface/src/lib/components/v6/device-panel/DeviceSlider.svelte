@@ -818,16 +818,16 @@
     opacity: 0.8;
     white-space: nowrap;
   }
-  /* A value box in a central view (ADR-477): its mark, name and value at
-     its head, at a knob caption's size, the fill under them. A chain
-     cell's slider keeps its centred, cell-sized name. */
+  /* A value box in a central view (ADR-477): its mark over its name and
+     value, centred in the box (Ben, 2026-11-17; at its head until then),
+     at a knob caption's size, the fill rising behind them. */
   :global([data-skin="hybrid"]) .slider-label.in-value-box {
-    /* Always a column at the head, centred, however wide the box: the
-       wide-box row put it at the left edge at mid-height. */
+    /* Always a column, centred both ways, however wide the box: the
+       wide-box row put it at the left edge. */
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    padding-top: 10px;
+    justify-content: center;
+    padding-top: 0;
     gap: 6px;
   }
   :global([data-skin="hybrid"]) .slider-container .slider-label.in-value-box.label-small .slider-label-text,
