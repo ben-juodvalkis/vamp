@@ -47,6 +47,7 @@ export type DeviceGlyph =
 	| 'drive'
 	| 'movement'
 	| 'gain'
+	| 'macros'
 	| 'device';
 
 /**
@@ -117,7 +118,8 @@ export const INSTRUMENT_GLYPHS: Readonly<Partial<Record<InstrumentType, DeviceGl
 	// The pattern rack plays shaker and tambourine loops, and draws this mark
 	// in place of a knob (user, 2026-09-17) — see useTrackDevice's mode rule.
 	'instrument-rack-pattern': 'shaker',
-	'instrument-rack': 'device',
+	// Its macro panel: two rows of four knobs (Ben, 2026-11-17).
+	'instrument-rack': 'macros',
 	sampler: 'sampler',
 	simpler: 'simpler',
 	omnisphere: 'orb',

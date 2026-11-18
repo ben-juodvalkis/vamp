@@ -39,6 +39,7 @@
 		HAND_DRUM,
 		HARP,
 		KEYBOARD,
+		MACROS,
 		MELD,
 		OPERATOR,
 		ORB,
@@ -105,6 +106,7 @@
 		drive: Zap,
 		movement: Music,
 		gain: SlidersHorizontal,
+		macros: MACROS,
 		device: Music
 	} as const satisfies Record<DeviceGlyph, unknown>;
 

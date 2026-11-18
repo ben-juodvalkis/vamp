@@ -259,7 +259,7 @@ describe('trackDeviceGlance', () => {
 		['Analog', 'UltraAnalog', 'square'],
 		['Komplete Kontrol', 'AuPluginDevice', 'plug'],
 		['Serum', 'AuPluginDevice', 'plug'],
-		['Stack', 'InstrumentGroupDevice', 'device'],
+		['Stack', 'InstrumentGroupDevice', 'macros'],
 		['Kit', 'DrumGroupDevice', 'drum']
 	])('draws %s (%s) as its own mark, the %s', (name, className, glyph) => {
 		replaceTree(1, [track('tracks/2', 'midi', [device('tracks/2/devices/0', name, className)])]);

@@ -295,3 +295,27 @@ export const TINE: IconNode = [['path', { d: 'M8 2.5V11q0 4.5 4 4.5t4-4.5V2.5M12
 
 /** Analog: a square wave. */
 export const SQUARE: IconNode = [['path', { d: 'M2 15.5H5.5V8.5H11V15.5H16.5V8.5H22' }]];
+
+/**
+ * An Instrument Rack: its macro panel, an outline round two rows of four
+ * knobs, each pointer at its own angle (Ben, 2026-11-17; the generic note until then).
+ */
+export const MACROS: IconNode = [
+	['rect', { x: '1.5', y: '4', width: '21', height: '16', rx: '2' }],
+	['circle', { cx: '4.75', cy: '8.5', r: '2' }],
+	['path', { d: 'M4.75 8.5L3.34 7.09' }],
+	['circle', { cx: '9.58', cy: '8.5', r: '2' }],
+	['path', { d: 'M9.58 8.5L10.58 6.77' }],
+	['circle', { cx: '14.42', cy: '8.5', r: '2' }],
+	['path', { d: 'M14.42 8.5L14.07 6.53' }],
+	['circle', { cx: '19.25', cy: '8.5', r: '2' }],
+	['path', { d: 'M19.25 8.5L21.13 7.82' }],
+	['circle', { cx: '4.75', cy: '15.5', r: '2' }],
+	['path', { d: 'M4.75 15.5L3.02 14.50' }],
+	['circle', { cx: '9.58', cy: '15.5', r: '2' }],
+	['path', { d: 'M9.58 15.5L10.99 14.09' }],
+	['circle', { cx: '14.42', cy: '15.5', r: '2' }],
+	['path', { d: 'M14.42 15.5L14.77 13.53' }],
+	['circle', { cx: '19.25', cy: '15.5', r: '2' }],
+	['path', { d: 'M19.25 15.5L18.25 13.77' }]
+];
