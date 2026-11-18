@@ -7,10 +7,9 @@
    * both), on the face grid since ADR-510, eight equal columns: Global
    * (Trnsp, the played amount, a box; Gain over Spread, set and left, two
    * knobs of one size with their names beside them) under the swap pill ·
-   * Osc over Pitch · the amp envelope, its picture over a knob for each
-   * stage, one under each of the picture's four slots (ADR-544: at the
-   * size of the view's other knobs, where the graph's own were 48px), the
-   * picture and the knobs level with the two pads. The Filter pad (cutoff across, resonance
+   * Osc over Pitch · the amp envelope as one Time pad, Ve Attack across
+   * and Ve Release up (ADR-546; its picture and four stages are on the
+   * full-screen board). The Filter pad (cutoff across, resonance
    * up) is the chain cell's (`sampler` in deviceControls), drawn above
    * this view, so the view no longer draws it too (user, 2026-11-06); a
    * Sampler KIT in the Drum Rack keeps it, where no chain cell carries a
@@ -164,15 +163,9 @@
 
   const GAIN = 'Volume';
 
-  // The amp envelope by Live's names: the graph's breakpoints and the four
-  // stage knobs under it.
+  // The amp envelope by Live's names: the compact face's Time pad reads
+  // Attack and Release (ADR-546); the board's graph reads them all.
   const AMP_ENVELOPE = { attack: 'Ve Attack', decay: 'Ve Decay', sustain: 'Ve Sustain', release: 'Ve Release', initial: 'Ve Init', peak: 'Ve Peak' } as const;
-  const AMP_STAGES = [
-    ['attack', 'Attack'],
-    ['decay', 'Decay'],
-    ['sustain', 'Sustain'],
-    ['release', 'Release']
-  ] as const;
   let gainState = $derived(stateAt(GAIN));
 
   // The full-screen board (ADR-521): the filter's pad and curve.
@@ -203,34 +196,23 @@
 {/snippet}
 
 {#snippet ampEnvelope()}
-  <!-- The picture across the section, and under each of its four slots
-       that stage's knob at the size of the view's other knobs (ADR-544):
-       the same parameters by name, written as the graph's own small knobs
-       wrote them. -->
-  <div class="amp-graph">
-    <EnvelopeGraph {params} ink={samplerInk.primary} names={AMP_ENVELOPE} knobs={false} />
+  <!-- The amp envelope as one Time pad (ADR-546): Ve Attack across, Ve
+       Release up, over each parameter's own range. Its picture and all
+       four stages are on the full-screen board. -->
+  <div class="amp-pad" data-time-pad data-envelope="Amp">
+    <DeviceXY
+      xValue={params.unit(AMP_ENVELOPE.attack) ?? 0}
+      yValue={params.unit(AMP_ENVELOPE.release) ?? 0.5}
+      title="Amp"
+      icon="envelope"
+      color={samplerInk}
+      isGhost={!params.has(AMP_ENVELOPE.attack)}
+      onInteraction={(x, y) => {
+        params.writeUnit(AMP_ENVELOPE.attack, x);
+        params.writeUnit(AMP_ENVELOPE.release, y);
+      }}
+    />
   </div>
-  {#each AMP_STAGES as [key, title] (key)}
-    {@const name = AMP_ENVELOPE[key]}
-    {@const range = params.range(name)}
-    <div class="amp-knob" data-param={name}>
-      <DeviceSlider
-        value={params.raw(name) ?? range?.min ?? 0}
-        {title}
-        icon={key}
-        face="knob"
-        knobSize="m"
-        knobFit
-        min={range?.min ?? 0}
-        max={range?.max ?? 1}
-        orientation="vertical"
-        isGhost={!params.has(name)}
-        color={samplerInk}
-        readout={params.display(name)}
-        onInteraction={(v) => params.write(name, v)}
-      />
-    </div>
-  {/each}
 {/snippet}
 
 <!-- The full-screen board's slots (ADR-521). -->
@@ -272,7 +254,7 @@
   {:else if instrument && device}
     <!-- The face (ADR-510): the Sampler kit's sections, less the pads,
          on one grid of equal columns — Global [Gain/Trnsp | Spread] under
-         the swap pill · Pitch / Osc · Amp Envelope A D S R, eight
+         the swap pill · Pitch / Osc · the Amp Envelope's Time pad, eight
          columns (the Filter pad is the chain cell's). The face owns the inset (--central-inset); the row
          carries none of its own. The wheels left for the MidiWheels
          device's chain cell (user, 2026-10-26). -->
@@ -294,20 +276,12 @@
 </div>
 
 <style>
-  /* The amp envelope's two rows (the row's `.envelope-host`): the picture
-     across the section's columns, a knob under each of its four slots. */
-  .amp-graph {
+  /* The amp envelope's Time pad: the whole of the row's `.envelope-host`,
+     both its rows and every column of the section. */
+  .amp-pad {
     grid-column: 1 / -1;
+    grid-row: 1 / -1;
     min-width: 0;
     min-height: 0;
-  }
-  .amp-knob {
-    display: flex;
-    min-width: 0;
-    min-height: 0;
-  }
-  .amp-knob > :global(*) {
-    flex: 1 1 0;
-    min-width: 0;
   }
 </style>

@@ -35,6 +35,10 @@ an expanded view to put them in.
   - Operator: each oscillator tab's envelope (A × R), the LFO's and the
     pitch envelope's (A × D), drawn by a panel group's new `time` field
     (`PanelGroup.time`), which only the frame reads.
+  - Sampler (the single instrument, 2026-11-18): Amp (Ve Attack × Ve
+    Release), the whole Amp Envelope section, where its picture stood over
+    four stage knobs. A Sampler KIT's row on the Drum Rack view keeps its
+    A and R boxes: that view has no full-screen board to hold the rest.
   - Omnisphere: Amp (A × R) and Filter Env (A × D) as a third column of
     pads beside its four macros, FX level with Amp and Env Amt level with
     the Filter envelope it scales.

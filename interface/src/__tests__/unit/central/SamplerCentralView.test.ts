@@ -138,10 +138,10 @@ describe('SamplerCentralView — the Sampler row by name', () => {
 	it('reads each control through its parameter range, by name', async () => {
 		const { container } = render(SamplerCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		// The amp envelope is four sliders in its own card since 2026-09-12,
-		// labelled one letter each; A and R carry what the Time pad's axes did.
-		// The amp envelope is a graph of the Ve stages (ADR-514), its sustain read on the slider.
-		expect(container.querySelector('[data-envelope-graph="Ve Attack"] [role="slider"]')!.getAttribute('aria-valuenow')).toBe('100');
+		// The amp envelope is one Time pad on the compact face (ADR-546):
+		// Ve Attack 0.2 across, Ve Release 0.345 up.
+		expect(slider(container, 'Amp').getAttribute('aria-label')).toMatch(/^Amp: X 20%, Y 3[45]%$/);
+		expect(container.querySelector('[data-envelope-graph]')).toBeNull(); // the picture is the board's
 		expect(slider(container, 'Pitch').getAttribute('aria-label')).toBe('Pitch: X 0%, Y 75%'); // Pe Attack 0 across, +24 st on ±48 up
 		expect(slider(container, 'Spread').getAttribute('aria-valuenow')).toBe('0.25'); // 25 of 100
 		expect(container.querySelector('[data-vm-function="selector"]')).toBeNull(); // a kit's control only
@@ -178,15 +178,15 @@ describe('SamplerCentralView — the Sampler row by name', () => {
 		expect(container.querySelectorAll('.vm-slot.vm-none')).toHaveLength(0);
 	});
 
-	it('the envelope graph writes Ve Attack at its own index, not 59', async () => {
+	it('the Amp Time pad writes Ve Attack and Ve Release at their own indices, not 59 / 66', async () => {
 		const { container } = render(SamplerCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		// jsdom lays nothing out: every square is at one point, and Attack's
-		// (the first listed) is the nearest to any finger.
-		drag(container.querySelector<HTMLElement>('[data-envelope-graph="Ve Attack"] svg')!, [50, 100], [60, 100]);
+		drag(slider(container, 'Amp'), [50, 100], [70, 60]);
 		const paths = paramSets().map((a) => a[0]);
 		expect(paths).toContain(`${DEVICE}/params/${INDEX['Ve Attack']}`);
+		expect(paths).toContain(`${DEVICE}/params/${INDEX['Ve Release']}`);
 		expect(paths).not.toContain(`${DEVICE}/params/59`);
+		expect(paths).not.toContain(`${DEVICE}/params/66`);
 		for (const a of paramSets()) {
 			expect(a[1] as number).toBeGreaterThanOrEqual(0);
 			expect(a[1] as number).toBeLessThanOrEqual(1);
