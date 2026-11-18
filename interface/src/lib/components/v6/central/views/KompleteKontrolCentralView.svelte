@@ -23,12 +23,11 @@
   let { instrument }: Props = $props();
 
   // Track reactive state
-  let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
 
   // PR-4a-6a6: path-keyed device lookup (v3 tree, chain-order indexed).
   // Returns `undefined` on cold start — same "show ghost" posture as
   // the v2 .find() it replaces.
-  let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  let device = $derived(selectedTrackStore.instrumentDevice(instrument));
 
   // One ink (ADR-544): the selected track's.
   let kompleteKontrolInk = $derived(selectedAmountScheme());

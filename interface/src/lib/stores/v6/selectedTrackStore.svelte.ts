@@ -377,6 +377,18 @@ class SelectedTrackStore {
 		return v3Store.deviceByPath.get(devicePath);
 	}
 
+	/**
+	 * The device an instrument view draws: one on a rack's chain by its
+	 * path (a Sampler inside an Instrument Rack gets its own view, as the
+	 * track's head instrument does), else the track's device at its index.
+	 * Typed as the index read was (the views guard on it being there).
+	 */
+	instrumentDevice(instrument: { deviceIndex?: number; devicePath?: string } | null | undefined): DeviceRecord {
+		const path = instrument?.devicePath;
+		if (path && path.includes('/chains/')) return this.deviceAt(path) as DeviceRecord;
+		return this.devicesByPath[instrument?.deviceIndex ?? 0];
+	}
+
 	/** The devices on a rack's chains (ADR-529), from its `rack-chain`
 	 *  bundle; `[]` until the rack's `chain_devices` row has been read. */
 	chainDevices(rackPath: string): DeviceRecord[] {

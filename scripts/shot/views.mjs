@@ -559,6 +559,34 @@ export const TOURS = {
 				...(devices ? { scenePatch: (scene) => setTrackDevices(scene, track, devices) } : {}),
 				steps: [openInstrument(track)]
 			})),
+			// An instrument on a rack's chain, tapped: its own instrument view,
+			// as it gets when it is the track's instrument (2026-11-17).
+			{
+				name: 'chain-rack-instrument-view',
+				description: 'A Sampler inside an Instrument Rack, unfolded and tapped: the Sampler view, on that Sampler',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
+						{
+							name: 'Keys Rack',
+							className: 'InstrumentGroupDevice',
+							params: [['Device On', 'Device On', 0, 1, 1, '']],
+							chains: [{ name: 'Sampler', devices: [{ name: 'Sampler', className: 'MultiSampler', params: [
+								['Device On', 0, 1, 1], ['Osc On', 0, 1, 0], ['Spread', 0, 100, 0], ['Transpose', -48, 48, 0],
+								['Pe On', 0, 1, 0], ['Volume', -36, 36, -12], ['Ve Attack', 0, 1, 0], ['Ve Decay', 0, 1, 0.581],
+								['Ve Sustain', 0, 1, 1], ['Ve Release', 0, 1, 0.356], ['F On', 0, 1, 1], ['Filter Freq', 0, 1, 1],
+								['Filter Res', 0, 1.25, 0.091]
+							].map(([n, min, max, v]) => [n, n, min, max, v, '']) }] }]
+						},
+						'Echo'
+					]),
+				steps: [
+					openInstrument(CHAIN_DEMO_TRACK),
+					{ click: `${chainCell(0)} .cell-fold` },
+					{ wait: 400 },
+					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .mark, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/0/chains/0/devices/0"] .cell-face` },
+					{ wait: 500 }
+				]
+			},
 			// Grain Delay's XY on its cell: Pitch across (+7 st), Feedback up.
 			{
 				name: 'chain-grain-delay',

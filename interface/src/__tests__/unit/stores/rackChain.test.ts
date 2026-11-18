@@ -127,3 +127,14 @@ describe('the chain_devices row and folding', () => {
 		expect(rackFold.chainOf(RACK)).toBe(0);
 	});
 });
+
+describe('an instrument on a rack chain gets its own instrument view', () => {
+	it('instrumentDevice finds a chain device by its path, a top-level one by its index', async () => {
+		const { selectedTrackStore } = await import('$lib/stores/v6/selectedTrackStore.svelte');
+		const SAMPLER = `${RACK}/chains/0/devices/0`;
+		replaceTree(3, [track('InstrumentGroupDevice')]);
+		mergeRackChain(4, RACK, new Map([[SAMPLER, device(SAMPLER, 'Sampler', 'MultiSampler')]]));
+		expect(selectedTrackStore.instrumentDevice({ deviceIndex: 0, devicePath: SAMPLER })?.className).toBe('MultiSampler');
+		expect(selectedTrackStore.instrumentDevice({ deviceIndex: 0, devicePath: SAMPLER })?.devicePath).toBe(SAMPLER);
+	});
+});

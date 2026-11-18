@@ -28,8 +28,7 @@
 
   let { instrument }: Props = $props();
 
-  let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
-  let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  let device = $derived(selectedTrackStore.instrumentDevice(instrument));
   let devicePath = $derived(device?.devicePath);
 
   /** The pages behind the face's eyebrows, every parameter by Live's name (ADR-487). */

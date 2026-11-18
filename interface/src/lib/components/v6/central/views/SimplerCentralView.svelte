@@ -83,12 +83,11 @@
   let { instrument }: Props = $props();
 
   // Track reactive state
-  let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
 
   // PR-4a-6a1: path-keyed device lookup (v3 tree, chain-order indexed).
   // Returns `undefined` on cold start — same "show ghost" posture as
   // the v2 .find() it replaces.
-  let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  let device = $derived(selectedTrackStore.instrumentDevice(instrument));
 
   // Random Start, the M4L utility behind the Random slider
   // (`constants.devices.randomStart`). Not on a track until the slider first

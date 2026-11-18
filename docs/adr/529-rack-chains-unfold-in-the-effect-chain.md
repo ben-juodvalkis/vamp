@@ -121,3 +121,14 @@ Live.
   instrument inside an Instrument Rack opens the generic view, not its
   instrument page, and a nested Instrument or MIDI Effect Rack opens the
   generic view (the rack view reads Audio Effect Racks).
+
+## Addendum (2026-11-17): an instrument inside a rack opens its own view
+
+A tap on an instrument on a rack's chain (a Sampler, Operator, Drift, ...
+inside an Instrument Rack) opens that instrument's own central view, the one
+it gets as the track's instrument, on that device: the views find their
+device by its path when it is on a chain (`selectedTrackStore.instrumentDevice`).
+Until then it opened the generic view. The swap pill is left off there: it
+steps the track's own instrument and would replace the whole rack. Effects
+inside a rack already opened their own views.
+

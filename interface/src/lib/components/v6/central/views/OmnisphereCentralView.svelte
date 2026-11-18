@@ -35,12 +35,11 @@
 
   // Track reactive state
   let trackIndex = $derived(session.selectedTrackIndex);
-  let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
 
   // PR-3.5.2a: path-keyed device lookup (v3 tree, chain-order indexed).
   // Returns `undefined` on cold start — same "show ghost" posture as
   // the v2 .find() it replaces.
-  let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  let device = $derived(selectedTrackStore.instrumentDevice(instrument));
 
   // One ink (ADR-544): the selected track's, for every pad, stage and box.
   let omniInk = $derived(selectedAmountScheme());

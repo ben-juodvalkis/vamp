@@ -25,8 +25,7 @@
 
   let { instrument }: Props = $props();
 
-  let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
-  let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  let device = $derived(selectedTrackStore.instrumentDevice(instrument));
 
   // Every amount is the selected track's ink (ADR-544): the view has no
   // colour of its own.

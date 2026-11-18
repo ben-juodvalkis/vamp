@@ -39,8 +39,7 @@
 
   let { instrument }: Props = $props();
 
-  let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
-  let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  let device = $derived(selectedTrackStore.instrumentDevice(instrument));
 
   /**
    * One ink, the selected track's (ADR-544): every arc, fill and curve.

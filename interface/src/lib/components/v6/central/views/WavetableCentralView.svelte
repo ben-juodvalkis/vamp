@@ -82,12 +82,11 @@
   let { instrument }: Props = $props();
 
   // Track reactive state
-  let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
 
   // PR-3.5.2a: path-keyed device lookup (v3 tree, chain-order indexed).
   // Returns `undefined` on cold start — same "show ghost" posture as
   // the v2 .find() it replaces.
-  let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  let device = $derived(selectedTrackStore.instrumentDevice(instrument));
 
   // ===== Parameter map (measured — see the module comment) =====
   // Each oscillator's eight, read off the running device 2026-10-22: Osc 2

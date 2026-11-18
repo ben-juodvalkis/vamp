@@ -121,7 +121,12 @@ import { logger } from '$lib/utils/logger';
 	// finger travel at least, its label upright (ADR-477).
 	provideValueBoxes();
 
-	const swap = useInstrumentSwap(() => viewType === 'instrument');
+	// An instrument on a rack's chain has its view but not the pill: the pill
+	// steps the track's own instrument, which would replace the whole rack.
+	const insideRack = $derived(
+		viewType === 'instrument' && (view.data?.instrument?.devicePath ?? '').includes('/chains/')
+	);
+	const swap = useInstrumentSwap(() => viewType === 'instrument' && !insideRack);
 	const clipSwap = useClipSwap(() => viewType === 'clip');
 	let pill = $derived(swap.model ? swap : clipSwap.model ? clipSwap : null);
 	const swapHost = provideSwapHost(() =>

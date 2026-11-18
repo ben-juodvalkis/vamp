@@ -66,12 +66,11 @@
 
   let { instrument }: Props = $props();
 
-  let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
 
   // PR-4a-6a1: path-keyed device lookup (v3 tree, chain-order indexed).
   // Returns `undefined` on cold start — same "show ghost" posture as
   // the v2 .find() it replaces.
-  let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  let device = $derived(selectedTrackStore.instrumentDevice(instrument));
   /** The device's parameters by name, for the amp envelope's graph (ADR-514). */
   const params = usePanelParams(() => device);
 

@@ -109,6 +109,8 @@
   import { onDestroy, tick, untrack } from 'svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
+  import { instrumentService } from '$lib/services/instrumentService';
+  import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
   import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
   import { DEVICE_PRESETS, DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
   import ControlGlyph from './ControlGlyph.svelte';
@@ -1027,6 +1029,23 @@
       fxChainStore.appoint(device.devicePath, { force: true });
       if (glance.instrumentViewType) {
         centralDisplayStore.setView('instrument', glance.instrumentViewType, { instrument: glance.instrument });
+        return;
+      }
+    }
+    // An instrument on a rack's chain: its own instrument view, the one it
+    // would get as the track's instrument (Ben, 2026-11-17), on that device.
+    if (cell.inside && !padScope && instrumentService.isInstrumentClass(device.className)) {
+      const instrument = {
+        deviceIndex: 0,
+        className: device.className,
+        name: device.name,
+        type: 'instrument' as const,
+        devicePath: device.devicePath
+      };
+      const type = instrumentService.identifyInstrumentType(instrument);
+      if (isViewRegistered('instrument', type)) {
+        fxChainStore.appoint(device.devicePath, { force: true });
+        centralDisplayStore.setView('instrument', type, { instrument });
         return;
       }
     }
