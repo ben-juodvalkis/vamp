@@ -55,7 +55,7 @@ export const VIEWS = {
 		prefs: {}
 	},
 	'palette-open': {
-		description: 'The FX palette opened by its chevron: three rows of chips, the chain under them (ADR-548).',
+		description: 'The FX palette opened by its chevron: three rows of chips lying over the chain (ADR-548, ADR-549).',
 		prefs: {},
 		steps: [{ click: '[data-debug="chain-add"]' }]
 	},

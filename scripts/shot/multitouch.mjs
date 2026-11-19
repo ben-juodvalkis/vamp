@@ -88,6 +88,7 @@ import { startMockSurface, loadScene } from './mock-surface.mjs';
 import { buildDefaultScene } from './scene.mjs';
 import { Fingers } from './fingers.mjs';
 import { resolveView, DEFAULT_VIEWPORT } from './views.mjs';
+import { installCatalogFixtures } from './screenshot-page.mjs';
 import {
 	assertMockPort,
 	resolveMockPort,
@@ -559,6 +560,28 @@ const SCENARIOS = [
 			await wait(300);
 			const closed = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
 			expect(closed === 'false', 'a second chevron tap must close the bar');
+		}
+	},
+	{
+		name: 'palette-latched-chain-tap-closes',
+		view: 'default',
+		description: 'the latched palette lies over the chain, which keeps its place; a tap on the chain closes the bar and presses nothing',
+		async run({ page, fingers, sent, reset }) {
+			const before = await centreOf(page, '[data-debug="chain-overview"]');
+			const chev = await centreOf(page, '[data-debug="chain-add"]');
+			await fingers.tap(chev.x, chev.y);
+			await wait(300);
+			const open = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(open === 'true', 'the chevron must open the bar');
+			const during = await centreOf(page, '[data-debug="chain-overview"]');
+			expect(during.y === before.y && during.h === before.h, `the chain must not move under the open bar (${before.y}/${before.h} → ${during.y}/${during.h})`);
+			reset();
+			// The chain's lower half, clear of the bar.
+			await fingers.tap(before.x, before.y + before.h / 3);
+			await wait(300);
+			const closed = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(closed === 'false', 'a tap on the chain must close a latched bar');
+			expect(!sent().some((m) => m.address.startsWith('/looping/v3/device')), 'the tap must press nothing under it');
 		}
 	},
 
@@ -1622,6 +1645,9 @@ try {
 		// Before the page exists, so its very first socket is intercepted and
 		// no finger's write can reach a real bridge on :8081.
 		await mock.routePage(context);
+		// `--fixture-data`, as `shot` takes it: the fixtures' Places, so a
+		// fresh clone (a cloud container) is not held on the first-run page.
+		if (has('fixture-data')) await installCatalogFixtures(context, { force: true });
 		await context.addInitScript(
 			({ prefs }) => {
 				try {

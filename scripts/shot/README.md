@@ -625,6 +625,7 @@ what reached the mock surface.
 npm run multitouch                          # every scenario
 npm run multitouch -- --list                # what they are
 npm run multitouch -- --scenario two-mutes  # one of them (repeatable)
+npm run multitouch -- --fixture-data         # the fixtures' Places: a fresh clone skips the first-run page
 ```
 
 It exists because concurrency is exactly what a screenshot cannot

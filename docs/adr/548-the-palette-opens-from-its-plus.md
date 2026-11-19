@@ -1,7 +1,8 @@
 # ADR-548: The Palette Opens Under the Finger
 
 ## Status
-**Accepted** (2026-11-18). Amends ADR-535 (the palette is no longer
+**Accepted** (2026-11-18); the open bar's layout superseded by
+[ADR-549](549-the-open-palette-lies-over-the-chain.md) (2026-11-19). Amends ADR-535 (the palette is no longer
 always two rows; the section is in sixths, not thirds) and ADR-523 (the
 bar has no + and no way to the browser). Interface only; no Live restart.
 
@@ -63,7 +64,7 @@ he dragged them around on) and asked for the chevron to go.
 - Nothing opens the full browser from the bar; a device not on it is
   added from the browser rail.
 - A device added to the +Effect folder does not become a chip by itself.
-- `npm run multitouch -- --only palette` drives the gesture: a hold
+- `npm run multitouch -- --scenario palette-…` drives the gesture: a hold
   slides to a third-row chip and loads it, a hold let go in place loads
   that chip, a quick tap loads without opening, and a release over the
   chain loads nothing.

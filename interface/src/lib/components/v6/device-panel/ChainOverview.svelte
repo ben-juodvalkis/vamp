@@ -789,6 +789,9 @@
    * and closes it, lit while open; a finger on a chip opens it for as long
    * as it is down: slide to any chip and let go to load it, and the bar
    * closes again. The bar has no way to the browser (Ben, 2026-11-18).
+   * Open, held or latched, it lies over the chain, which never moves
+   * (ADR-549); latched, a touch on the rest of the chain closes it
+   * (`.palette-catch`) and presses nothing under it.
    */
   let paletteOpen = $state(false);
   function togglePalette() {
@@ -893,7 +896,7 @@
   // slides to its new place. Measured only when the order changes, and run
   // only for a reorder: the same cells in another order. A cell added or
   // removed (a chip's load, its ghost giving way to the device) or the
-  // chain resized under them (the palette opening or closing) snaps in one
+  // chain resized under them snaps in one
   // frame; sliding every cell from where the old layout had it read as the
   // chain jumping twice on every load (Ben, 2026-11-18).
   const orderKey = $derived(shown.map((c) => c.key).join('\n'));
@@ -1320,6 +1323,14 @@
     </button>
   </div>
 </div>
+{#if paletteOpen}
+  <div
+    class="palette-catch"
+    aria-hidden="true"
+    data-debug="chain-palette-catch"
+    use:press={{ onPress: togglePalette, touchAction: 'none', fireOn: 'down', stopPropagation: true }}
+  ></div>
+{/if}
 <div
   class="chain"
   style:--chain-cols={grid.cols}
@@ -1434,11 +1445,11 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     /* Sixths (ADR-548, after ADR-535's thirds): a row of chips is one,
-       half the rail's Record tile, as the two rows were. Closed, the
-       palette is the first and the chain the other five; open, the
-       palette the first three and the chain the last three. Same row gap
-       as the rail's buttons, so the open bar ends on the seam under
-       Record's neighbour. */
+       half the rail's Record tile, as the two rows were. The palette is
+       the first and the chain the other five; open, the palette covers
+       the first three, over the chain (ADR-549). Same row gap as the
+       rail's buttons, so the open bar ends on the seam under Record's
+       neighbour. */
     grid-template-rows: repeat(6, minmax(0, 1fr));
     row-gap: var(--spacing-xs);
     column-gap: 8px;
@@ -1449,9 +1460,6 @@
   :global([data-phone-layout]) .chain-wrap {
     grid-template-rows: 44px repeat(2, minmax(0, 1fr));
     row-gap: 8px;
-  }
-  :global([data-phone-layout]) .chain-wrap.palette-open {
-    grid-template-rows: 140px repeat(2, minmax(0, 1fr));
   }
   :global([data-phone-layout]) .chain-wrap .chain {
     grid-row: 2 / span 2;
@@ -1477,6 +1485,9 @@
      (FXGrid's .fx-scoped: drawn inside, since the section clips). */
   .chain {
     position: relative;
+    /* Its own stacking context, so nothing raised inside a cell (a pad's
+       dot) draws over the open palette lying on it (ADR-549). */
+    isolation: isolate;
   }
   .chain-scope-chip {
     --chip-ink: var(--scope-ink, var(--track-ink));
@@ -1615,17 +1626,31 @@
   }
   /* Three rows and the two gaps they replace, so the bar still ends on
      the section's third sixth. */
+  /* Open, the bar lies OVER the chain (ADR-549): the chain keeps its five
+     sixths and never moves, held or latched. The bar is opaque and casts
+     a shadow on the chain's cells under it. */
   .chain-wrap.palette-open .palette {
     grid-row: 1 / span 3;
     grid-template-rows: repeat(3, minmax(0, 1fr));
-  }
-  .chain-wrap.palette-open .chain {
-    grid-row: 4 / span 3;
+    position: relative;
+    z-index: 3;
+    background: var(--background);
+    box-shadow: 0 6px 16px -4px color-mix(in srgb, black 55%, transparent);
   }
   :global([data-phone-layout]) .chain-wrap.palette-open .palette {
     grid-row: 1;
+    align-self: start;
+    height: 140px;
   }
-  :global([data-phone-layout]) .chain-wrap.palette-open .chain {
+  /* A latched bar: the rest of the chain takes one tap, which closes the
+     bar and presses nothing under it. */
+  .palette-catch {
+    grid-column: 1;
+    grid-row: 2 / span 5;
+    position: relative;
+    z-index: 2;
+  }
+  :global([data-phone-layout]) .palette-catch {
     grid-row: 2 / span 2;
   }
   .palette-slot {
