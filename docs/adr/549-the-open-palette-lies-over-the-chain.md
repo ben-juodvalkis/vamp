@@ -19,6 +19,9 @@ the latch) was weighed and dropped as two paradigms for one bar (Ben).
   the cells under it. The chain keeps its five sixths and never moves.
   The chain is its own stacking context, so nothing raised in a cell
   draws over the bar.
+- **The chain dims under the open bar**, held or latched (opacity 0.6,
+  an 80ms fade; Ben, the same day): it is out of play, and the names at
+  the cells' feet still read.
 - **A latched bar closes on a touch on the chain** (`.palette-catch`,
   over the chain's uncovered part): the touch closes the bar and presses
   nothing under it. The chevron still closes it too.

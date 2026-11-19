@@ -1642,6 +1642,15 @@
     align-self: start;
     height: 140px;
   }
+  /* Under the open bar the chain dims, held or latched (Ben, 2026-11-19):
+     it is out of play, its names at the cells' feet still read. Quick,
+     since a hold opens the bar for under a second. */
+  .chain {
+    transition: opacity 80ms ease-out;
+  }
+  .chain-wrap.palette-open .chain {
+    opacity: 0.6;
+  }
   /* A latched bar: the rest of the chain takes one tap, which closes the
      bar and presses nothing under it. */
   .palette-catch {

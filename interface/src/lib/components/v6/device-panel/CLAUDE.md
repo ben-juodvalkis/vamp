@@ -78,7 +78,7 @@ latches the bar open to three rows (lit) and closes it; a finger on a
 chip opens it for as long as it is down (a 120ms hold, or at once on a
 slide), letting go on a chip loads it, and a quick tap loads without
 opening. Open, held or latched, the bar lies over the chain, which never
-moves; a tap on the rest of a latched bar's chain closes it and presses
+moves, dimmed; a tap on the rest of a latched bar's chain closes it and presses
 nothing (ADR-549). The bar has no way to the browser (the phone keeps a fixed bar,
 44px or 140px). A tap on a cell's header bar is Device On (no power button);
 a drag from it reorders.
