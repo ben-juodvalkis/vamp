@@ -58,6 +58,7 @@
   import Plus from '@lucide/svelte/icons/plus';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import ChainListFace from './chain/ChainListFace.svelte';
   import { CHAIN_DEVICES, SHOW_DEVICES, SELECTED_CHAIN, chainAddTarget, chainDevicePathOf, chainPathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
@@ -790,14 +791,32 @@
    * as it is down: slide to any chip and let go to load it, and the bar
    * closes again. The bar has no way to the browser (Ben, 2026-11-18).
    * Open, held or latched, it lies over the chain, which never moves
-   * (ADR-549); latched, a touch on the rest of the chain closes it
-   * (`.palette-catch`) and presses nothing under it.
+   * (ADR-549); latched, a touch anywhere outside it closes it, and on the
+   * chain (`.palette-catch`) presses nothing under it.
    */
   let paletteOpen = $state(false);
+  let paletteEl = $state<HTMLElement | null>(null);
   function togglePalette() {
     swallowNextClick();
     paletteOpen = !paletteOpen;
   }
+  function closePalette() {
+    swallowNextClick();
+    paletteOpen = false;
+  }
+  /* Latched, the bar stays open until the chevron closes it or a touch
+   * lands outside it (Ben, 2026-11-19). Outside the chain that touch also
+   * does its own job (Record still records); on the chain, `.palette-catch`
+   * takes it, so it only closes the bar. */
+  $effect(() => {
+    if (!paletteOpen) return;
+    const onDown = (event: PointerEvent) => {
+      if (paletteEl && event.target instanceof Node && paletteEl.contains(event.target)) return;
+      paletteOpen = false;
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  });
   /* A tap loads the chip it lands on; a release off the
    * chips loads nothing. It opens on a short hold (a quick tap only loads)
    * or at once on a slide; 300ms felt laggy (Ben, 2026-11-18). One gesture
@@ -1261,6 +1280,7 @@
      beside it. -->
 <div
   class="palette"
+  bind:this={paletteEl}
   bind:clientWidth={paletteWidth}
   style:grid-template-columns={placed.template}
   data-debug="chain-palette"
@@ -1319,7 +1339,7 @@
       data-debug="chain-add"
       use:press={{ onPress: togglePalette, touchAction: 'none', stopPropagation: true }}
     >
-      <span class="chain-add-plus" aria-hidden="true"><ChevronDown /></span>
+      <span class="chain-add-plus" aria-hidden="true">{#if paletteOpen}<ChevronUp />{:else}<ChevronDown />{/if}</span>
     </button>
   </div>
 </div>
@@ -1328,7 +1348,7 @@
     class="palette-catch"
     aria-hidden="true"
     data-debug="chain-palette-catch"
-    use:press={{ onPress: togglePalette, touchAction: 'none', fireOn: 'down', stopPropagation: true }}
+    use:press={{ onPress: closePalette, touchAction: 'none', fireOn: 'down', stopPropagation: true }}
   ></div>
 {/if}
 <div

@@ -584,6 +584,31 @@ const SCENARIOS = [
 			expect(!sent().some((m) => m.address.startsWith('/looping/v3/device')), 'the tap must press nothing under it');
 		}
 	},
+	{
+		name: 'palette-latched-outside-tap-closes',
+		view: 'default',
+		description: 'the latched palette points its chevron up; a tap outside the bar and the chain closes it and still does its own job',
+		async run({ page, fingers, sent, reset }) {
+			const chev = await centreOf(page, '[data-debug="chain-add"]');
+			await fingers.tap(chev.x, chev.y);
+			await wait(300);
+			const open = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(open === 'true', 'the chevron must open the bar');
+			const up = await page.locator('[data-debug="chain-add"] svg.lucide-chevron-up').count();
+			expect(up === 1, 'open, the chevron must point up');
+			const name = await centreOf(page, '.header-name', 1);
+			reset();
+			await fingers.tap(name.x, name.y);
+			await wait(300);
+			const closed = await page.getAttribute('[data-debug="chain-palette"]', 'data-palette-open');
+			expect(closed === 'false', 'a tap outside the bar must close it');
+			const down = await page.locator('[data-debug="chain-add"] svg.lucide-chevron-down').count();
+			expect(down === 1, 'closed, the chevron must point down');
+			const msgs = sent().map((m) => m.address);
+			log(`outside tap sent: ${JSON.stringify(msgs)}`);
+			expect(msgs.length > 0, 'the tap outside must still do its own job (the track name mutes)');
+		}
+	},
 
 	// ---- Concurrent fingers. Chromium only (CDP). -------------------------
 	{

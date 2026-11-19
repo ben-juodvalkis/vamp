@@ -22,9 +22,13 @@ the latch) was weighed and dropped as two paradigms for one bar (Ben).
 - **The chain dims under the open bar**, held or latched (opacity 0.6,
   an 80ms fade; Ben, the same day): it is out of play, and the names at
   the cells' feet still read.
-- **A latched bar closes on a touch on the chain** (`.palette-catch`,
-  over the chain's uncovered part): the touch closes the bar and presses
-  nothing under it. The chevron still closes it too.
+- **A latched bar stays open until the chevron or a touch outside it
+  closes it** (Ben, 2026-11-19). A pick from it leaves it open. On the
+  chain (`.palette-catch`, over its uncovered part) the touch closes the
+  bar and presses nothing under it; anywhere else it closes the bar and
+  still does its own job, so Record still records.
+- **Open, the chevron points up** (Ben, 2026-11-19), down again when it
+  closes.
 - The phone keeps its 44px bar; open, it is 140px over the chain.
 
 ## Consequences
@@ -35,6 +39,8 @@ the latch) was weighed and dropped as two paradigms for one bar (Ben).
 - The chain can't be reordered or tapped while the bar is latched.
 - `npm run multitouch -- --fixture-data --scenario palette-latched-chain-tap-closes`
   checks that the chain keeps its box under the open bar and that a tap on
-  it closes the bar with nothing sent. `--fixture-data` (new for
+  it closes the bar with nothing sent; `palette-latched-outside-tap-closes`
+  that the chevron points up while open and that a tap on a track name
+  closes the bar and still mutes. `--fixture-data` (new for
   `multitouch`, as `shot` takes it) keeps a fresh clone off the
   first-run page.
