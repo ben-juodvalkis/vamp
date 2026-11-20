@@ -742,11 +742,12 @@
 
   /*
    * An open rack's arm (ADR-529), a group track's panhandle (ADR-413) in
-   * the chain: the rack cell's outline continues sideways over everything
-   * its unfold drew, which hangs below the arm with a gap and keeps its own
-   * outline. One arm per row the unfold reaches; a rack inside a rack sits
-   * one step lower and its arm stacks under its parent's. A tap on an arm
-   * folds the rack.
+   * the chain: the rack cell's outline continues sideways along the foot of
+   * everything its unfold drew, which stands on the arm with a gap and keeps
+   * its own outline (at the foot since the names went there, the user,
+   * 2026-11-20). One arm per row the unfold reaches; a rack inside a rack
+   * stands one step higher and its arm stacks above its parent's. A tap on
+   * an arm folds the rack.
    */
   const ARM_STEP = 18;
   function levelOf(cell: Cell): number {
@@ -1458,7 +1459,7 @@
       class:unfolded={cell.foldable && rackFold.isOpen(cell.path)}
       class:armed={cell.kind !== 'chains' && armedRacks.has(cell.path)}
       class:half={layout.places[position]?.span === 1}
-      style="--cell-ink: {cell.ink};{levelOf(cell) ? ` margin-top: ${levelOf(cell) * ARM_STEP}px;` : ''}"
+      style="--cell-ink: {cell.ink};{levelOf(cell) ? ` margin-bottom: ${levelOf(cell) * ARM_STEP}px;` : ''}"
       style:grid-column={layout.places[position] ? `${layout.places[position].col + 1} / span ${layout.places[position].span}` : undefined}
       style:grid-row={layout.places[position] ? `${layout.places[position].row + 1}` : undefined}
       data-cell-key={cell.key}
@@ -1499,7 +1500,7 @@
       class:joined={arm.joined}
       style:grid-column="{arm.from + 1} / {arm.to + 1}"
       style:grid-row={arm.row + 1}
-      style:margin-top="{arm.level * ARM_STEP}px"
+      style:margin-bottom="{arm.level * ARM_STEP}px"
       style="--arm-ink: {arm.ink};"
       data-debug="rack-arm"
       data-rack-path={arm.path}
@@ -1904,9 +1905,9 @@
   /* An open rack's arm (ADR-529): the group panhandle's material
      (TracksPanelV6's .group-band) in the rack's ink — the rack cell's
      outline continuing sideways, its left edge open where it joins, a
-     thin band its unfold hangs under. */
+     thin band its unfold stands on. */
   .rack-arm {
-    align-self: start;
+    align-self: end;
     position: relative;
     z-index: 1;
     height: 12px;
@@ -1926,7 +1927,7 @@
     border-radius: 0 var(--cell-radius) var(--cell-radius) 0;
   }
   .chain-cell.armed {
-    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
   }
 
   /* The face: the cell's rest, inset from the panel's edge so its own

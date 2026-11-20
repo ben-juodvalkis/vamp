@@ -111,7 +111,7 @@ at the left of its header bar
 rack's `show_devices` row, held for every rack drawn), so it mirrors Live
 both ways. Open, the rack is followed by its chain list (`chain/ChainListFace`,
 one cell, when it has two or more chains) and the chosen chain's devices,
-each an ordinary cell, all under the rack's arm (the Group Track
+each an ordinary cell, all standing on the rack's arm at their foot (the Group Track
 panhandle, one per open rack and none per chain; a tap on it folds the
 rack). A tap on a row chooses the chain shown
 (`rackFold.chainOf` / `selectChain`: Live's selected chain, the rack's
