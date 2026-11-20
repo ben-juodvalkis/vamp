@@ -176,9 +176,10 @@
 	// Simpler its samples and audio clips, Clip those plus its MIDI clips.
 	let placeVendors = $state<BrowserVendor[]>([]);
 	/**
-	 * The effects Place (`catalog.effectsPlace`), where + Effect opens: off
-	 * the rail unless it is ticked, so it is a vendor of its own beside the
-	 * rail's. Null when the Mac names none.
+	 * The effects Place (`catalog.effectsPlace`): laid out as one screen of
+	 * its folders when it is opened from the rail. Off the rail it is not
+	 * reachable (the + that opened it went with ADR-548). Null when the Mac
+	 * names none.
 	 */
 	let effectsVendor = $state<BrowserVendor | null>(null);
 	/** Each Place's index entry, keyed by its rail id (`place:drum`). */
@@ -213,7 +214,6 @@
 
 	const vendors = $derived.by(() => {
 		const list = [...placeVendors];
-		if (effectsVendor && !list.some((v) => v.id === effectsVendor?.id)) list.push(effectsVendor);
 		if (recentInstrumentsStore.hasItems) list.push(recentVendor);
 		return list;
 	});
@@ -1559,9 +1559,9 @@
 			wasPersistent = nowPersistent;
 		}
 	});
-	// The chain overview's + cell (`openEffectsBrowser`): the effects Place
-	// when the Mac names one (`catalog.effectsPlace`), else the open Place if
-	// it has effect presets, else the first Place that does.
+	// A rack chain's + (`openEffectsBrowser`): the effects Place when it is on
+	// the rail, else the open Place if it has effect presets, else the first
+	// Place that does.
 	let seenEffectsRequest = browserModeStore.effectsOpenRequest;
 	$effect(() => {
 		const request = browserModeStore.effectsOpenRequest;
@@ -1570,7 +1570,8 @@
 		isExpanded = true;
 		untrack(() => {
 			const current = findVendorById(vendors, selectedVendorId);
-			const target = effectsVendor ?? (
+			const onRail = placeVendors.find((v) => v.id === effectsVendor?.id);
+			const target = onRail ?? (
 				current && isPlaceVendor(current) && placeHas(current.id, EFFECT_GROUPS)
 					? current
 					: (placeVendors.find((v) => placeHas(v.id, EFFECT_GROUPS)) ?? current));

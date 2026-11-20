@@ -18,10 +18,6 @@
 	 * and Downloads. The rig is seeded from `paths.sidebarRoot`, so nothing
 	 * changes there. A folder that is not on this Mac right now (a Pack on an
 	 * unmounted drive) is listed greyed and cannot be ticked.
-	 *
-	 * Above the list, the effects folder (ADR-498): the Place + Effect opens
-	 * and Vamp's own effects (an amp rack, a Max effect) are found in by
-	 * name, or Live's Audio Effects. An effect not in it has no tile.
 	 */
 	import { untrack } from 'svelte';
 	import Check from '@lucide/svelte/icons/check';
@@ -83,10 +79,6 @@
 		box.checked = places.listing?.sources.find((x) => x.key === s.key)?.ticked ?? box.checked;
 	}
 
-	/** Folders that can be the effects folder: the sidebar Places and the User Library, on this Mac. */
-	const effectsChoices = $derived(sources.filter((s) => s.present && (s.kind === 'place' || s.kind === 'user-library')));
-	const effectsPlace = $derived(places.listing?.effectsPlace ?? '');
-
 	const sourceLine = $derived.by(() => {
 		const l = places.listing;
 		if (!l) return '';
@@ -105,32 +97,6 @@
 		<p class="set-lead">
 			A ticked folder or category gets a button in the browser’s sidebar, on every screen within seconds.
 		</p>
-
-		<section class="set-group places-effects" data-debug="places-effects">
-			<h3 class="set-group-title">Effects folder</h3>
-			<div class="set-list">
-				<label class="set-row set-row-stack">
-					<span class="set-row-main">
-						<span class="set-row-label">+ Effect opens</span>
-						<span class="set-row-sub">
-							Where Vamp also looks for its own effects by name (an amp rack, a Max effect). Live’s built-in effects work
-							either way.
-						</span>
-					</span>
-					<select
-						class="set-select places-select"
-						value={effectsPlace}
-						disabled={places.saving}
-						onchange={(e) => void places.setEffectsPlace((e.currentTarget as HTMLSelectElement).value)}
-					>
-						<option value="">Live’s Audio Effects</option>
-						{#each effectsChoices as s (s.key)}
-							<option value={s.name}>{s.name}</option>
-						{/each}
-					</select>
-				</label>
-			</div>
-		</section>
 
 		<div class="set-listbar">
 			<p class="set-listbar-count" aria-live="polite">
@@ -239,17 +205,9 @@
 	.set-places {
 		gap: var(--spacing-lg);
 	}
-	.places-effects {
-		max-width: 50rem;
-		margin: var(--spacing-sm) 0 var(--spacing-md);
-	}
 	.places-foot {
 		max-width: 46rem;
 		margin-top: var(--spacing-md);
-	}
-	.places-select {
-		flex: 0 1 16rem;
-		min-width: 10rem;
 	}
 	/* One line, cut from the START: the end of a path is what tells two
 	   folders apart. */

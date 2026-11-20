@@ -77,7 +77,7 @@ export async function addEffectToChain(effect: ChainEffect): Promise<void> {
 		// effects folder, by name (ADR-498); a Live device by name sends no file (3.12.0).
 		const config = effect.preset ? DEVICE_PRESETS[effect.preset] : undefined;
 		const found = config?.effect ? effectSource(config) : null;
-		if (config?.effect && !found) throw new Error('Not in your effects folder (Settings → Places)');
+		if (config?.effect && !found) throw new Error('Not in your effects folder');
 		const { source, rel } = found ?? effect;
 		const file = effect.preset ? (found?.presetPath || config?.presetPath || '') : nativeClassOf(effect) ? '' : effect.fullPath;
 		// A type is a ghost cell in the chain at once, taking edits that land

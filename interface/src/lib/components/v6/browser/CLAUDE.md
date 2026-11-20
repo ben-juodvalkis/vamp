@@ -386,14 +386,15 @@ source and the Phase 4 switch that chose between them.
   tracks only" on its face, and `addEffect` refuses one there too (a random
   pick could land on it) (user, 2026-10-26). The stacked label
   (`.has-plugin`, column flex) applies only to tiles that carry one.
-- **Where + Effect opens**: Live's Audio Effects category by default since
-  2026-10-31 (Ben), ticked or not, cataloged and kept off the rail unless
-  ticked; or the Effects folder chosen in Settings → Library
-  (`logs/effects.json`, ADR-498, 2026-11-01), else the Place
-  `catalog.effectsPlace` names. Vamp's own effect tiles load their files by
-  name from that same folder; a tile whose file is not there is refused
-  with a banner and the chain shows no ghost of it. A button holding only
-  effects opens on the Effect segment, whatever segment was on before.
+- **Where a rack chain's + opens** (ADR-529, ADR-550): the effects Place
+  when it is on the rail, else the open Place with effect presets, else the
+  first that has some, on the Effect segment. The chain's own + and the
+  Settings choice of the effects folder are gone (ADR-548, ADR-550); Vamp's
+  own effect tiles still load their files by name from the effects folder
+  (`logs/effects.json`, else `catalog.effectsPlace`, else Live's Audio
+  Effects, ADR-498); a tile whose file is not there is refused with a banner
+  and the chain shows no ghost of it. A button holding only effects opens on
+  the Effect segment, whatever segment was on before.
 - **The effects Place** (`catalog.effectsPlace`, a Place's sidebar name;
   "Vamp Devices" by default from 2026-10-26 until 2026-10-31; the
   rig named its own shelf, "Audio-Midi Effects", in `constants.local.json`,
@@ -420,10 +421,9 @@ source and the Phase 4 switch that chose between them.
   on the first. The solver counts the same rows (`fill`), and bounds the columns by the tiles, not the largest folder (a 6-tile largest folder once capped it at 6 and overflowed the screen). Its folder names are a slim label in the folder's ink over the tiles (`FILL_HEADER_H` 22px, `FILL_SECTION_GAP` 10px), not the 44px header band (user, 2026-10-26). Other Places keep
   `packGroupedSections`: their sections can hold thousands. The server
   catalogs it whether or not it is ticked and flags it in `index.json`
-  (`effects`, and `hidden` while unticked); the browser keeps a hidden one off
-  the rail (`effectsVendor`) and the chain overview's + Effect opens it, on
-  Effect. Unset, + Effect opens the open Place, else the first ticked one with
-  effect presets. A rail Place's Effect segment works as before.
+  (`effects`, and `hidden` while unticked); the browser shows it only when
+  it is ticked, on the rail (`effectsVendor` is kept for its layout, ADR-550).
+  A rail Place's Effect segment works as before.
 - **Live preset faces** (2026-10-25, ADR-478; one definition since
   2026-10-26, ADR-479): an effect preset tile whose device type has a control
   in `device-panel/deviceControls.ts` draws that control (`BrowserPresetFace`

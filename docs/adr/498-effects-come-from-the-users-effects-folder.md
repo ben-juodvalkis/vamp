@@ -1,7 +1,8 @@
 # ADR-498: Effects Come From the User's Effects Folder
 
 ## Status
-**Accepted** (2026-11-01). Amends [ADR-493](493-live-categories-on-the-browser-rail.md)
+**Accepted** (2026-11-01); its Settings choice is superseded by
+[ADR-550](550-no-effects-folder-choice-in-settings.md). Amends [ADR-493](493-live-categories-on-the-browser-rail.md)
 (the effects Place is now a Settings choice), [ADR-445](445-expression-pedal-rack-on-midi-tracks.md)
 (the head-of-chain Wah is matched by file name) and the general-release plan's
 "one Place" (Vamp Devices holds utilities only). The interface takes it on its

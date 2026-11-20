@@ -26,10 +26,9 @@
    * queue behind it and go out against the paths Live reports next. Only
    * a lifted finger drops — a cancelled gesture puts the cell back. The
    * instrument stays put and nothing crosses it (`utils/chainDrop`).
-   * A dashed + cell after the last device opens the
-   * browser on its Effect segment (`openEffectsBrowser`), as the strips
-   * row's add buttons end the tracks; a pick joins this chain, the pad's
-   * under a pad scope.
+   * Effects join the chain from the palette's chips (ADR-548); a rack
+   * chain's own + opens the browser on its Effect segment
+   * (`openEffectsBrowser`, ADR-529, ADR-550).
    *
    * **A cell carries its tile's control** (2026-10-25): a device the FX
    * grid has a tile for shows that tile — its XY or slider, the grid's own
