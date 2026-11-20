@@ -121,23 +121,33 @@ def cache(user_library_root, tmp_path):
 # --- lookups --------------------------------------------------------------
 
 
-def test_first_lookup_builds_cache_and_returns_item(cache, user_library_root, tmp_path):
+def _node(root, *names):
+    for n in names:
+        root = next(c for c in root._children if c.name == n)
+    return root
+
+
+def test_a_user_library_lookup_reads_only_the_folders_on_its_path(cache, user_library_root, tmp_path):
+    """2026-11-20: the rig's User Library (~292,000 entries) passed the walk's
+    200,000 cap and Sidebar/Key loads missed after 2-3 s on Live's thread. A
+    lookup steps down the path instead and never opens a folder off it."""
     base = str(tmp_path / "UserLibrary")
     item = cache.lookup(os.path.join(base, "Drums", "kit"))
-    assert item is not None
-    assert item.name == "kit"
-    # Tree was walked at least once.
-    assert user_library_root.total_reads() >= 1
+    assert item is not None and item.name == "kit"
+    assert user_library_root.children_reads == 1
+    assert _node(user_library_root, "Drums").children_reads == 1
+    assert _node(user_library_root, "Looping Presets").children_reads == 0
 
 
-def test_second_lookup_does_not_rewalk(cache, user_library_root, tmp_path):
+def test_a_file_live_lists_later_is_found_on_the_next_load(cache, user_library_root, tmp_path):
+    """Nothing is cached, so no cooldown stands between Live listing a file
+    and a load finding it."""
     base = str(tmp_path / "UserLibrary")
-    cache.lookup(os.path.join(base, "Drums", "kit"))
-    reads_after_build = user_library_root.total_reads()
-
-    # Second lookup, same root — no new reads expected.
-    cache.lookup(os.path.join(base, "Looping Presets", "Instruments", "preset"))
-    assert user_library_root.total_reads() == reads_after_build
+    path = os.path.join(base, "Drums", "snare")
+    assert cache.lookup(path) is None
+    _node(user_library_root, "Drums")._children.append(CountingBrowserItem("snare", is_loadable=True))
+    item = cache.lookup(path)
+    assert item is not None and item.name == "snare"
 
 
 def test_ableton_native_extension_stripped(cache, tmp_path):
@@ -171,13 +181,21 @@ def test_path_outside_known_roots_returns_none(cache):
     assert item is None
 
 
-def test_invalidate_forces_rebuild(cache, user_library_root, tmp_path):
-    base = str(tmp_path / "UserLibrary")
-    cache.lookup(os.path.join(base, "Drums", "kit"))
-    reads_before = user_library_root.total_reads()
+def test_invalidate_forces_rebuild(tmp_path):
+    place = _build_tree({"Bass": {"Sub": {"808.adv": True}}})
+    root = str(tmp_path / "Bass")
+    cache = BrowserCache(
+        browser=StubBrowser(user_library=CountingBrowserItem("User Library"), user_folders=[place]),
+        user_library_base=str(tmp_path / "UserLibrary"),
+        places_roots={"Bass": root},
+    )
+    cache.lookup(os.path.join(root, "Sub", "808.adv"))
+    reads_before = place.total_reads()
+    cache.lookup(os.path.join(root, "Sub", "808.adv"))
+    assert place.total_reads() == reads_before
     cache.invalidate()
-    cache.lookup(os.path.join(base, "Drums", "kit"))
-    assert user_library_root.total_reads() > reads_before
+    cache.lookup(os.path.join(root, "Sub", "808.adv"))
+    assert place.total_reads() > reads_before
 
 
 # --- Places ---------------------------------------------------------------
@@ -341,16 +359,16 @@ def test_walk_depth_cap_prunes_subtree_without_recursionerror(tmp_path, caplog):
     # Build from bottom up.
     for i in range(overshoot, 0, -1):
         node = CountingBrowserItem("L%d" % i, is_loadable=False, children=[node])
+    # A Place outside the User Library is walked (the library is descended).
     root = CountingBrowserItem(
-        "User Library", is_loadable=False, children=[node],
+        "Deep", is_loadable=False, children=[node],
     )
 
-    base = tmp_path / "UserLibrary"
-    base.mkdir()
+    base = tmp_path / "Deep"
     cache = BrowserCache(
-        browser=StubBrowser(user_library=root),
-        user_library_base=str(base),
-        places_roots={},
+        browser=StubBrowser(user_library=CountingBrowserItem("User Library"), user_folders=[root]),
+        user_library_base=str(tmp_path / "UserLibrary"),
+        places_roots={"Deep": str(base)},
     )
 
     import logging

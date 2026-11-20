@@ -327,8 +327,13 @@ entry, the User Library for a Place inside it (which `user_folders` omits),
 `device/load` (3 or 5) take optional trailing `source` (`place:<name>` /
 `library` / `pack:<name>`) and `rel` (the path inside it):
 `BrowserCache.lookup_named` looks there first, by path second, and an empty
-preset path is filled in from the Place's folder. A miss walks the root once
-more, no more often than every 10 s, so a file Live has listed since loads.
+preset path is filled in from the Place's folder. A path inside the User
+Library (the rig's Sidebar Places included) is found by stepping down Live's
+browser one folder of the path at a time, never by walking the library: the
+rig's ~292,000 entries passed the walk's 200,000 cap and Sidebar/Key loads
+missed (2026-11-20). A Place outside it or a Pack is walked once and cached;
+a miss walks it again, no more often than every 10 s, so a file Live has
+listed since loads.
 Permute and MidiWheels are the checkout's own (`live_library.device_path`,
 found from this file's real path through the Remote Scripts symlink), loaded
 as `place:Vamp Devices` + the path inside; an older config's

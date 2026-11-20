@@ -78,9 +78,11 @@ _LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 _ABLETON_NATIVE_EXTS = frozenset({".amxd", ".adv", ".adg", ".als", ".alc"})
 
 
-# Hard cap on cached entries per root. Even very heavy User Libraries
-# have <50k loadable presets in practice; this guards against a
-# pathological tree (cycles, infinite generators) eating memory.
+# Hard cap on cached entries per walked root (a Place outside the User
+# Library, a Pack): guards against a pathological tree (cycles, infinite
+# generators) eating memory. The User Library is never walked whole: the
+# rig's passed this cap in Live 13 (2026-11-19) and loads missed, so its
+# paths are found by descent (``_descend_user_library``).
 _MAX_ENTRIES_PER_ROOT = 200_000
 
 # Hard cap on walk recursion depth. Real User Library nesting is
@@ -181,7 +183,7 @@ class BrowserCache:
             )
         if base is not None:
             tail = norm[len(base) + 1:]
-            return self._lookup_in_root("user_library", tail, preset_path)
+            return self._descend_user_library(tail, preset_path)
 
         pack = self._match_pack(norm)
         if pack is not None:
@@ -208,7 +210,7 @@ class BrowserCache:
         if not tail:
             return None
         if source == SOURCE_LIBRARY:
-            return self._lookup_in_root("user_library", tail, rel)
+            return self._descend_user_library(tail, rel)
         if source.startswith(SOURCE_PLACE_PREFIX):
             name = source[len(SOURCE_PLACE_PREFIX):]
             # The Place's folder, or Vamp Devices' User Library copy (root_path).
@@ -384,6 +386,64 @@ class BrowserCache:
             "BrowserCache: %r not found in %s cache (%d entries)",
             original_path, root_label, len(self._caches.get(root_label, {})),
         )
+        return None
+
+    def _descend_user_library(self, tail: str, original_path: str) -> Optional[object]:
+        """The loadable item at ``tail`` inside the User Library, reached by
+        stepping down Live's browser one folder of the path at a time.
+
+        The User Library is never walked whole (2026-11-20): on the rig it
+        holds ~292,000 files and folders, the Sidebar Places among them
+        (``user_folders`` omits a Place inside the User Library), and the
+        walk that cached it stopped at ``_MAX_ENTRIES_PER_ROOT`` (200,000)
+        before reaching Key, so ``Sidebar/Key/…`` loads missed, each after
+        2-3 s on Live's thread. A descent reads only the folders on the
+        path, holds nothing that can go stale, and a file Live lists later
+        is found on the next load with no cooldown.
+        """
+        segments = tuple(browser_name(s) for s in tail.split(os.sep) if s)
+        if not segments:
+            logger.warning("BrowserCache: empty segment list for %r [root=user_library]", original_path)
+            return None
+        node = self._resolve_root_node("user_library", None)
+        if node is None:
+            return None
+        for i, segment in enumerate(segments):
+            last = i == len(segments) - 1
+            names: Tuple[str, ...] = (segment,)
+            if last:
+                # Live shows an Ableton-native file without its extension.
+                stem, ext = os.path.splitext(segment)
+                if ext.lower() in _ABLETON_NATIVE_EXTS:
+                    names = (segment, stem)
+            child = self._child_named(node, names, loadable=last)
+            if child is None:
+                logger.warning(
+                    "BrowserCache: %r not in Live's browser: no %r in %s",
+                    original_path, segment, "/".join(segments[:i]) or "the User Library",
+                )
+                return None
+            node = child
+        return node
+
+    def _child_named(self, node, names: Tuple[str, ...], loadable: bool) -> Optional[object]:
+        """The child of ``node`` named the first of ``names`` it has (a
+        loadable one when ``loadable``), or ``None``."""
+        try:
+            children = list(node.children or ())
+        except _LOM_ERRORS as e:
+            logger.warning("BrowserCache: children access raised: %s: %s", type(e).__name__, e)
+            return None
+        for want in names:
+            for child in children:
+                try:
+                    if unicodedata.normalize("NFC", child.name or "") != want:
+                        continue
+                    if loadable and not bool(child.is_loadable):
+                        continue
+                except _LOM_ERRORS:
+                    continue
+                return child
         return None
 
     def _find(self, root_label: str, segments: Tuple[str, ...]) -> Optional[object]:
