@@ -272,8 +272,6 @@ import { logger } from '$lib/utils/logger';
 			error={pill.model.error}
 			ink={null}
 			density={viewDensity}
-			onPrev={() => pill?.act('prev')}
-			onNext={() => pill?.act('next')}
 			onOpen={pill.canOpen ? () => pill?.open() : null}
 		/>
 	{/if}

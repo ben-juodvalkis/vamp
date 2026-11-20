@@ -25,8 +25,6 @@
     disabled={pill.model.disabled}
     error={pill.model.error}
     ink={pill.ink}
-    onPrev={() => pill?.act('prev')}
-    onNext={() => pill?.act('next')}
     onOpen={pill.open ? () => pill?.open?.() : null}
   />
 {/if}

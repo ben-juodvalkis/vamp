@@ -1,7 +1,7 @@
 # ADR-442: The swap pill's name opens the browser
 
 ## Status
-**Accepted** (extends ADR-439/440, moves the gesture ADR-390/441 built)
+**Superseded** by ADR-552 (the whole pill opens the browser; the step halves are gone). Was: Accepted (extends ADR-439/440, moves the gesture ADR-390/441 built)
 
 ## Context
 

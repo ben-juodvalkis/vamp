@@ -980,24 +980,15 @@ export const TOURS = {
 					detail: 'helper not running (no socket; npm run install-ax-helper)'
 				}
 			},
-			// The one step in this repo that PRESSES the swap pill, and it is a
-			// CSS gate rather than a picture. `SwapControl`'s `.swap-name` is
-			// `grid-column: 1 / -1`, so it covers the whole pill including both
-			// arrows, and only `pointer-events: none` on it lets a press reach
-			// the half below. Nothing covered that: the component's own tests
-			// press with the keyboard, `check:touch` does not reach `central/`,
-			// and `multitouch.mjs` has no swap scenario — delete that one
-			// declaration and every assertion still passed, while on the iPad
-			// the whole control went dead but for two ~12 px strips.
+			// The one step in this repo that PRESSES the swap pill. Since ADR-552
+			// the whole pill is one button that opens the browser, and
 			// `screenshot-page.mjs`'s `page.click()` does Playwright's real
-			// hit-target check, so an intercepted press fails the run rather
-			// than quietly photographing an unpressed pill. Kick is latched first
-			// because the Drums track records no preset, so its KIT pill is
-			// disabled; a latched Drum Sampler pad's pill is live.
+			// hit-target check, so a pill something else paints over fails the run
+			// rather than quietly photographing an unpressed one.
 			{
 				name: 'drumrack-swap-pressed',
-				description: 'The swap pill pressed — the hit test SwapControl’s pointer-events split depends on',
-				steps: [openInstrument(0), { click: '.pad-tile[data-note="36"]' }, { click: '[data-swap="next"]' }]
+				description: 'The swap pill pressed — the whole pill opens the browser',
+				steps: [openInstrument(0), { click: '.pad-tile[data-note="36"]' }, { click: '[data-swap="open"]' }]
 			},
 			{ name: 'drumrack-simpler-kit', description: 'Drum Rack, Simpler kit (Jazz)', steps: [openInstrument(8)] },
 			{
