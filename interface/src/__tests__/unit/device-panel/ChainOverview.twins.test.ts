@@ -180,18 +180,21 @@ describe("the palette bar's chevron", () => {
 		await tick();
 		const chevron = container.querySelector<HTMLElement>('[data-debug="chain-add"]')!;
 		const open = () => container.querySelector('[data-debug="chain-palette"]')?.getAttribute('data-palette-open');
-		return { chevron, open };
+		return { container, chevron, open };
 	}
+	const down = (el: HTMLElement, id: number, y = 5) => fireEvent.pointerDown(el, { clientX: 5, clientY: y, pointerId: id, button: 0 });
+	const up = (el: HTMLElement, id: number, y = 5) => fireEvent.pointerUp(el, { clientX: 5, clientY: y, pointerId: id, button: 0 });
 
 	it('latches the bar open on a tap, and a second tap closes it', async () => {
 		const { chevron, open } = await renderBar();
-		await fireEvent.pointerDown(chevron, { clientX: 5, clientY: 5, pointerId: 1 });
-		expect(open()).toBe('true');
-		await fireEvent.pointerUp(chevron, { clientX: 5, clientY: 5, pointerId: 1 });
+		await down(chevron, 1);
 		await tick();
 		expect(open()).toBe('true');
-		await fireEvent.pointerDown(chevron, { clientX: 5, clientY: 5, pointerId: 2 });
-		await fireEvent.pointerUp(chevron, { clientX: 5, clientY: 5, pointerId: 2 });
+		await up(chevron, 1);
+		await tick();
+		expect(open()).toBe('true');
+		await down(chevron, 2);
+		await up(chevron, 2);
 		await tick();
 		expect(open()).toBe('false');
 	});
@@ -200,14 +203,32 @@ describe("the palette bar's chevron", () => {
 		vi.useFakeTimers();
 		try {
 			const { chevron, open } = await renderBar();
-			await fireEvent.pointerDown(chevron, { clientX: 5, clientY: 5, pointerId: 1 });
+			await down(chevron, 1);
+			await tick();
 			expect(open()).toBe('true');
 			vi.advanceTimersByTime(400);
-			await fireEvent.pointerUp(chevron, { clientX: 5, clientY: 5, pointerId: 1 });
+			await up(chevron, 1);
 			await tick();
 			expect(open()).toBe('false');
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+
+	it('slides down onto a chip and loads it on release, then closes', async () => {
+		const { container, chevron, open } = await renderBar();
+		await down(chevron, 1);
+		await tick();
+		const chip = container.querySelector<HTMLElement>('[data-debug="chain-palette"] [data-chip-id^="2:"]');
+		expect(chip).not.toBeNull();
+		document.elementFromPoint = () => chip;
+		await fireEvent.pointerMove(window, { clientX: 5, clientY: 60, pointerId: 1 });
+		await tick();
+		expect(open()).toBe('true');
+		await fireEvent.pointerUp(window, { clientX: 5, clientY: 60, pointerId: 1 });
+		await tick();
+		expect(open()).toBe('false');
+		const loads = vi.mocked(send).mock.calls.filter(([address]) => String(address).includes('device'));
+		expect(loads.length).toBeGreaterThan(0);
 	});
 });

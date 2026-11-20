@@ -89,7 +89,7 @@
   import { schemeFromInk } from '$lib/config/devicePresets';
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
-  import { press, type PressReleaseInfo } from '$lib/actions/press';
+  import { press } from '$lib/actions/press';
   import { shouldRestoreOnRelease } from '../tracks/TrackStrip/utils/momentaryPress';
   import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag as dragAction, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
@@ -817,19 +817,40 @@
    */
   let paletteOpen = $state(false);
   let paletteEl = $state<HTMLElement | null>(null);
-  /* The chevron is Solo's rule (ADR-427): it toggles at finger-down; a tap
-   * latches, and a press that opened the bar and is held past
-   * MOMENTARY_HOLD_MS closes it again on release, so a hold peeks and a
-   * second finger can load a chip meanwhile (Ben, 2026-11-20). */
-  let chevronOpened = false;
-  function togglePalette() {
-    swallowNextClick();
-    chevronOpened = !paletteOpen;
-    paletteOpen = !paletteOpen;
+  /* The chevron is a press on the bar's own gesture, so its finger can
+   * slide down onto a chip (Ben, 2026-11-20). It opens the bar at
+   * finger-down. Let go on a chip and that chip loads; the bar then closes
+   * unless it was latched before the press. Let go anywhere else and it is
+   * Solo's rule (ADR-427): a tap latches, a hold past MOMENTARY_HOLD_MS (or
+   * a slide that found no chip) closes it again. On an open bar the
+   * chevron closes it, unless the finger slides off to load a chip. */
+  let chevron: { wasOpen: boolean; downAt: number; held: boolean } | null = null;
+  function onChevron(event: PointerEvent | null): boolean {
+    return event?.target instanceof Element && !!event.target.closest('[data-debug="chain-add"]');
   }
-  function releaseChevron({ elapsedMs, reason }: PressReleaseInfo) {
-    if (chevronOpened && shouldRestoreOnRelease({ elapsedMs, reason })) paletteOpen = false;
-    chevronOpened = false;
+  function startChevron() {
+    swallowNextClick();
+    chevron = { wasOpen: paletteOpen, downAt: Date.now(), held: false };
+    paletteOpen = true;
+  }
+  function endChevron(reason: 'up' | 'cancel', moved: boolean) {
+    if (!chevron) return;
+    const { wasOpen, downAt } = chevron;
+    chevron = null;
+    const target = reason === 'up' ? hotChip : null;
+    hotChip = null;
+    if (target) {
+      loadChip(target);
+      paletteOpen = wasOpen;
+    } else if (wasOpen) {
+      paletteOpen = false;
+    } else if (moved || shouldRestoreOnRelease({ elapsedMs: Date.now() - downAt, reason })) {
+      paletteOpen = false;
+    }
+  }
+  /** A keyboard press on the chevron (a pointer's click is the gesture's). */
+  function keyToggle(event: MouseEvent) {
+    if (event.detail === 0) paletteOpen = !paletteOpen;
   }
   function closePalette() {
     swallowNextClick();
@@ -1386,22 +1407,42 @@
   use:dragGesture={{
     commit: 'either',
     holdMs: PEEK_HOLD_MS,
-    onDown: ({ downX, downY }) => {
+    onDown: ({ downX, downY, event }) => {
+      if (onChevron(event)) {
+        startChevron();
+        hotChip = null;
+        chipGesture = false;
+        return;
+      }
       hotChip = chipAt(downX, downY);
       chipGesture = hotChip !== null;
     },
     onHold: () => {
-      if (chipGesture) palettePeek = true;
+      if (chevron) chevron.held = true;
+      else if (chipGesture) palettePeek = true;
     },
-    onStart: () => {
-      if (chipGesture) palettePeek = true;
+    onStart: ({ x, y }) => {
+      if (chevron) hotChip = chipAt(x, y);
+      else if (chipGesture) palettePeek = true;
     },
     onMove: ({ x, y }) => {
-      if (chipGesture) hotChip = chipAt(x, y);
+      if (chevron || chipGesture) hotChip = chipAt(x, y);
     },
-    onTap: () => endChipGesture(true),
-    onEnd: ({ reason }) => endChipGesture(reason === 'up'),
+    onTap: () => {
+      if (chevron) endChevron('up', false);
+      else endChipGesture(true);
+    },
+    onEnd: ({ reason }) => {
+      if (chevron) endChevron(reason === 'up' ? 'up' : 'cancel', true);
+      else endChipGesture(reason === 'up');
+    },
     onPressEnd: ({ mode, event }) => {
+      if (chevron) {
+        // A hold let go without moving ends here; a quick tap ends in onTap.
+        if (mode === 'undecided' && event?.type === 'pointerup' && chevron.held) endChevron('up', false);
+        else if (mode === 'undecided' && event?.type === 'pointercancel') endChevron('cancel', false);
+        return;
+      }
       // A hold let go without moving: the release is here, not in onEnd.
       if (mode === 'undecided' && palettePeek && event?.type === 'pointerup') endChipGesture(true);
       else if (mode === 'undecided' && event?.type === 'pointercancel') endChipGesture(false);
@@ -1432,7 +1473,7 @@
       aria-label={paletteOpen ? 'Fewer effects' : 'More effects'}
       aria-expanded={paletteOpen}
       data-debug="chain-add"
-      use:press={{ onPress: togglePalette, onRelease: releaseChevron, fireOn: 'down', touchAction: 'none', stopPropagation: true }}
+      onclick={keyToggle}
     >
       <span class="chain-add-plus" aria-hidden="true">{#if paletteOpen}<ChevronUp />{:else}<ChevronDown />{/if}</span>
     </button>
