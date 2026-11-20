@@ -1217,8 +1217,11 @@
       {:else if cell.presetKey === 'sequencer'}
         <!-- Permute: its mute and pitch steps, on this device. -->
         <div class="cell-control" role="presentation"><CellSize><PermuteStepsFace device={cell.device} color={cell.ink} /></CellSize></div>
-      {:else if !padScope && !cell.inside && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType) && !isBareRack(cell)}
-        <!-- The instrument's signature control, as its view draws it. -->
+      {:else if !padScope && !cell.inside && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType) && !isBareRack(cell) && !(cell.foldable && macroGridOf(cell.device))}
+        <!-- The instrument's signature control, as its view draws it. An
+             Instrument Rack whose macros are named draws its macro panel
+             below instead, as a rack anywhere else in the chain does: its
+             table entry is its first macro alone (2026-11-19). -->
         <div class="cell-control" role="presentation"><CellSize>
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={trackScheme ?? schemeFromInk(cell.ink)} />
         </CellSize></div>

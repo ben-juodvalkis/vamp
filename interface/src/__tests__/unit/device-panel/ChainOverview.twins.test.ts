@@ -115,3 +115,23 @@ describe("REC's recorder in the chain", () => {
 		expect(container.textContent).not.toContain('Vamp-Capture');
 	});
 });
+
+describe('an Instrument Rack at the head of the chain', () => {
+	it('draws its named macros as Live\'s panel, not its first macro alone', async () => {
+		const rack = device(0, 'Wurly Blender', 'InstrumentGroupDevice');
+		const names = ['Device On', 'Amp Volume', 'Drive', 'Tone', 'Tremolo', 'Macro 5', 'Macro 6', 'Macro 7', 'Macro 8'];
+		names.forEach((name, i) => {
+			const p = rack.params.get(`${rack.devicePath}/params/${i}`)!;
+			rack.params.set(p.paramPath, { ...p, name, displayName: name, max: i === 0 ? 1 : 127 });
+		});
+		replaceTree(3, [track([rack], true)]);
+		selectedTrackStore.handleTrackSelected(0);
+		fxGrid.resetForTrackChange();
+		const { container } = render(ChainOverview, { props: {} });
+		await tick();
+		const face = container.querySelector('[data-device-path="tracks/0/devices/0"] .rack-face');
+		expect(face).not.toBeNull();
+		const named = Array.from(face!.querySelectorAll('.macro:not(.dim)')).map((m) => m.textContent?.trim());
+		expect(named).toEqual(expect.arrayContaining(['Amp Volume', 'Drive', 'Tone', 'Tremolo']));
+	});
+});
