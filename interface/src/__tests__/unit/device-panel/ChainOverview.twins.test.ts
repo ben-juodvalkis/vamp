@@ -25,6 +25,8 @@ import {
 	type TrackRecord
 } from '$lib/stores/v3/normalized.svelte';
 import { send } from '$lib/api/simpleClient';
+import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
+import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 
 const TRACK = 'tracks/0';
 
@@ -133,5 +135,38 @@ describe('an Instrument Rack at the head of the chain', () => {
 		expect(face).not.toBeNull();
 		const named = Array.from(face!.querySelectorAll('.macro:not(.dim)')).map((m) => m.textContent?.trim());
 		expect(named).toEqual(expect.arrayContaining(['Amp Volume', 'Drive', 'Tone', 'Tremolo']));
+	});
+});
+
+describe('the lit cell', () => {
+	async function renderChain() {
+		replaceTree(3, [track([device(0, 'Operator', 'Operator'), device(1, 'Saturator', 'Saturator')], true)]);
+		selectedTrackStore.handleTrackSelected(0);
+		fxGrid.resetForTrackChange();
+		const { container } = render(ChainOverview, { props: {} });
+		await tick();
+		const lit = () => Array.from(container.querySelectorAll('.chain-cell.appointed')).map((c) => c.getAttribute('data-device-path'));
+		return lit;
+	}
+
+	it('is the instrument while its view is open and Live\'s hand is on nothing in the chain', async () => {
+		fxChainStore.observeAppointed('tracks/9/devices/0');
+		centralDisplayStore.setView('instrument', 'operator');
+		const lit = await renderChain();
+		expect(lit()).toEqual(['tracks/0/devices/0']);
+	});
+
+	it('is the device Live\'s hand is on, whatever view is open', async () => {
+		fxChainStore.observeAppointed('tracks/0/devices/1');
+		centralDisplayStore.setView('instrument', 'operator');
+		const lit = await renderChain();
+		expect(lit()).toEqual(['tracks/0/devices/1']);
+	});
+
+	it('is nothing outside the instrument view when the hand is elsewhere', async () => {
+		fxChainStore.observeAppointed(null);
+		centralDisplayStore.setView('clip');
+		const lit = await renderChain();
+		expect(lit()).toEqual([]);
 	});
 });

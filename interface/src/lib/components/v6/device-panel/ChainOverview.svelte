@@ -638,6 +638,17 @@
     return { cells: out, tops };
   });
   const drawn = $derived(expanded.cells);
+  /**
+   * The cell lit as the one whose view is open below: Live's blue hand, or,
+   * when the hand is on nothing in this chain and the instrument view is
+   * up (a track selected opens it without moving the hand), the track's
+   * instrument (2026-11-19).
+   */
+  const litPath = $derived.by(() => {
+    if (appointedPath && drawn.some((c) => c.device.devicePath === appointedPath)) return appointedPath;
+    if (centralDisplayStore.view.type !== 'instrument') return appointedPath;
+    return drawn.find((c) => c.kind === 'instrument' && !c.inside)?.device.devicePath ?? appointedPath;
+  });
 
   /** The chain position a drawn place stands for: its own, else its rack's. */
   function topAt(drawnIndex: number): number {
@@ -1384,8 +1395,8 @@
       class:off={!isOn(cell)}
       class:landing={!!cell.landing}
       class:dragging={drag?.key === cell.key}
-      class:appointed={appointedPath === cell.device.devicePath}
-      aria-current={appointedPath === cell.device.devicePath ? 'true' : undefined}
+      class:appointed={litPath === cell.device.devicePath}
+      aria-current={litPath === cell.device.devicePath ? 'true' : undefined}
       class:instrument={cell.kind === 'instrument' && !cell.inside}
       class:inside={!!cell.inside}
       class:unfolded={cell.foldable && rackFold.isOpen(cell.path)}
