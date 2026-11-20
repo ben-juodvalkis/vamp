@@ -41,7 +41,7 @@
  * its `.amxd`.
  *
  * **When it cannot be trusted** the caller falls back to the disk scan:
- * no database, a `version` other than `12300`, a column this reads gone,
+ * no database, a `version` not in `SUPPORTED_SCHEMAS`, a column this reads gone,
  * or a Place the `places` table does not list.
  */
 import { DatabaseSync } from 'node:sqlite';
@@ -52,8 +52,13 @@ import type { ItemKind } from '$lib/utils/placeKinds';
 import { fourCC, readKind, tintFor, CLIP_EXTENSION, PRESET_EXTENSIONS, SAMPLE_EXTENSIONS, type AuComponent, type KindCache, type KindInfo, type PlaceFolder, type PlaceItem } from './diskScan';
 import { newestLiveDatabase } from '../../../routes/api/similar-samples/similarSamples';
 
-/** The one schema this reader was measured against. */
-export const SUPPORTED_SCHEMA = 12300;
+/**
+ * The schemas this reader was measured against: 12300 (Live 12) and 13003
+ * (Live 13.0b25). Measured 2026-11-20: 13003's 56 tables match 12300's but
+ * for one added `files.last_used` column, which nothing here reads, and
+ * places:diff against the disk agreed for the rig's seven Places.
+ */
+export const SUPPORTED_SCHEMAS: readonly number[] = [12300, 13003];
 
 export const FOLDER_TYPE = fourccOf('fldr');
 /**
@@ -119,7 +124,7 @@ export function openIndex(file: string): IndexHandle {
 	try {
 		const row = db.prepare('SELECT * FROM version').get() as Record<string, unknown> | undefined;
 		const schema = Number(row ? Object.values(row)[0] : NaN);
-		if (schema !== SUPPORTED_SCHEMA) throw new Error(`index schema ${schema}, expected ${SUPPORTED_SCHEMA}`);
+		if (!SUPPORTED_SCHEMAS.includes(schema)) throw new Error(`index schema ${schema}, expected one of ${SUPPORTED_SCHEMAS.join(', ')}`);
 		return { db, file, schema };
 	} catch (err) {
 		db.close();

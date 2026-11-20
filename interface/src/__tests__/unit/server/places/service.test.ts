@@ -6,7 +6,7 @@
  * disk source, with no Live database; the index reader has its own tests.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createPlacesService, loadSource, type PlacesService } from '$lib/server/places/service';
@@ -173,6 +173,25 @@ describe('PlacesService, disk source', () => {
 		(s as unknown as { rebuildTicked(why: string): boolean }).rebuildTicked('test');
 		expect(s.currentVersion).toBe(v + 1);
 		expect(s.fileTag('drum.json')).not.toBe(tag);
+	});
+
+	it('follows a preset moved deep inside a Place, though the Place folder itself is untouched', () => {
+		const s = make();
+		const drum = firstPlace(s);
+		s.setTicks([drum.key]);
+		const v = s.currentVersion;
+		const top = join(root, 'Sidebar', 'Drum');
+		const topTime = statSync(top).mtime;
+		// Kits/Kit A moves into Kits/Old: only folders below the Place change.
+		mkdirSync(join(top, 'Kits', 'Old'));
+		renameSync(join(top, 'Kits', 'Kit A.aupreset'), join(top, 'Kits', 'Old', 'Kit A.aupreset'));
+		utimesSync(top, topTime, topTime);
+		(s as unknown as { rebuildTicked(why: string): boolean }).rebuildTicked('test');
+		expect(s.currentVersion).toBe(v + 1);
+		// The Place's tuning may reshape its folders; the moved file's path is the proof.
+		const served = JSON.stringify(s.fileJson('drum.json'));
+		expect(served).toContain(join('Kits', 'Old', 'Kit A.aupreset'));
+		expect(served).not.toContain(join('Kits', 'Kit A.aupreset'));
 	});
 
 	it('follows a Place renamed in Live, and serves it under its new name', () => {

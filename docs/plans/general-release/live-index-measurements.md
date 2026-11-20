@@ -288,7 +288,10 @@ indexer lists a newly saved preset. Both need a change to the library (below).
 - **Plug-ins:** the index already knows each preset's plug-in and whether it's installed.
 
 Keep the disk scan for when the database is missing, `version` isn't 12300, or a column
-we read is gone.
+we read is gone. (2026-11-20: 13003, Live 13.0b25, is read too: its 56 tables match
+12300's but for an added `files.last_used`. After a reorganization of the Sidebar
+Places, both Lives' indexes lagged the disk by thousands of items for minutes with
+Live running, so the rig runs `catalog.source: disk`, kept current by a folder watch.)
 
 Rules the index needs:
 

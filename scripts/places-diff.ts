@@ -8,6 +8,7 @@
  *   npm run places:diff                 the ticked Places (or, on a first run, the seed)
  *   npm run places:diff -- --all        every folder Live's library lists that exists here
  *   npm run places:diff -- --name Drum  one folder by name
+ *   npm run places:diff -- --db <file>  this Live-files-*.db, not the newest
  *
  * Exit 0 when every Place matches, 1 on any difference, 2 when the index
  * cannot be read. Runs under `tsx --tsconfig interface/tsconfig.json`.
@@ -57,7 +58,8 @@ function main(): number {
 
 	const dir = configPath('liveDatabaseDir') ?? '';
 	const dbDir = dir.startsWith('~/') ? join(homedir(), dir.slice(2)) : dir;
-	const db = findLiveDatabase(dbDir);
+	const dbAt = args.indexOf('--db');
+	const db = dbAt >= 0 && args[dbAt + 1] ? { file: args[dbAt + 1] } : findLiveDatabase(dbDir);
 	if (!db) {
 		console.log(`no Live-files-*.db in ${dbDir}`);
 		return 2;

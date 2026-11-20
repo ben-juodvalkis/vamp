@@ -21,6 +21,8 @@
  * **Freshness.** A 2 s poll of three mtimes — `Library.cfg`, the index's
  * `-wal` (what Live's indexer writes while it runs) and the ticks file —
  * decides when to rebuild. Ticked Places are rebuilt, the others never read.
+ * A watch on each ticked Place's folder (`folderWatch.ts`) rebuilds too, so a
+ * disk build follows a move anywhere inside it without waiting on Live.
  * Until a new catalog is ready the last one keeps being served.
  *
  * **Staying fast (§9).** Nothing here reaches Live's thread. An index build of
@@ -56,6 +58,7 @@ import {
 	type PlaceItem,
 	type PlaceTuning
 } from './diskScan';
+import { FolderWatch, folderTreeStamp } from './folderWatch';
 import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
 import { MANIFEST_NAME, readManifest } from './placesManifest';
 import { readEffectsChoice, writeEffectsChoice } from './effectsChoice';
@@ -282,6 +285,10 @@ export class PlacesService {
 	private readonly auDirs: string[] | undefined;
 	private kindCache: KindCache | null = null;
 	private lastDbStamp = '';
+	/** Watches the ticked Places' folders while the service polls (`folderWatch.ts`). */
+	private folderWatch: FolderWatch | null = null;
+	/** Each watched folder's `folderTreeStamp`, kept until the watch says it changed. */
+	private treeStamps = new Map<string, string>();
 	private rebuildQueued = false;
 	/** Whether this rebuild pass scanned a Place (rather than finding every one current). */
 	private scanned = false;
@@ -322,6 +329,12 @@ export class PlacesService {
 	start(): void {
 		if (this.started) return;
 		this.started = true;
+		if (this.polls) {
+			this.folderWatch = new FolderWatch((roots) => {
+				for (const r of roots) this.treeStamps.delete(r);
+				this.rebuildTicked('folder changed');
+			});
+		}
 		this.reload('start');
 		if (!this.polls) return;
 		this.timer = setInterval(() => this.poll(), POLL_MS);
@@ -334,6 +347,9 @@ export class PlacesService {
 		this.categoryScans.stop();
 		if (this.timer) clearInterval(this.timer);
 		this.timer = null;
+		this.folderWatch?.close();
+		this.folderWatch = null;
+		this.treeStamps.clear();
 		this.started = false;
 	}
 
@@ -528,6 +544,9 @@ export class PlacesService {
 			indexOk: this.indexState.ok,
 			ms: Date.now() - t0
 		});
+		// Watch what a disk build reads: a Place's own folder, never Live's
+		// categories or Collections, which come from the index alone.
+		this.folderWatch?.set(wanted.filter((s) => s.kind !== 'category' && s.kind !== 'collection' && s.path).map((s) => s.path));
 		if (changed) this.bump(why);
 		this.scheduleBake();
 		return changed;
@@ -541,18 +560,14 @@ export class PlacesService {
 	private buildOne(s: LibrarySource, id: string, index: IndexHandle | null, ctx: { au: Map<string, AuComponent>; colors: Record<string, string | undefined> }): BuiltCatalog | null {
 		const tuning = tuningFor(s.name);
 		const role = tuning.role !== undefined ? tuning.role : (categoryForFolderName(s.name) ?? categoryForFolderName(basename(s.path)));
-		// The stamp: the index's write stamp for an index build (any index
-		// write rebuilds, 0.1 s for the rig's seven), the folder's own for a
-		// disk build (decided by mtime of the root, cheap; a deeper change
-		// arrives with the 2 s poll's next index stamp or a forced rebuild).
 		// The stamp: what the build read. An index build carries the index's
 		// write stamp, so any index write rebuilds it (0.1 s for the rig's
-		// seven). A disk build carries the root folder's own mtime and no
-		// index stamp: a walk of the rig's seven costs seconds of the server's
-		// only thread, so it runs for a tick, a Library.cfg change, a change
-		// at the Place's top level, or a forced rebuild — not for every file
-		// Live's indexer touches anywhere. The Place's name, icon and id are
-		// in it too, so a Place renamed in Live is served under its new name.
+		// seven). A disk build carries `diskStamp`, the newest folder mtime
+		// anywhere in the Place, so a move deep inside it rebuilds; the folder
+		// watch says when to walk again (`folderWatch.ts`, 0.2 s for the rig's
+		// seven), so nothing walks while the folders are still. The Place's
+		// name, icon and id are in it too, so a Place renamed in Live is served
+		// under its new name.
 		const effects = this.isEffectsPlace(s) ? (configSection<{ effectsHidden?: string[] }>('catalog').effectsHidden ?? []) : null;
 		// The effects Place's layout rule is in it too, so a change to how the
 		// Place is drawn rebuilds a catalog cached under the old one.
@@ -738,12 +753,20 @@ export class PlacesService {
 		return built;
 	}
 
+	/**
+	 * What a disk build of `path` read: the newest folder mtime anywhere in
+	 * it (`folderTreeStamp`), so a preset moved two folders down rebuilds the
+	 * Place. Kept while the folder is watched, and walked again only once the
+	 * watch reports a change; without a watch (the script, tests) walked each time.
+	 */
 	private diskStamp(path: string): string {
-		try {
-			return String(statSync(path).mtimeMs);
-		} catch {
-			return 'missing';
+		if (!this.folderWatch) return folderTreeStamp(path);
+		let stamp = this.treeStamps.get(path);
+		if (stamp === undefined) {
+			stamp = folderTreeStamp(path);
+			this.treeStamps.set(path, stamp);
 		}
+		return stamp;
 	}
 
 	private readCache(key: string, stamp: string): BuiltCatalog | null {
