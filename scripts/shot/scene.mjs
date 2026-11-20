@@ -1978,3 +1978,67 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
  * compared to anything.
  */
 export const SCENE_ETAG = '0x5cde0000';
+
+/** Rename every `RACK_CHAINS` key under `from` to sit under `to` (a rack whose path moved). */
+function rekeyRackChains(from, to) {
+	if (from === to) return;
+	const moved = Object.keys(RACK_CHAINS).filter((k) => k === from || k.startsWith(`${from}/`));
+	const held = moved.map((k) => [k, RACK_CHAINS[k]]);
+	for (const k of moved) delete RACK_CHAINS[k];
+	for (const [k, v] of held) RACK_CHAINS[to + k.slice(from.length)] = v;
+}
+
+/**
+ * `device/move_into` (ADR-551) on a built scene: the top-level device at
+ * `devicePath` leaves its track (the rest renumbered, as Live does) and
+ * joins the rack chain at `chainPath` at `index` (-1 appends). False when
+ * either is not in the scene. Racks whose paths shift are re-keyed, so
+ * their `chain_devices` rows still answer.
+ */
+export function moveTrackDeviceIntoChain(args, devicePath, chainPath, index) {
+	const dm = /^(tracks\/\d+)\/devices\/(\d+)$/.exec(devicePath);
+	const cm = /^(tracks\/\d+\/devices\/\d+(?:\/chains\/\d+\/devices\/\d+)*)\/chains\/(\d+)$/.exec(chainPath);
+	if (!dm || !cm || !chainPath.startsWith(`${dm[1]}/devices/`)) return false;
+	const trackPath = dm[1];
+	const from = Number(dm[2]);
+	const prefix = `${trackPath}/devices/`;
+	const start = args.findIndex((v, k) => v === 'D' && String(args[k + 1]).startsWith(prefix));
+	if (start < 0) return false;
+	const groups = [];
+	let k = start;
+	for (;;) {
+		const path = String(args[k + 1]);
+		if (args[k] === 'D' && path.startsWith(prefix)) {
+			groups.push(args.slice(k, k + 4));
+			k += 4;
+		} else if (args[k] === 'P' && path.startsWith(prefix)) {
+			groups.at(-1).push(...args.slice(k, k + 8));
+			k += 8;
+		} else break;
+	}
+	const group = groups[from];
+	if (!group) return false;
+	const [, , name, className] = group;
+	const params = [];
+	for (let p = 4; p < group.length; p += 8) params.push(group.slice(p + 2, p + 8));
+	// The rack's path once the device has left the track.
+	let rackPath = cm[1];
+	const rackTop = Number(/^tracks\/\d+\/devices\/(\d+)/.exec(rackPath)[1]);
+	if (rackTop === from) return false;
+	groups.splice(from, 1);
+	for (let i = from; i < groups.length; i++) rekeyRackChains(`${prefix}${i + 1}`, `${prefix}${i}`);
+	if (rackTop > from) rackPath = rackPath.replace(/^(tracks\/\d+\/devices\/)\d+/, `$1${rackTop - 1}`);
+	const renumbered = groups.flatMap((g, i) =>
+		g.map((v) => (typeof v === 'string' ? v.replace(/^(tracks\/\d+\/devices\/)\d+(?=\/|$)/, (m, p) => (p === prefix ? `${p}${i}` : m)) : v))
+	);
+	args.splice(start, k - start, ...renumbered);
+	const chain = RACK_CHAINS[rackPath]?.[Number(cm[2])];
+	if (!chain) return false;
+	const at = index < 0 ? chain.devices.length : Math.max(0, Math.min(chain.devices.length, index));
+	const base = `${rackPath}/chains/${chain.index}/devices/`;
+	// Racks behind the insert move one place down the chain.
+	for (let d = chain.devices.length - 1; d >= at; d--) rekeyRackChains(`${base}${d}`, `${base}${d + 1}`);
+	chain.devices.splice(at, 0, { index: at, name, className, params, type: className.includes('Midi') ? 4 : 2, rack: 0 });
+	chain.devices.forEach((d, i) => (d.index = i));
+	return rackPath;
+}

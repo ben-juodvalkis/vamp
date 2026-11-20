@@ -12,7 +12,6 @@
  * folder (ADR-498, `effectSources`).
  */
 import { addPresetToChain } from '$lib/services/deviceMoveService';
-import { chainAddTarget } from '$lib/services/rackChains.svelte';
 import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
 import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
@@ -56,16 +55,15 @@ export function fitsSelectedTrack(effect: Pick<ChainEffect, 'kind'>): boolean {
 }
 
 /**
- * Add an effect to the selected track's chain, the scoped pad's, or the rack
- * chain the chain's own + chose (ADR-529); its
+ * Add an effect to the selected track's chain or the scoped pad's; its
  * view opens once Live reports the device.
  */
 export async function addEffectToChain(effect: ChainEffect): Promise<void> {
 	// A held strip's chain is the one on screen, so the effect goes there.
 	const trackPath = trackHoldScope.primary ?? selectedTrackStore.selectedTrackPath;
 	const pad = trackHoldScope.active ? null : activeDrumRackScope();
-	// A rack's chain the chain's own + chose (ADR-529), else the pad's, else the track's.
-	const target = chainAddTarget.path ?? pad?.padPath ?? '';
+	// The pad's chain, else the track's.
+	const target = pad?.padPath ?? '';
 	if (!trackPath) return reportFailure(effect.name, new Error('No track selected'));
 	if (!fitsSelectedTrack(effect)) return reportFailure(effect.name, new Error('A MIDI effect goes on a MIDI track'));
 	// Not under a hold: opening the view appoints the device, which would

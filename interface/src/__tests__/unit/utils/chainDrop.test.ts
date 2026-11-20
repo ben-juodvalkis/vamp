@@ -8,7 +8,7 @@ import {
 	REORDER_IDLE,
 	sameDevices,
 	type ChainEntry,
-	type ReorderState, recentLayout, chainUnitLayout, chainIndexAt, dropIntoTarget } from '$lib/utils/chainDrop';
+	type ReorderState, recentLayout, chainUnitLayout, chainIndexAt, dropIntoTarget, dropSide } from '$lib/utils/chainDrop';
 
 describe('clampChainIndex', () => {
 	it('lands where the finger is', () => {
@@ -238,20 +238,22 @@ describe('chainUnitLayout: sliders one unit, pads two, the ghost section four', 
 
 describe('dropIntoTarget (ADR-551)', () => {
 	const chain = 'tracks/1/devices/2/chains/0';
-	it('goes in front of a device in a rack chain', () => {
-		expect(dropIntoTarget({ key: 'k', kind: 'effect', path: `${chain}/devices/3`, chainPath: chain }, 'tracks/1/devices/4')).toEqual({
-			key: 'k',
-			chainPath: chain,
-			index: 3
-		});
+	it('goes in front of a device in a rack chain, or behind it', () => {
+		const t = dropIntoTarget({ key: 'k', kind: 'effect', path: `${chain}/devices/3`, chainPath: chain }, 'tracks/1/devices/4');
+		expect(t).toEqual({ key: 'k', chainPath: chain, index: 3 });
+		const after = dropSide(t!, true);
+		expect(after.index).toBe(4);
+		expect(dropSide(after, true).index).toBe(4);
+		expect(dropSide(after, false).index).toBe(3);
 	});
-	it("appends on the chain's +", () => {
-		expect(dropIntoTarget({ key: 'a', kind: 'add', path: chain, chainPath: chain }, 'tracks/1/devices/4')?.index).toBe(-1);
+	it("appends on the rack's chain list", () => {
+		const t = dropIntoTarget({ key: 'a', kind: 'chains', path: 'tracks/1/devices/2', chainPath: chain }, 'tracks/1/devices/4');
+		expect(t?.index).toBe(-1);
+		expect(dropSide(t!, true).index).toBe(-1);
 	});
-	it('refuses a top-level cell, the chain list, a landing effect and a rack into itself', () => {
+	it('refuses a top-level cell, a landing effect and a rack into itself', () => {
 		expect(dropIntoTarget({ key: 't', kind: 'effect', path: 'tracks/1/devices/3' }, 'tracks/1/devices/4')).toBeNull();
-		expect(dropIntoTarget({ key: 'c', kind: 'chains', path: 'tracks/1/devices/2', chainPath: chain }, 'tracks/1/devices/4')).toBeNull();
 		expect(dropIntoTarget({ key: 'l', kind: 'effect', path: `${chain}/devices/0`, chainPath: chain, landing: 'x' }, 'tracks/1/devices/4')).toBeNull();
-		expect(dropIntoTarget({ key: 'r', kind: 'add', path: chain, chainPath: chain }, 'tracks/1/devices/2')).toBeNull();
+		expect(dropIntoTarget({ key: 'r', kind: 'chains', path: 'tracks/1/devices/2', chainPath: chain }, 'tracks/1/devices/2')).toBeNull();
 	});
 });

@@ -64,7 +64,6 @@ describe('NewTrackButtons', () => {
 	it('opens the browser on Instrument once a MIDI track exists, and none for + Audio', async () => {
 		vi.mocked(prepareForPreset).mockResolvedValue({ trackPath: 'tracks/3', trackIndex: 3, wasCreated: true });
 		const { getByLabelText } = render(NewTrackButtons);
-		const effects = browserModeStore.effectsOpenRequest;
 		const instruments = browserModeStore.instrumentOpenRequest;
 
 		await tap(getByLabelText('New MIDI track'));
@@ -75,7 +74,6 @@ describe('NewTrackButtons', () => {
 		// The user, 2026-11-13: + Audio no longer opens the browser.
 		await tap(getByLabelText('New Audio track'));
 		await tick();
-		expect(browserModeStore.effectsOpenRequest).toBe(effects);
 		expect(browserModeStore.instrumentOpenRequest).toBe(instruments + 1);
 	});
 

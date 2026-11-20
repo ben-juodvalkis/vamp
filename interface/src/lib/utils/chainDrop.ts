@@ -289,10 +289,11 @@ export function chainIndexAt(places: readonly ChainPlace[], row: number, col: nu
 
 /**
  * Where a top-level device dropped on a cell drawn inside an unfolded rack
- * goes (ADR-551): that cell's chain, in front of it, or at the chain's end
- * for the chain's own +. Null for a cell that is not in a rack's chain
- * (the chain list, a top-level cell), an effect still landing (no place in
- * Live yet), and a rack's own chains when the dragged device is that rack.
+ * goes (ADR-551): that cell's chain, in front of it (`dropSide` moves it
+ * behind), or at the end of the chosen chain for its chain list. Null for
+ * a cell that is not in a rack's chain, an effect still landing (no place
+ * in Live yet), and a rack's own chains when the dragged device is that
+ * rack.
  */
 export interface DropInto {
 	/** The cell under the finger, which lights. */
@@ -301,17 +302,26 @@ export interface DropInto {
 	chainPath: string;
 	/** The index in that chain; -1 appends. */
 	index: number;
+	/** Behind the lit device rather than in front of it. */
+	after?: boolean;
 }
 
 export function dropIntoTarget(
 	cell: { key: string; kind: string; path: string; landing?: string; chainPath?: string },
 	draggedPath: string
 ): DropInto | null {
-	if (!cell.chainPath || cell.kind === 'chains' || cell.landing) return null;
+	if (!cell.chainPath || cell.landing) return null;
 	// A rack never goes into a chain of its own.
-	if (cell.chainPath.startsWith(`${draggedPath}/`)) return null;
-	if (cell.kind === 'add') return { key: cell.key, chainPath: cell.chainPath, index: -1 };
+	if (cell.chainPath.startsWith(`${draggedPath}/`) || cell.chainPath === draggedPath) return null;
+	if (cell.kind === 'chains') return { key: cell.key, chainPath: cell.chainPath, index: -1 };
 	const m = /\/devices\/(\d+)$/.exec(cell.path);
 	if (!m || !cell.path.startsWith(`${cell.chainPath}/devices/`)) return null;
 	return { key: cell.key, chainPath: cell.chainPath, index: Number(m[1]) };
+}
+
+/** A device target, in front of the device or behind it (Live's next index). */
+export function dropSide(target: DropInto, after: boolean): DropInto {
+	if (target.index < 0) return target;
+	const base = target.after ? target.index - 1 : target.index;
+	return after ? { ...target, index: base + 1, after: true } : { ...target, index: base, after: false };
 }

@@ -386,10 +386,9 @@ source and the Phase 4 switch that chose between them.
   tracks only" on its face, and `addEffect` refuses one there too (a random
   pick could land on it) (user, 2026-10-26). The stacked label
   (`.has-plugin`, column flex) applies only to tiles that carry one.
-- **Where a rack chain's + opens** (ADR-529, ADR-550): the effects Place
-  when it is on the rail, else the open Place with effect presets, else the
-  first that has some, on the Effect segment. The chain's own + and the
-  Settings choice of the effects folder are gone (ADR-548, ADR-550); Vamp's
+- **Nothing outside the rail opens the browser on Effect.** The chain's +,
+  a rack chain's + and the Settings choice of the effects folder are gone
+  (ADR-548, ADR-550, ADR-551); Vamp's
   own effect tiles still load their files by name from the effects folder
   (`logs/effects.json`, else `catalog.effectsPlace`, else Live's Audio
   Effects, ADR-498); a tile whose file is not there is refused with a banner
@@ -489,8 +488,7 @@ Simpler | Clip | Effect]` switch reads/writes these via the `browseMode`
 projection (`get browseMode` / `setBrowseMode`): `midi`↔instruments,
 `simpler`↔audio+simpler, `audio`↔audio+clip, `effects`↔instruments+`browseEffects`
 (persisted too; a replace clears it) — one control over the orthogonal fields
-(ADR-397). `openEffectsBrowser` opens it on Effect (the chain overview's +
-cell, ADR-478).
+(ADR-397).
 (`browserGestureStore` was gesture-only and was deleted with the old browser.)
 
 ## Grid layout

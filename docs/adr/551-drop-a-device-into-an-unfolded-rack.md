@@ -37,5 +37,26 @@ reordered it beside the rack.
   target rule (`dropIntoTarget`, 3 tests), and a screenshot of the drag in
   flight (`shot:tour -- chain --only chain-drop-into`). Not yet seen in Live.
 
+## Addendum (2026-11-20): no + in a rack chain, and a smoother landing
+- **The rack chain's + is gone**, and with it the last way to open the
+  browser on Effect from outside the rail (`chainAddTarget`,
+  `openEffectsBrowser`). A drop now picks its side: over a device's left
+  half it goes in front, over its right half behind, shown by a bar on that
+  side of the lit cell. Over the rack's chain list it goes to the end of
+  the chosen chain. An empty rack with one chain has no cell to drop on.
+- **The landing no longer jumps.** The let-go cell used to glide back to
+  its old slot, then vanish, and the chain redrew in one step when Live
+  answered. Now it stays hidden where it was let go; when Live shows the
+  device in its chain, the cells that stay slide to their new places and
+  the device's new cell flies in from the drop. Live refusing the move
+  (nothing after 2 s) brings the cell back.
+- **A rack chain's cells are keyed by the chain row's names**, not the
+  device records', which can lag the row by a message: a move into a chain
+  gave two cells one key for that moment (`each_key_duplicate` in the
+  console).
+- Checked: the end state on the screenshot mock (which now plays out
+  `device/move_into`), with no duplicate-key error. The motion itself was
+  not captured: the harness's screenshot lands after the 220 ms animation.
+
 ## Tags
 `chain`, `racks`, `drag`, `wire`

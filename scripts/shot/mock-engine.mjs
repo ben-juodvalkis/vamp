@@ -23,6 +23,7 @@ import {
 	padChainRecords,
 	rackChainRecords,
 	rackChainsValue,
+	moveTrackDeviceIntoChain,
 	setRackChainField,
 	appendPadDevice,
 	deviceClassName,
@@ -741,6 +742,28 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 					generation += 1;
 					sendStateFull(ws, 'structural');
 					log(`device/move ${devicePath} → index ${index}`);
+					return;
+				}
+
+				case '/looping/v3/device/move_into': {
+					// [devicePath, chainPath, index] — a drop into an unfolded
+					// rack (ADR-551). The device leaves the track for the rack's
+					// chain; the tree is re-sent, then the rack's chain row and
+					// bundle, as Live's republish and the row's listener would.
+					const [devicePath, chainPath, index] = args;
+					const rackPath =
+						typeof devicePath === 'string' && typeof chainPath === 'string' && typeof index === 'number'
+							? moveTrackDeviceIntoChain(resolved.treeArgs, devicePath, chainPath, index)
+							: false;
+					if (!rackPath) {
+						log(`unhandled ${address} ${devicePath} → ${chainPath}`);
+						return;
+					}
+					generation += 1;
+					sendStateFull(ws, 'structural');
+					send(ws, '/looping/v3/property/value', [rackPath, 'chain_devices', rackChainsValue(rackPath)]);
+					send(ws, '/looping/v3/state/full/tree', ['rack-chain', generation, SCENE_ETAG, rackPath, ...rackChainRecords(rackPath)]);
+					log(`device/move_into ${devicePath} → ${chainPath} at ${index}`);
 					return;
 				}
 

@@ -26,9 +26,10 @@
    * queue behind it and go out against the paths Live reports next. Only
    * a lifted finger drops — a cancelled gesture puts the cell back. The
    * instrument stays put and nothing crosses it (`utils/chainDrop`).
-   * Effects join the chain from the palette's chips (ADR-548); a rack
-   * chain's own + opens the browser on its Effect segment
-   * (`openEffectsBrowser`, ADR-529, ADR-550).
+   * Effects join the chain from the palette's chips (ADR-548). A
+   * top-level cell dropped on a device inside an unfolded rack goes into
+   * that chain, before or after it by the half the finger is over, or at
+   * the chosen chain's end on its chain list (ADR-551).
    *
    * **A cell carries its tile's control** (2026-10-25): a device the FX
    * grid has a tile for shows that tile — its XY or slider, the grid's own
@@ -54,13 +55,11 @@
    */
   import Box from '@lucide/svelte/icons/box';
   import Plug from '@lucide/svelte/icons/plug';
-  import Plus from '@lucide/svelte/icons/plus';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import ChainListFace from './chain/ChainListFace.svelte';
-  import { CHAIN_DEVICES, SHOW_DEVICES, SELECTED_CHAIN, chainAddTarget, chainDevicePathOf, chainPathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
-  import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
+  import { CHAIN_DEVICES, SHOW_DEVICES, SELECTED_CHAIN, chainDevicePathOf, chainPathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { setContext } from 'svelte';
   import CellSize from './chain/CellSize.svelte';
@@ -100,6 +99,7 @@
     chainUnitLayout,
     chainIndexAt,
     dropIntoTarget,
+    dropSide,
     type DropInto,
     type ChainPlace,
     clampChainIndex,
@@ -185,7 +185,7 @@
     /** Where Live has it now. */
     path: string;
     device: DeviceRecord;
-    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains' | 'add';
+    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains';
     presetKey: string | null;
     tile: string | null;
     ink: string;
@@ -386,7 +386,7 @@
   const ROW_UNITS = 13;
   function unitsOf(cell: Cell): number {
     // The chain list is a slider's width (the user, 2026-11-12).
-    if (cell.kind === 'chains' || cell.kind === 'add') return 1;
+    if (cell.kind === 'chains') return 1;
     if (cell.kit || isMidiWheels(cell.device)) return 1;
     // A rack with no macro assigned is its header and mark alone (Ben, 2026-11-17).
     if (isBareRack(cell)) return 1;
@@ -585,7 +585,10 @@
               ? 'plugin'
               : 'effect';
       const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
-      const sig = `${device.className}|${device.name}`;
+      // Keyed by the chain row's own class and name, as `nth` counts them:
+      // the device's record can lag the row by a message after a change,
+      // and a key from the record then collides with its neighbour's.
+      const sig = `${d.className}|${d.name}`;
       const nested: Cell = {
         key: `${cell.key}|c${chosen.index}|${sig}|${nth}`,
         sig,
@@ -620,8 +623,6 @@
         landing: id
       });
     }
-    // The chain's own + (the user, 2026-11-12): a browser pick lands in it.
-    out.push({ ...listCell(cell), key: `${cell.key}|c${chosen.index}|add`, kind: 'add', path: chainPathOf(rackPath, chosen.index), inside });
   }
   function listCell(rack: Cell): Cell {
     return { ...rack, key: `${rack.key}|chains`, kind: 'chains', tile: null, presetKey: null, foldable: false, kit: false };
@@ -936,8 +937,15 @@
   // chain resized under them snaps in one
   // frame; sliding every cell from where the old layout had it read as the
   // chain jumping twice on every load (Ben, 2026-11-18).
-  const orderKey = $derived(shown.map((c) => c.key).join('\n'));
+  const orderKey = $derived(drawn.map((c) => c.key).join('\n'));
   let before = new Map<string, DOMRect>();
+  /**
+   * A drop into a rack chain waiting for Live (ADR-551): the device's
+   * class and name, where it was let go, its hidden cell. While it waits,
+   * a change to the chain slides every cell that stays and flies the
+   * device's new cell in from the drop.
+   */
+  let landInto: { sig: string; rect: DOMRect; node: HTMLElement; until: number } | null = null;
   $effect.pre(() => {
     void orderKey;
     if (!chainEl) return;
@@ -951,13 +959,32 @@
     if (!chainEl || before.size === 0) return;
     const now = [...chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')].map((el) => el.dataset.cellKey!);
     const reorder = now.length === before.size + (dragNode ? 1 : 0) && now.every((k) => before.has(k) || dragNode?.dataset.cellKey === k);
-    if (!reorder) {
+    const into = landInto && Date.now() < landInto.until ? landInto : null;
+    if (!reorder && !into) {
       before = new Map();
       return;
     }
     for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
-      const from = before.get(el.dataset.cellKey!);
-      if (!from) continue;
+      const key = el.dataset.cellKey!;
+      const from = before.get(key);
+      if (!from) {
+        // The dropped device, arriving in its chain: from the drop to here.
+        if (into && el !== into.node && key.includes(`|${into.sig}|`)) {
+          for (const a of el.getAnimations()) a.cancel();
+          const to = el.getBoundingClientRect();
+          const sx = to.width ? into.rect.width / to.width : 1;
+          const sy = to.height ? into.rect.height / to.height : 1;
+          el.animate(
+            [
+              { transformOrigin: '0 0', transform: `translate(${into.rect.left - to.left}px, ${into.rect.top - to.top}px) scale(${sx}, ${sy})` },
+              { transformOrigin: '0 0', transform: 'none' }
+            ],
+            { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+          );
+          landInto = null;
+        }
+        continue;
+      }
       for (const a of el.getAnimations()) a.cancel();
       const to = el.getBoundingClientRect();
       const dx = from.left - to.left;
@@ -1037,11 +1064,19 @@
       places: layout.places.map((p) => ({ ...p })),
       path: cell.path,
       targets: drawn.map((c) =>
-        dropIntoTarget({ key: c.key, kind: c.kind, path: c.path, landing: c.landing, chainPath: c.inside ? chainPathOf(c.inside.rackPath, c.inside.chain.index) : undefined }, cell.path)
+        dropIntoTarget({ key: c.key, kind: c.kind, path: c.path, landing: c.landing, chainPath: chainPathForDrop(c) }, cell.path)
       ),
       into: null
     };
     paintDragged();
+  }
+
+  /** The rack chain a drop on a drawn cell goes into: its own, or for a chain list the chosen chain. */
+  function chainPathForDrop(c: Cell): string | undefined {
+    if (!c.inside) return undefined;
+    if (c.kind !== 'chains') return chainPathOf(c.inside.rackPath, c.inside.chain.index);
+    const count = c.chains?.length ?? 1;
+    return chainPathOf(c.inside.rackPath, Math.min(rackFold.chainOf(c.inside.rackPath), count - 1));
   }
 
   function dragMove(info: DragInfo) {
@@ -1057,9 +1092,13 @@
     // Over a cell in an unfolded rack's chain: a drop goes into that chain
     // (ADR-551), and the chain stays as it was lifted so the cell lit is
     // the one under the finger.
-    const into = d.targets[at] ?? null;
-    if (into) {
-      if (into.key !== d.into?.key || d.to !== d.from) drag = { ...d, to: d.from, into };
+    const target = d.targets[at] ?? null;
+    if (target) {
+      // Over a device's right half the drop goes after it.
+      const place = d.places[at];
+      const colF = ((x - d.chain.left) * d.cols) / (d.chain.width + GRID_GAP);
+      const into = place && target.index >= 0 ? dropSide(target, colF > place.col + place.span / 2) : target;
+      if (into.key !== d.into?.key || into.after !== d.into?.after || d.to !== d.from) drag = { ...d, to: d.from, into };
       return;
     }
     const to = clampChainIndex({ from: d.from, to: topAt(at), count: d.base.length, instrument: d.instrument });
@@ -1076,6 +1115,23 @@
     // Only a finger lifted drops; a cancel or an unmount puts it back.
     if (d && info.reason === 'up' && d.into) {
       void moveDeviceInto(d.path, d.into.chainPath, d.into.index).catch(() => {});
+      // The cell stays hidden where it was let go until Live shows the
+      // device in its chain, which then flies from here into its place
+      // while the rest slide (`landInto`). Live refusing it: it comes back.
+      if (node) {
+        const sig = d.base[d.from]?.sig ?? '';
+        const rect = node.getBoundingClientRect();
+        node.style.visibility = 'hidden';
+        landInto = { sig, rect, node, until: Date.now() + MOVE_TIMEOUT_MS };
+        setTimeout(() => {
+          if (landInto?.node !== node) return;
+          landInto = null;
+          if (!node.isConnected) return;
+          node.style.visibility = '';
+          settle(node);
+        }, MOVE_TIMEOUT_MS);
+      }
+      return;
     } else if (d && info.reason === 'up' && d.to !== d.from) {
       reorder = { desired: moved(d.base, d.from, d.to), inflight: reorder.inflight };
     }
@@ -1119,16 +1175,6 @@
     return deviceTypeLabel(cell.device.className, cell.device.name);
   }
 
-  /** The chain's own +: the browser on Effect, its picks into that chain (ADR-529). */
-  function addToChain(chainPath: string) {
-    swallowNextClick();
-    chainAddTarget.set(chainPath);
-    browserModeStore.openEffectsBrowser();
-  }
-  // A chain is the target only while the browser it opened is up.
-  $effect(() => {
-    if (!browserModeStore.isInstrumentPersistent) untrack(() => chainAddTarget.clear());
-  });
 
   /** The instrument view type of an instrument on a rack's chain, when it has a face; else null. */
   function innerFaceType(cell: Cell): string | null {
@@ -1397,29 +1443,14 @@
   bind:this={chainEl}
 >
   {#each drawn as cell, position (cell.key)}
-    {#if cell.kind === 'add'}
-    <button
-      type="button"
-      class="chain-add chain-add-inner"
-      class:targeted={chainAddTarget.path === cell.path}
-      class:drop-into={drag?.into?.key === cell.key}
-      style="--rack-ink: {cell.inside?.ink ?? cell.ink};{levelOf(cell) ? ` margin-top: ${levelOf(cell) * ARM_STEP}px;` : ''}"
-      style:grid-column={layout.places[position] ? `${layout.places[position].col + 1} / span ${layout.places[position].span}` : undefined}
-      style:grid-row={layout.places[position] ? `${layout.places[position].row + 1}` : undefined}
-      aria-label="Add an effect to {cell.inside?.chain.name || 'the chain'}"
-      data-debug="chain-add-inner"
-      data-chain-path={cell.path}
-      use:press={{ onPress: () => addToChain(cell.path), touchAction: 'none' }}
-    >
-      <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
-    </button>
-    {:else}
     <div
       class="chain-cell"
       class:off={!isOn(cell)}
       class:landing={!!cell.landing}
       class:dragging={drag?.key === cell.key}
       class:drop-into={drag?.into?.key === cell.key}
+      class:drop-before={drag?.into?.key === cell.key && !drag.into.after}
+      class:drop-after={drag?.into?.key === cell.key && !!drag.into.after}
       class:appointed={litPath === cell.device.devicePath}
       aria-current={litPath === cell.device.devicePath ? 'true' : undefined}
       class:instrument={cell.kind === 'instrument' && !cell.inside}
@@ -1460,7 +1491,6 @@
     >
       {@render cellBody(cell, position)}
     </div>
-    {/if}
   {/each}
   {#each arms as arm (arm.key)}
     <button
@@ -1586,31 +1616,27 @@
   .chain-add:active > span {
     opacity: 1;
   }
-  /* A chain's own + (ADR-529): the dashed ghost in the rack's ink, lit
-     while the browser it opened is adding to that chain. */
-  .chain-add-inner {
-    border-color: color-mix(in oklab, var(--rack-ink) 60%, var(--ghost-line-strong));
-    color: var(--rack-ink);
-  }
-  .chain-add-inner.targeted {
-    border-style: solid;
-    background: color-mix(in oklab, var(--rack-ink) 18%, transparent);
-  }
-  .chain-add-inner.targeted > span {
-    opacity: 1;
-  }
-  /* A dragged device over a rack chain's cell or +: a drop goes into that
-     chain, in front of the lit cell or at the chain's end (ADR-551). */
-  .chain-add-inner.drop-into {
-    border-style: solid;
-    background: color-mix(in oklab, var(--rack-ink) 28%, transparent);
-  }
-  .chain-add-inner.drop-into > span {
-    opacity: 1;
-  }
+  /* A dragged device over a cell in an unfolded rack's chain (ADR-551):
+     the cell lights, and a bar on the side the drop goes to. */
   .chain-cell.drop-into {
-    outline: 3px solid var(--on-bg);
-    outline-offset: -3px;
+    outline: 2px solid var(--on-bg);
+    outline-offset: -2px;
+  }
+  .chain-cell.drop-into::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: var(--on-bg);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .chain-cell.drop-into.drop-before::after {
+    left: 0;
+  }
+  .chain-cell.drop-into.drop-after::after {
+    right: 0;
   }
   /* A big +, as tall as the tile allows (the user, 2026-11-05). */
   .chain-add-plus {

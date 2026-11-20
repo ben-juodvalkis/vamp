@@ -75,8 +75,6 @@ function createBrowserModeStore() {
 	let sourceMode = $state<SourceMode>(readSourceModeFromStorage());
 	let audioLoadTarget = $state<AudioLoadTarget>(readAudioLoadTargetFromStorage());
 	let browseEffects = $state(readStringFromStorage(BROWSE_EFFECTS_STORAGE_KEY) === '1');
-	// Bumped by `openEffectsBrowser`; the browser lands on a Place with effects.
-	let effectsOpenRequest = $state(0);
 	// Bumped by `openInstrumentBrowser`; the browser resumes where it was, on Instrument.
 	let instrumentOpenRequest = $state(0);
 	const setBrowseEffects = (value: boolean) => {
@@ -173,20 +171,6 @@ function createBrowserModeStore() {
 			sourceMode = 'audio';
 			writeStringToStorage(SOURCE_MODE_STORAGE_KEY, sourceMode);
 			isInstrumentPersistent = true;
-		},
-
-		// Open the browser on its Effect segment — the chain overview's + cell
-		// (2026-10-25). A pick lands on the selected track's chain, or the
-		// scoped pad's.
-		openEffectsBrowser() {
-			sourceMode = 'instruments';
-			writeStringToStorage(SOURCE_MODE_STORAGE_KEY, sourceMode);
-			setBrowseEffects(true);
-			isInstrumentPersistent = true;
-			effectsOpenRequest += 1;
-		},
-		get effectsOpenRequest(): number {
-			return effectsOpenRequest;
 		},
 
 		// Open the browser on its Instrument segment, where it was left — the

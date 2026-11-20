@@ -74,7 +74,6 @@
 	import BrowserWheelsFace from './BrowserWheelsFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
 	import { addEffectToChain, type ChainEffect } from '$lib/services/chainEffects.svelte';
-	import { chainAddTarget } from '$lib/services/rackChains.svelte';
 	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { sectionInks } from './utils/sectionInks';
@@ -178,8 +177,7 @@
 	/**
 	 * The effects Place (`catalog.effectsPlace`): laid out as one screen of
 	 * its folders when it is opened from the rail. Off the rail it is not
-	 * reachable (the + that opened it went with ADR-548). Null when the Mac
-	 * names none.
+	 * reachable (ADR-550). Null when the Mac names none.
 	 */
 	let effectsVendor = $state<BrowserVendor | null>(null);
 	/** Each Place's index entry, keyed by its rail id (`place:drum`). */
@@ -1008,8 +1006,8 @@
 		}
 		const pad = trackHoldScope.active ? null : activeDrumRackScope();
 		browserNavigationStore.loadedPresetPath = preset.path;
-		// A rack's chain the chain's own + chose (ADR-529), else the pad's, else the track's.
-		const target = chainAddTarget.path ?? pad?.padPath ?? '';
+		// The pad's chain, else the track's.
+		const target = pad?.padPath ?? '';
 		const [source, rel] = placeArgs(preset);
 		return startPresetDrag({
 			trackPath,
@@ -1558,25 +1556,6 @@
 			}
 			wasPersistent = nowPersistent;
 		}
-	});
-	// A rack chain's + (`openEffectsBrowser`): the effects Place when it is on
-	// the rail, else the open Place if it has effect presets, else the first
-	// Place that does.
-	let seenEffectsRequest = browserModeStore.effectsOpenRequest;
-	$effect(() => {
-		const request = browserModeStore.effectsOpenRequest;
-		if (request === seenEffectsRequest) return;
-		seenEffectsRequest = request;
-		isExpanded = true;
-		untrack(() => {
-			const current = findVendorById(vendors, selectedVendorId);
-			const onRail = placeVendors.find((v) => v.id === effectsVendor?.id);
-			const target = onRail ?? (
-				current && isPlaceVendor(current) && placeHas(current.id, EFFECT_GROUPS)
-					? current
-					: (placeVendors.find((v) => placeHas(v.id, EFFECT_GROUPS)) ?? current));
-			if (target && isPlaceVendor(target)) selectCategory(target, { restore: true });
-		});
 	});
 	// The strips' + MIDI (`openInstrumentBrowser`): the Place it was on, where
 	// it was left among its instruments; the first Place if none was open.
