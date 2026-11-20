@@ -231,6 +231,24 @@ describe("the palette bar's chevron", () => {
 		const loads = vi.mocked(send).mock.calls.filter(([address]) => String(address).includes('device'));
 		expect(loads.length).toBeGreaterThan(0);
 	});
+
+	it('slid onto a chip and back onto the chevron, closes and loads nothing', async () => {
+		const { container, chevron, open } = await renderBar();
+		await down(chevron, 1);
+		await tick();
+		const chip = container.querySelector<HTMLElement>('[data-debug="chain-palette"] [data-chip-id^="2:"]');
+		document.elementFromPoint = () => chip;
+		await fireEvent.pointerMove(window, { clientX: 5, clientY: 60, pointerId: 1 });
+		await tick();
+		document.elementFromPoint = () => chevron;
+		await fireEvent.pointerMove(window, { clientX: 5, clientY: 5, pointerId: 1 });
+		await tick();
+		await fireEvent.pointerUp(window, { clientX: 5, clientY: 5, pointerId: 1 });
+		await tick();
+		expect(open()).toBe('false');
+		const loads = vi.mocked(send).mock.calls.filter(([address]) => String(address).includes('device'));
+		expect(loads).toHaveLength(0);
+	});
 });
 
 describe("the palette bar's rows at rest", () => {

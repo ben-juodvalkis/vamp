@@ -78,8 +78,9 @@ or, once the chain wraps to two rows, the bar one row and the chain five
 (the phone keeps one row). The chevron
 opens the bar to three rows (lit) at finger-down: a tap latches it open
 and a second tap closes it, a hold past `momentaryHoldMs` closes it on
-release (Solo's rule), and a slide from it onto a chip loads that chip
-(the chevron is a press on the bar's own gesture); a finger on a
+release (Solo's rule), and a slide from it onto a chip loads that chip, while sliding back
+to let go on the chevron closes the bar and loads nothing (the chevron
+is a press on the bar's own gesture); a finger on a
 chip opens it for as long as it is down (a 120ms hold, or at once on a
 slide), letting go on a chip loads it, and a quick tap loads without
 opening. Open, held or latched, the bar lies over the chain, which never
