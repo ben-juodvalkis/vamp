@@ -295,8 +295,10 @@ export async function performSteps(page, steps, { log = () => {} } = {}) {
 			await page.fill(step.fill, step.text, { timeout: 5000 });
 			await page.waitForTimeout(300);
 		} else if (step.drag) {
-			const [dx, dy] = step.by ?? [24, -24];
 			const { x, y } = await centreOf(page, step.drag, '--drag');
+			// `to`: a selector to end over, its centre, instead of an offset.
+			const end = step.to ? await centreOf(page, step.to, '--drag') : null;
+			const [dx, dy] = end ? [end.x - x, end.y - y] : (step.by ?? [24, -24]);
 			log(`dragging ${step.drag} by ${dx},${dy}`);
 			await page.mouse.move(x, y);
 			await page.mouse.down();

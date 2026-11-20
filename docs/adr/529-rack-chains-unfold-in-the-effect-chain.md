@@ -92,7 +92,8 @@ Live.
   devices. The rack view and the generic view find a picked nested device
   by path.
 - Cells inside a rack are not dragged; a drop of a top-level cell onto
-  them lands at their rack's place.
+  them lands at their rack's place. (Amended by [ADR-551](551-drop-a-device-into-an-unfolded-rack.md):
+  the drop goes into that chain.)
 
 ## Consequences
 

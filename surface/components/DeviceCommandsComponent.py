@@ -9,6 +9,7 @@ side-effect methods that have no Live property surface (verified via
     /looping/v3/device/move_to_top   [devicePath]
     /looping/v3/device/move_to_end   [devicePath]
     /looping/v3/device/move          [devicePath, index]
+    /looping/v3/device/move_into     [devicePath, chainPath, index]
     /looping/v3/simpler/reverse      [devicePath]
     /looping/v3/simpler/warp_half    [devicePath]
     /looping/v3/simpler/warp_double  [devicePath]
@@ -77,6 +78,7 @@ V3_DEVICE_SELECT_ADDRESS = "/looping/v3/device/select"
 V3_DEVICE_MOVE_TO_TOP_ADDRESS = "/looping/v3/device/move_to_top"
 V3_DEVICE_MOVE_TO_END_ADDRESS = "/looping/v3/device/move_to_end"
 V3_DEVICE_MOVE_ADDRESS = "/looping/v3/device/move"
+V3_DEVICE_MOVE_INTO_ADDRESS = "/looping/v3/device/move_into"
 V3_DEVICE_DELETE_ADDRESS = "/looping/v3/device/delete"
 V3_SIMPLER_REVERSE_ADDRESS = "/looping/v3/simpler/reverse"
 V3_SIMPLER_WARP_HALF_ADDRESS = "/looping/v3/simpler/warp_half"
@@ -128,6 +130,7 @@ class DeviceCommandsComponent:
     V3_DEVICE_MOVE_TO_TOP_ADDRESS = V3_DEVICE_MOVE_TO_TOP_ADDRESS
     V3_DEVICE_MOVE_TO_END_ADDRESS = V3_DEVICE_MOVE_TO_END_ADDRESS
     V3_DEVICE_MOVE_ADDRESS = V3_DEVICE_MOVE_ADDRESS
+    V3_DEVICE_MOVE_INTO_ADDRESS = V3_DEVICE_MOVE_INTO_ADDRESS
     V3_SIMPLER_REVERSE_ADDRESS = V3_SIMPLER_REVERSE_ADDRESS
     V3_SIMPLER_WARP_HALF_ADDRESS = V3_SIMPLER_WARP_HALF_ADDRESS
     V3_SIMPLER_WARP_DOUBLE_ADDRESS = V3_SIMPLER_WARP_DOUBLE_ADDRESS
@@ -269,6 +272,85 @@ class DeviceCommandsComponent:
             )
             return
         self._move_to(args[:1], V3_DEVICE_MOVE_ADDRESS, position=wanted)
+
+    def handle_move_into(self, args, source_addr) -> None:
+        """``[devicePath, chainPath, index]`` — move the device into a
+        rack's chain (``…/devices/<N>/chains/<M>``, ADR-551): the chain
+        overview's drop onto an unfolded rack's cell or its chain's +.
+
+        ``index`` is where it lands in that chain; ``-1`` or past the end
+        appends. A device whose chain this already is moves as
+        ``device/move`` does. A rack is never moved into a chain of its
+        own (``write-rejected``, before Live is asked). Live refuses what
+        it refuses (a MIDI effect behind an instrument, an instrument
+        into an audio effect rack) and that comes back as
+        ``write-rejected`` with its message.
+        """
+        address = V3_DEVICE_MOVE_INTO_ADDRESS
+        if self._disconnected:
+            return
+        if not self._check_arg_count(address, args, 3):
+            return
+        device_path = _coerce_str(args[0])
+        chain_path = _coerce_str(args[1])
+        try:
+            wanted = int(args[2])
+        except (TypeError, ValueError):
+            self._emit_error(address, V3_ERROR_WRITE_REJECTED, path=device_path, detail="index is not a number")
+            return
+        device = self._resolve_device_or_error(address, device_path)
+        if device is None:
+            return
+        r = path_resolver.resolve_rack_chain(self._song, chain_path)
+        if r.status is not ResolveStatus.OK:
+            self._emit_error(
+                address, _DEVICE_RESOLVE_ERROR_MAP.get(r.status, V3_ERROR_PATH_NOT_FOUND),
+                path=chain_path, detail=r.detail or "",
+            )
+            return
+        chain = r.obj
+        if self._contains(device, chain):
+            self._emit_error(address, V3_ERROR_WRITE_REJECTED, path=device_path, detail="a rack cannot go into its own chain")
+            return
+        try:
+            count = len(chain.devices)
+        except _LOM_ERRORS as e:
+            self._emit_error(
+                address, V3_ERROR_WRITE_REJECTED, path=chain_path,
+                detail="chain.devices read raised: %s: %s" % (type(e).__name__, str(e)[:80]),
+            )
+            return
+        current = self._index_in(chain, device)
+        if current is not None:
+            # Already in this chain: an ordinary move within it.
+            target = count - 1 if wanted < 0 else max(0, min(count - 1, wanted))
+            if target == current:
+                return
+            target_index = target + 1 if target > current else target
+        else:
+            target_index = count if wanted < 0 else max(0, min(count, wanted))
+        try:
+            self._song.move_device(device, chain, target_index)
+        except _LOM_ERRORS as e:
+            self._emit_error(
+                address, V3_ERROR_WRITE_REJECTED, path=device_path,
+                detail="move_device raised: %s: %s" % (type(e).__name__, str(e)[:80]),
+            )
+
+    @staticmethod
+    def _contains(device, chain) -> bool:
+        """Whether ``chain`` lies inside ``device`` (a rack moved into itself)."""
+        node = chain
+        for _ in range(16):
+            try:
+                node = node.canonical_parent
+            except _LOM_ERRORS:
+                return False
+            if node is None:
+                return False
+            if path_resolver.same_lom_handle(node, device):
+                return True
+        return False
 
     def handle_delete(self, args, source_addr) -> None:
         """``[devicePath]`` — remove the device from its chain (issue #491,

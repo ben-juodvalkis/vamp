@@ -286,3 +286,32 @@ export function chainIndexAt(places: readonly ChainPlace[], row: number, col: nu
 	const first = places.findIndex((p) => p.row === row);
 	return first >= 0 ? first : places.length;
 }
+
+/**
+ * Where a top-level device dropped on a cell drawn inside an unfolded rack
+ * goes (ADR-551): that cell's chain, in front of it, or at the chain's end
+ * for the chain's own +. Null for a cell that is not in a rack's chain
+ * (the chain list, a top-level cell), an effect still landing (no place in
+ * Live yet), and a rack's own chains when the dragged device is that rack.
+ */
+export interface DropInto {
+	/** The cell under the finger, which lights. */
+	key: string;
+	/** The rack chain's path (`…/devices/<N>/chains/<M>`). */
+	chainPath: string;
+	/** The index in that chain; -1 appends. */
+	index: number;
+}
+
+export function dropIntoTarget(
+	cell: { key: string; kind: string; path: string; landing?: string; chainPath?: string },
+	draggedPath: string
+): DropInto | null {
+	if (!cell.chainPath || cell.kind === 'chains' || cell.landing) return null;
+	// A rack never goes into a chain of its own.
+	if (cell.chainPath.startsWith(`${draggedPath}/`)) return null;
+	if (cell.kind === 'add') return { key: cell.key, chainPath: cell.chainPath, index: -1 };
+	const m = /\/devices\/(\d+)$/.exec(cell.path);
+	if (!m || !cell.path.startsWith(`${cell.chainPath}/devices/`)) return null;
+	return { key: cell.key, chainPath: cell.chainPath, index: Number(m[1]) };
+}

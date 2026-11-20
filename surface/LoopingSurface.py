@@ -146,6 +146,7 @@ from .components.DeviceCommandsComponent import (
     V3_DEVICE_DELETE_ADDRESS,
     V3_DEVICE_MOVE_TO_END_ADDRESS,
     V3_DEVICE_MOVE_ADDRESS,
+    V3_DEVICE_MOVE_INTO_ADDRESS,
     V3_DEVICE_MOVE_TO_TOP_ADDRESS,
     V3_DEVICE_SELECT_ADDRESS,
     V3_SIMPLER_REVERSE_ADDRESS,
@@ -892,6 +893,9 @@ class LoopingSurface(ControlSurface):
             # The chain overview's drag (2026-10-25): to an index.
             (V3_DEVICE_MOVE_ADDRESS,
              self._device_commands_component.handle_move),
+            # A drop into an unfolded rack's chain (ADR-551).
+            (V3_DEVICE_MOVE_INTO_ADDRESS,
+             self._device_commands_component.handle_move_into),
             # Issue #491 (3.8.0): remove a device from its chain — a
             # track's, or a drum pad's.
             (V3_DEVICE_DELETE_ADDRESS,

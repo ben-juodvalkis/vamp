@@ -75,6 +75,30 @@ export async function moveDevice(devicePath: string, index: number): Promise<voi
 	}
 }
 
+const V3_DEVICE_MOVE_INTO_ADDRESS = '/looping/v3/device/move_into';
+
+/**
+ * Move the device at `devicePath` into a rack's chain (`chainPath`,
+ * `…/devices/<N>/chains/<M>`) at `index`, -1 for its end: the chain
+ * overview's drop onto an unfolded rack (ADR-551). The surface clamps the
+ * index and refuses a rack into its own chain; Live's refusals arrive on
+ * `/looping/v3/error`.
+ */
+export async function moveDeviceInto(devicePath: string, chainPath: string, index: number): Promise<void> {
+	try {
+		await send(V3_DEVICE_MOVE_INTO_ADDRESS, [devicePath, chainPath, index]);
+	} catch (error) {
+		logger.error('Failed to move device into a chain:', {
+			component: 'deviceMove',
+			devicePath,
+			chainPath,
+			index,
+			error,
+		});
+		throw error;
+	}
+}
+
 const V3_DEVICE_DELETE_ADDRESS = '/looping/v3/device/delete';
 
 /**

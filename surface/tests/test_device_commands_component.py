@@ -631,3 +631,69 @@ def test_move_non_numeric_index_is_rejected(component, emits):
 def test_move_wrong_arg_count_is_rejected(component, emits):
     component.handle_move(args=("tracks/0/devices/1",), source_addr=None)
     assert emits[0][1][1] == V3_ERROR_WRITE_REJECTED
+
+
+# --- handle_move_into (a drop into an unfolded rack's chain, ADR-551) --------
+
+from components.DeviceCommandsComponent import V3_DEVICE_MOVE_INTO_ADDRESS
+from tests.support.lom_fakes import FakeEffectRack
+
+
+def _into_rig():
+    delay = FakeDevice("Delay", type_=2, name="Delay")
+    eq = FakeDevice("Eq8", type_=2, name="EQ Eight")
+    inner = FakeChain([delay, eq], name="A")
+    other = FakeChain([], name="B")
+    rack = FakeEffectRack([inner, other])
+    reverb = FakeDevice("Hybrid", type_=2, name="Reverb")
+    track = FakeTrack([rack, reverb], "Guitar")
+    song = FakeSong(tracks=[track])
+    emits: List[Tuple[str, tuple]] = []
+    comp = DeviceCommandsComponent(song=song, emit=lambda a, args: emits.append((a, tuple(args))))
+    return comp, song, track, rack, reverb, emits
+
+
+def test_move_into_puts_a_track_device_at_an_index_in_a_chain():
+    comp, _song, track, rack, reverb, emits = _into_rig()
+    comp.handle_move_into(["tracks/0/devices/1", "tracks/0/devices/0/chains/0", 1], None)
+    assert [d.name for d in rack.chains[0].devices] == ["Delay", "Reverb", "EQ Eight"]
+    assert [d.name for d in track.devices] == ["Audio Effect Rack"]
+    assert emits == []
+
+
+def test_move_into_appends_on_minus_one_and_past_the_end():
+    comp, song, _track, rack, reverb, _emits = _into_rig()
+    comp.handle_move_into(["tracks/0/devices/1", "tracks/0/devices/0/chains/1", -1], None)
+    assert rack.chains[1].devices == [reverb]
+    assert song.moves[-1][2] == 0
+    comp2, song2, _t, rack2, _r, _e = _into_rig()
+    comp2.handle_move_into(["tracks/0/devices/1", "tracks/0/devices/0/chains/0", 99], None)
+    assert [d.name for d in rack2.chains[0].devices][-1] == "Reverb"
+    assert song2.moves[-1][2] == 2
+
+
+def test_move_into_its_own_chain_moves_within_it():
+    comp, song, _track, rack, _reverb, _emits = _into_rig()
+    comp.handle_move_into(["tracks/0/devices/0/chains/0/devices/0", "tracks/0/devices/0/chains/0", 1], None)
+    assert [d.name for d in rack.chains[0].devices] == ["EQ Eight", "Delay"]
+    assert song.moves[-1][2] == 2
+
+
+def test_move_into_refuses_a_rack_into_its_own_chain():
+    comp, song, _track, _rack, _reverb, emits = _into_rig()
+    comp.handle_move_into(["tracks/0/devices/0", "tracks/0/devices/0/chains/0", 0], None)
+    assert song.moves == []
+    assert emits[-1][1][:2] == (V3_DEVICE_MOVE_INTO_ADDRESS, V3_ERROR_WRITE_REJECTED)
+
+
+def test_move_into_errors():
+    comp, song, _track, _rack, _reverb, emits = _into_rig()
+    comp.handle_move_into(["tracks/0/devices/1", "tracks/0/devices/0/chains/5", 0], None)
+    assert emits[-1][1][:2] == (V3_DEVICE_MOVE_INTO_ADDRESS, V3_ERROR_PATH_NOT_FOUND)
+    comp.handle_move_into(["tracks/0/devices/1", "tracks/0/devices/0/chains/0", "x"], None)
+    assert emits[-1][1][1] == V3_ERROR_WRITE_REJECTED
+    comp.handle_move_into(["tracks/0/devices/1", "tracks/0/devices/0/chains/0"], None)
+    assert emits[-1][1][1] == V3_ERROR_WRITE_REJECTED
+    song.raise_on.add("move")
+    comp.handle_move_into(["tracks/0/devices/1", "tracks/0/devices/0/chains/0", 0], None)
+    assert "move_device raised" in emits[-1][1][3]

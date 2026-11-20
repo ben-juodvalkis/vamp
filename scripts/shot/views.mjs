@@ -351,6 +351,17 @@ export const TOURS = {
 				]
 			},
 			{
+				name: 'chain-drop-into',
+				description: 'Reverb dragged over the Auto Filter inside the unfolded rack (ADR-551): that cell lights, and a drop puts Reverb into the Echoes chain in front of it',
+				scenePatch: chainDemo,
+				steps: [
+					openInstrument(CHAIN_DEMO_TRACK),
+					{ click: `${chainCell(5)} .cell-fold` },
+					{ click: '[data-debug="chain-list"] [data-chain-index="1"]' },
+					{ drag: `${chainCell(6)} .cell-head`, to: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/1"]`, keep: true }
+				]
+			},
+			{
 				name: 'chain-rack-device-view',
 				description: 'A device inside an unfolded rack, tapped: its own view opens, and it is the one the view controls',
 				scenePatch: chainDemo,

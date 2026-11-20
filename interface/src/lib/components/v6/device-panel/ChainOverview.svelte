@@ -93,12 +93,14 @@
   import { press } from '$lib/actions/press';
   import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag as dragAction, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
-  import { moveDevice } from '$lib/services/deviceMoveService';
+  import { moveDevice, moveDeviceInto } from '$lib/services/deviceMoveService';
   import { isHiddenFromChain, visibleDevices } from '$lib/config/hiddenDevices';
   import {
     arrange,
     chainUnitLayout,
     chainIndexAt,
+    dropIntoTarget,
+    type DropInto,
     type ChainPlace,
     clampChainIndex,
     moved,
@@ -488,6 +490,12 @@
     /** The grid at lift: its unit columns and each cell's place. */
     cols: number;
     places: ChainPlace[];
+    /** The dragged device's path at lift. */
+    path: string;
+    /** Per drawn place at lift: the rack chain a drop there goes into (ADR-551), or null. */
+    targets: (DropInto | null)[];
+    /** The rack chain the finger is over, or null for a reorder. */
+    into: DropInto | null;
   };
   let drag = $state<Drag | null>(null);
   /** The dragged cell's own node. */
@@ -536,8 +544,8 @@
    * Unfolded racks (ADR-529): after a rack's own cell, its chain list (when
    * it has more than one chain) and the chosen chain's devices, as Live's
    * device view shows them; a rack among those unfolds the same way. They
-   * belong to the rack: never dragged, and a drop onto one lands at the
-   * rack's place. `tops[i]` is the chain position a drawn cell stands for.
+   * belong to the rack: never dragged, and a top-level device dropped on
+   * one, or on the chain's +, goes into that chain (ADR-551). `tops[i]` is the chain position a drawn cell stands for.
    */
   const MAX_DEPTH = 4;
   function expand(cell: Cell, depth: number, out: Cell[]): void {
@@ -1026,7 +1034,12 @@
       box: { left: r.left - c.left, top: r.top - c.top, width: r.width, height: r.height },
       chain: { left: c.left, top: c.top, width: c.width, height: c.height },
       cols: layout.cols,
-      places: layout.places.map((p) => ({ ...p }))
+      places: layout.places.map((p) => ({ ...p })),
+      path: cell.path,
+      targets: drawn.map((c) =>
+        dropIntoTarget({ key: c.key, kind: c.kind, path: c.path, landing: c.landing, chainPath: c.inside ? chainPathOf(c.inside.rackPath, c.inside.chain.index) : undefined }, cell.path)
+      ),
+      into: null
     };
     paintDragged();
   }
@@ -1040,8 +1053,17 @@
     // cell wherever it was picked up by.
     const x = d.chain.left + d.box.left + d.box.width / 2 + info.dx;
     const y = d.chain.top + d.box.top + d.box.height / 2 - info.dy;
-    const to = clampChainIndex({ from: d.from, to: topAt(positionAt(d, x, y)), count: d.base.length, instrument: d.instrument });
-    if (to !== null && to !== d.to) drag = { ...d, to };
+    const at = positionAt(d, x, y);
+    // Over a cell in an unfolded rack's chain: a drop goes into that chain
+    // (ADR-551), and the chain stays as it was lifted so the cell lit is
+    // the one under the finger.
+    const into = d.targets[at] ?? null;
+    if (into) {
+      if (into.key !== d.into?.key || d.to !== d.from) drag = { ...d, to: d.from, into };
+      return;
+    }
+    const to = clampChainIndex({ from: d.from, to: topAt(at), count: d.base.length, instrument: d.instrument });
+    if ((to !== null && to !== d.to) || d.into) drag = { ...d, to: to ?? d.to, into: null };
   }
 
   function dragEnd(info: DragEndInfo) {
@@ -1052,7 +1074,9 @@
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     // Only a finger lifted drops; a cancel or an unmount puts it back.
-    if (d && info.reason === 'up' && d.to !== d.from) {
+    if (d && info.reason === 'up' && d.into) {
+      void moveDeviceInto(d.path, d.into.chainPath, d.into.index).catch(() => {});
+    } else if (d && info.reason === 'up' && d.to !== d.from) {
       reorder = { desired: moved(d.base, d.from, d.to), inflight: reorder.inflight };
     }
     if (node) settle(node);
@@ -1378,6 +1402,7 @@
       type="button"
       class="chain-add chain-add-inner"
       class:targeted={chainAddTarget.path === cell.path}
+      class:drop-into={drag?.into?.key === cell.key}
       style="--rack-ink: {cell.inside?.ink ?? cell.ink};{levelOf(cell) ? ` margin-top: ${levelOf(cell) * ARM_STEP}px;` : ''}"
       style:grid-column={layout.places[position] ? `${layout.places[position].col + 1} / span ${layout.places[position].span}` : undefined}
       style:grid-row={layout.places[position] ? `${layout.places[position].row + 1}` : undefined}
@@ -1394,6 +1419,7 @@
       class:off={!isOn(cell)}
       class:landing={!!cell.landing}
       class:dragging={drag?.key === cell.key}
+      class:drop-into={drag?.into?.key === cell.key}
       class:appointed={litPath === cell.device.devicePath}
       aria-current={litPath === cell.device.devicePath ? 'true' : undefined}
       class:instrument={cell.kind === 'instrument' && !cell.inside}
@@ -1572,6 +1598,19 @@
   }
   .chain-add-inner.targeted > span {
     opacity: 1;
+  }
+  /* A dragged device over a rack chain's cell or +: a drop goes into that
+     chain, in front of the lit cell or at the chain's end (ADR-551). */
+  .chain-add-inner.drop-into {
+    border-style: solid;
+    background: color-mix(in oklab, var(--rack-ink) 28%, transparent);
+  }
+  .chain-add-inner.drop-into > span {
+    opacity: 1;
+  }
+  .chain-cell.drop-into {
+    outline: 3px solid var(--on-bg);
+    outline-offset: -3px;
   }
   /* A big +, as tall as the tile allows (the user, 2026-11-05). */
   .chain-add-plus {
