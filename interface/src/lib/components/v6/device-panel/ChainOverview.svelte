@@ -89,7 +89,8 @@
   import { schemeFromInk } from '$lib/config/devicePresets';
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
-  import { press } from '$lib/actions/press';
+  import { press, type PressReleaseInfo } from '$lib/actions/press';
+  import { shouldRestoreOnRelease } from '../tracks/TrackStrip/utils/momentaryPress';
   import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag as dragAction, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
   import { moveDevice, moveDeviceInto } from '$lib/services/deviceMoveService';
@@ -816,9 +817,19 @@
    */
   let paletteOpen = $state(false);
   let paletteEl = $state<HTMLElement | null>(null);
+  /* The chevron is Solo's rule (ADR-427): it toggles at finger-down; a tap
+   * latches, and a press that opened the bar and is held past
+   * MOMENTARY_HOLD_MS closes it again on release, so a hold peeks and a
+   * second finger can load a chip meanwhile (Ben, 2026-11-20). */
+  let chevronOpened = false;
   function togglePalette() {
     swallowNextClick();
+    chevronOpened = !paletteOpen;
     paletteOpen = !paletteOpen;
+  }
+  function releaseChevron({ elapsedMs, reason }: PressReleaseInfo) {
+    if (chevronOpened && shouldRestoreOnRelease({ elapsedMs, reason })) paletteOpen = false;
+    chevronOpened = false;
   }
   function closePalette() {
     swallowNextClick();
@@ -1421,7 +1432,7 @@
       aria-label={paletteOpen ? 'Fewer effects' : 'More effects'}
       aria-expanded={paletteOpen}
       data-debug="chain-add"
-      use:press={{ onPress: togglePalette, touchAction: 'none', stopPropagation: true }}
+      use:press={{ onPress: togglePalette, onRelease: releaseChevron, fireOn: 'down', touchAction: 'none', stopPropagation: true }}
     >
       <span class="chain-add-plus" aria-hidden="true">{#if paletteOpen}<ChevronUp />{:else}<ChevronDown />{/if}</span>
     </button>

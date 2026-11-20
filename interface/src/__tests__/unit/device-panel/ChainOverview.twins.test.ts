@@ -170,3 +170,44 @@ describe('the lit cell', () => {
 		expect(lit()).toEqual([]);
 	});
 });
+
+describe("the palette bar's chevron", () => {
+	async function renderBar() {
+		replaceTree(3, [track([device(0, 'Saturator', 'Saturator')], false)]);
+		selectedTrackStore.handleTrackSelected(0);
+		fxGrid.resetForTrackChange();
+		const { container } = render(ChainOverview, { props: {} });
+		await tick();
+		const chevron = container.querySelector<HTMLElement>('[data-debug="chain-add"]')!;
+		const open = () => container.querySelector('[data-debug="chain-palette"]')?.getAttribute('data-palette-open');
+		return { chevron, open };
+	}
+
+	it('latches the bar open on a tap, and a second tap closes it', async () => {
+		const { chevron, open } = await renderBar();
+		await fireEvent.pointerDown(chevron, { clientX: 5, clientY: 5, pointerId: 1 });
+		expect(open()).toBe('true');
+		await fireEvent.pointerUp(chevron, { clientX: 5, clientY: 5, pointerId: 1 });
+		await tick();
+		expect(open()).toBe('true');
+		await fireEvent.pointerDown(chevron, { clientX: 5, clientY: 5, pointerId: 2 });
+		await fireEvent.pointerUp(chevron, { clientX: 5, clientY: 5, pointerId: 2 });
+		await tick();
+		expect(open()).toBe('false');
+	});
+
+	it('opens the bar only while held', async () => {
+		vi.useFakeTimers();
+		try {
+			const { chevron, open } = await renderBar();
+			await fireEvent.pointerDown(chevron, { clientX: 5, clientY: 5, pointerId: 1 });
+			expect(open()).toBe('true');
+			vi.advanceTimersByTime(400);
+			await fireEvent.pointerUp(chevron, { clientX: 5, clientY: 5, pointerId: 1 });
+			await tick();
+			expect(open()).toBe('false');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
