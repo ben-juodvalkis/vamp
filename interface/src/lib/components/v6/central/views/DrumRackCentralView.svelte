@@ -303,6 +303,7 @@
     decay: vm.badge('decay'),
     sustain: vm.badge('sustain'),
     release: vm.badge('release'),
+    time: vm.badge('attack', 'release'),
     spread: vm.badge('spread'),
     selector: vm.badge('selector'),
     pitch: vm.badge('pitch')

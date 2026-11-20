@@ -211,6 +211,8 @@ export type SamplerRowSlot =
 	| 'decay'
 	| 'sustain'
 	| 'release'
+	/** A kit's Attack and Release as one Time pad (2026-11-19). */
+	| 'time'
 	| 'spread'
 	| 'selector'
 	| 'pitch';

@@ -13,6 +13,10 @@
    *   Kit [Trnsp | Gain, Spread, Select] · Pitch/Osc [Osc over Pitch]
    *   · Amp Envelope [A D S R] · Filter
    *
+   * and on a KIT (Decay and Sustain hidden):
+   *
+   *   Kit · Pitch/Osc [Osc over Pitch] · Filter / Time [Filter over Time]
+   *
    * on one grid of equal columns, the host's Gain and Filter passed in as
    * snippets. Trnsp, then Gain at the head of the knobs' column, are the
    * first two columns on every Drum Rack kit.
@@ -29,7 +33,10 @@
    * split across two idioms, read out of order. Four sliders costs a
    * gesture and buys the whole envelope in one place; the section's name and
    * seams say where it stops, which in turn lets each slider be one letter.
-   * A KIT hides Decay and Sustain, so there it holds A and R.
+   * A KIT hides Decay and Sustain, and there Attack and Release are one
+   * Time pad (Attack across, Release up) under the Filter pad, in place of
+   * an envelope section of two sliders (user, 2026-11-19): the DrumCell
+   * kit's Time over Filter, Filter on top.
    *
    * Every pad reads its amount up and its time or tune across: Osc —
    * coarse tune across (O Coarse), oscillator amount up (O Volume);
@@ -118,7 +125,11 @@
   let showSelect = $derived(voiceCount > 0 && !hide.has('selector'));
   let kitSpan = 2;
   let stageCount = $derived(2 + (hide.has('decay') ? 0 : 1) + (hide.has('sustain') ? 0 : 1));
-  let sectionSpans = $derived(filter ? [kitSpan, 2, stageCount, 2] : [kitSpan, 2, stageCount]);
+  /** A kit's Attack and Release: one Time pad under the Filter pad, no envelope section. */
+  let timeUnderFilter = $derived(!!filter && !envelope && hide.has('decay') && hide.has('sustain'));
+  let sectionSpans = $derived(
+    timeUnderFilter ? [kitSpan, 2, 2] : filter ? [kitSpan, 2, stageCount, 2] : [kitSpan, 2, stageCount]
+  );
 
   function t(control: SamplerRowControl, atRest: number): number {
     const v = values[control];
@@ -141,6 +152,7 @@
   let decayState = $derived(stateOf('decay'));
   let sustainState = $derived(stateOf('sustain'));
   let releaseState = $derived(stateOf('release'));
+  let timeState = $derived(pairState('attack', 'release'));
   let spreadState = $derived(stateOf('spread'));
   let selectorState = $derived(stateOf('selector'));
   let pitchState = $derived(stateOf('pitch'));
@@ -283,6 +295,37 @@
   </FaceSection>
   <FaceSeam ink={color.primary} />
 
+  {#if timeUnderFilter && filter}
+  <!-- A kit: Filter over Time, one column of two pads like Osc over Pitch.
+       Time: Attack across, Release up. -->
+  <FaceSection span={2}>
+    {#snippet head()}<PanelEyebrow title="Filter / Time" color={color.primary} />{/snippet}
+    <div class="pad-column face-span-all flex flex-col gap-(--face-gutter) min-w-0 h-full">
+      <div class="filter-cell min-h-0 flex-1">{@render filter()}</div>
+      <div
+        class="vm-slot min-w-0 min-h-0 flex-1"
+        class:vm-none={timeState === 'none'}
+        class:vm-held={timeState === 'held'}
+        data-vm-state={timeState}
+        data-vm-function="attack|release"
+      >
+        <DeviceXY
+          xValue={t('attack', 0.5)}
+          yValue={t('release', 0.5)}
+          title="Time"
+          icon="envelope"
+          {color}
+          isGhost={timeState === 'none'}
+          onInteraction={(x, y) => {
+            write('attack', x);
+            write('release', y);
+          }}
+        />
+        {#if badges.time}{@render heldBadge(badges.time)}{/if}
+      </div>
+    </div>
+  </FaceSection>
+  {:else}
   <!-- The amp envelope: its stages in ADSR order, one column each (user's
        call, 2026-09-12, replacing a Time XY pad that reached neither Decay
        nor Sustain). A KIT hides Decay and Sustain, so there it holds A and R. -->
@@ -308,6 +351,7 @@
       {#snippet head()}<PanelEyebrow title="Filter" color={color.primary} />{/snippet}
       <div class="filter-cell face-span-all">{@render filter()}</div>
     </FaceSection>
+  {/if}
   {/if}
 </FaceGrid>
 

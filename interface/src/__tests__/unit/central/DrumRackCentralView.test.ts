@@ -349,9 +349,8 @@ describe('DrumRackCentralView — mode from the census', () => {
 		await setCensus(AUTUMN_UNMAPPED);
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('sampler');
 		expect(container.querySelector('.vm-kit-card')).toBeNull();
-		expect(container.querySelectorAll('.vm-slot')).toHaveLength(9); // the Sampler row on a kit: Gain, Osc, Pitch, A, R, Spread, Select, Trnsp, Filter
-		expect(stateOf(container, 'A')).toBe('live');
-		expect(stateOf(container, 'R')).toBe('live');
+		expect(container.querySelectorAll('.vm-slot')).toHaveLength(8); // the Sampler row on a kit: Gain, Osc, Pitch, Time, Spread, Select, Trnsp, Filter
+		expect(stateOf(container, 'Time')).toBe('live');
 		expect(stateOf(container, 'Trnsp')).toBe('live');
 	});
 
@@ -705,7 +704,7 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('draws the Sampler row on a kit: Osc and Pitch pads, the A/R envelope card, Spread, Select, Trnsp — Decay and Sustain hidden', async () => {
+	it('draws the Sampler row on a kit: Osc and Pitch pads, Filter over a Time pad, Spread, Select, Trnsp — Decay and Sustain hidden', async () => {
 		seed({
 			'vm.members': AUTUMN_UNMAPPED,
 			'vm.oscAmount': 0.3,
@@ -723,7 +722,7 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		// DOM order is the face's (ADR-510): Kit [Trnsp | Gain, Spread and
-		// Select knobs] · Osc over Pitch · A R · Filter.
+		// Select knobs] · Osc over Pitch · Filter over Time (2026-11-19).
 		expect(Array.from(container.querySelectorAll('.vm-slot')).map((s) => s.getAttribute('data-vm-function'))).toEqual([
 			'pitch',
 			'gain',
@@ -731,17 +730,16 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 			'selector',
 			'oscAmount|oscCoarse',
 			'pitchEnvAmount|pitchEnvAttack',
-			'attack',
-			'release',
-			'filterFreq|filterRes'
+			'filterFreq|filterRes',
+			'attack|release'
 		]);
 		// Every pad: the amount up, the time or tune across.
 		expect(slider(container, 'Osc').getAttribute('aria-label')).toBe('Osc: X 6%, Y 30%');
 		expect(slider(container, 'Pitch').getAttribute('aria-label')).toBe('Pitch: X 72%, Y 75%');
-		// The amp envelope is a card of one-letter sliders since 2026-09-12.
-		expect(container.querySelector('[data-envelope-group]')).not.toBeNull();
-		expect(slider(container, 'A').getAttribute('aria-valuenow')).toBe('0.2');
-		expect(slider(container, 'R').getAttribute('aria-valuenow')).toBe('0.66');
+		// On a kit, Attack and Release are one Time pad under the Filter
+		// (2026-11-19): no envelope section of two sliders.
+		expect(container.querySelector('[data-envelope-group]')).toBeNull();
+		expect(slider(container, 'Time').getAttribute('aria-label')).toBe('Time: X 20%, Y 66%');
 		// Decay and Sustain are hidden on a kit (user's call, 2026-09-08); the single-Sampler view keeps them.
 		expect(container.querySelector('[data-vm-function="decay"]')).toBeNull();
 		expect(container.querySelector('[data-vm-function="sustain"]')).toBeNull();
@@ -769,20 +767,17 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 		expect(container.querySelector('[data-vm-function="oscAmount|oscCoarse"]')?.getAttribute('data-vm-state')).toBe('none');
 		expect(container.querySelector('[data-vm-function="spread"]')?.getAttribute('data-vm-state')).toBe('none');
 		expect(container.querySelector('[data-vm-function="selector"]')?.getAttribute('data-vm-state')).toBe('none');
-		expect(container.querySelector('[data-vm-function="attack"]')?.getAttribute('data-vm-state')).toBe('live');
-		expect(container.querySelector('[data-vm-function="release"]')?.getAttribute('data-vm-state')).toBe('live');
+		expect(container.querySelector('[data-vm-function="attack|release"]')?.getAttribute('data-vm-state')).toBe('live');
 	});
 
-	it('holds the Release slider on a kit whose Release macro maps every pad, and leaves Attack alone', async () => {
+	it('keeps the Time pad live on a kit whose Release macro maps every pad, Attack free, and badges it', async () => {
 		seed({ 'vm.members': AUTUMN_RELEASE_HELD, 'vm.attack': 0.2, 'vm.release': 0.66 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		// Splitting the Time pad into A and R (2026-09-12) also split this
-		// reading: the macro holds Release and only Release, which the pad
-		// could only say as a shared "32/64" badge over both stages.
-		expect(stateOf(container, 'A')).toBe('live');
-		expect(stateOf(container, 'R')).toBe('held');
-		expect(container.querySelector('[data-vm-function="release"] .vm-held-badge')?.textContent?.trim()).toBe('macro');
+		// One pad for both stages again (2026-11-19): Attack is free, so the
+		// pad stays live, and its badge says half its members are macro-held.
+		expect(stateOf(container, 'Time')).toBe('live');
+		expect(container.querySelector('[data-vm-function="attack|release"] .vm-held-badge')).not.toBeNull();
 	});
 
 	it('a drag on the Osc pad writes vm.oscAmount and vm.oscCoarse as t', async () => {
@@ -1584,12 +1579,8 @@ describe('DrumRackCentralView — the pane and the scoped pad\'s own row', () =>
 		padPointer(tile(container, 67), 'pointerdown', 1);
 		await tick();
 		expect(scopeOf(container)).toBe('67');
-		// The Sampler row now — its Osc pad, and the amp envelope as separate
-		// A/R slots rather than the Simpler row's combined Time pad.
+		// The Sampler row now: its Osc pad says so.
 		expect(container.querySelector('[data-vm-function="oscAmount|oscCoarse"]')).not.toBeNull();
-		expect(container.querySelector('[data-vm-function="attack|release"]')).toBeNull();
-		expect(container.querySelector('[data-vm-function="attack"]')).not.toBeNull();
-		expect(container.querySelector('[data-vm-function="release"]')).not.toBeNull();
 		expect(propertyWireCalls('/looping/v3/property/subscribe')).toContain('vm.pad.67.oscAmount');
 
 		holdPast();
