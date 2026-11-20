@@ -48,6 +48,9 @@ final class Supervisor: ObservableObject {
     /// Where the log ended when this app last started the child: the Vamp
     /// window reads the start's progress from there on (nil: not started here).
     private(set) var startLogOffset: UInt64?
+    /// Launch has decided what to do (start, update, or leave a running Vamp
+    /// be): until then a stopped state is only the moment before the start.
+    private(set) var launchSettled = false
 
     private var child: Process?
     /// An `npm run ipad` this app started before it crashed or was
@@ -80,6 +83,8 @@ final class Supervisor: ObservableObject {
                 adopted = pid
                 state = .starting
                 starting = Date()
+                // Its start is in the log already: the window reads its steps from there.
+                startLogOffset = Self.logOffset(ofStartBy: pid)
                 VampLog.line("— Vamp for Mac took back the npm run ipad it started before (pid \(pid)) —")
             }
             await checkHealth()
@@ -89,10 +94,23 @@ final class Supervisor: ObservableObject {
                 if await updateSelfIfStale() { return }
                 start()
             }
+            launchSettled = true
         }
     }
 
     var logURL: URL? { VampLog.url }
+
+    /// Where the log's line for this app starting `pid` ends, searched in the
+    /// log's last 4 MB; nil when it is not there.
+    private static func logOffset(ofStartBy pid: pid_t) -> UInt64? {
+        guard let url = VampLog.url, let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let end = try? handle.seekToEnd() else { return nil }
+        let from = end > 4_000_000 ? end - 4_000_000 : 0
+        guard (try? handle.seek(toOffset: from)) != nil, let tail = try? handle.readToEnd(),
+              let at = SupervisorRules.startLineEnd(pid: pid, in: tail) else { return nil }
+        return from + UInt64(at)
+    }
 
     private var hasChild: Bool { child != nil || adopted != nil }
 

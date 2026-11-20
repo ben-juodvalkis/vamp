@@ -120,4 +120,26 @@ final class SupervisorRulesTests: XCTestCase {
         XCTAssertEqual(SupervisorRules.buildEstimate(recent: recent), 21.3)
         XCTAssertEqual(SupervisorRules.buildEstimate(recent: []), 20)
     }
+
+    func testATakenBackStartIsFoundInTheLogByItsPid() {
+        let log = Data("""
+        [2026-11-20 16:15:53 +0000] — Vamp for Mac started npm run ipad (pid 14182) —
+        > vamp@1.0.0 ipad
+        [2026-11-20 16:20:27 +0000] — Vamp for Mac started npm run ipad (pid 27579) —
+        📦 Preparing the iPad app...
+
+        """.utf8)
+        let end = SupervisorRules.startLineEnd(pid: 27579, in: log)!
+        XCTAssertTrue(String(decoding: log[end...], as: UTF8.self).hasPrefix("📦 Preparing"))
+        XCTAssertNil(SupervisorRules.startLineEnd(pid: 99, in: log))
+        // 1418 is not 14182.
+        XCTAssertNil(SupervisorRules.startLineEnd(pid: 1418, in: log))
+    }
+
+    func testAStepIsSlowWellPastItsUsualTime() {
+        XCTAssertFalse(SupervisorRules.isSlow(.building, secondsInStep: 35, buildEstimate: 21))
+        XCTAssertTrue(SupervisorRules.isSlow(.building, secondsInStep: 47, buildEstimate: 21))
+        XCTAssertFalse(SupervisorRules.isSlow(.startingServers, secondsInStep: 5, buildEstimate: 21))
+        XCTAssertTrue(SupervisorRules.isSlow(nil, secondsInStep: 31, buildEstimate: 21))
+    }
 }

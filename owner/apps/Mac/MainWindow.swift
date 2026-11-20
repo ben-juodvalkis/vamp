@@ -36,6 +36,12 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
     /// How long each finished step took, by the window's own clock.
     private var took: [StartStep: Double] = [:]
     private var buildSkipped = false
+    /// The start being followed (its offset in the log), so a start that
+    /// begins after the window opened, or a restart, is picked up.
+    private var followedStart: UInt64?
+    /// The next read is output written before the window looked: its steps
+    /// are done, but their times are not known.
+    private var replaying = false
     private var probing = false
 
     /// The page's own background (app.html's theme-color), so nothing flashes.
@@ -86,18 +92,15 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
         if progress == nil {
             let view = StartProgressView(frame: content.bounds)
             view.autoresizingMask = [.width, .height]
+            view.onAction = { [weak self] action in self?.act(action) }
             content.addSubview(view)
             progress = view
         }
         progress?.alphaValue = 1
         // Read the start's output from where this app started it; a start
-        // made elsewhere (a Terminal, a crash ago) shows no steps.
-        logOffset = vamp.startLogOffset
-        partialLine = ""
-        step = vamp.startLogOffset == nil && vamp.pageUp ? .loading : .preparing
-        stepSince = Date()
-        took = [:]
-        buildSkipped = false
+        // made elsewhere (a Terminal) shows no steps.
+        follow(vamp.startLogOffset, replay: true)
+        if vamp.startLogOffset == nil && vamp.pageUp { step = .loading }
         tick?.invalidate()
         tick = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.update() }
@@ -105,8 +108,26 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
         update()
     }
 
+    /// Read a start's steps from `start` in the log (nil: none to read).
+    /// `replay`: it began before the window looked.
+    private func follow(_ start: UInt64?, replay: Bool) {
+        followedStart = start
+        logOffset = start
+        replaying = replay && start != nil
+        partialLine = ""
+        step = .preparing
+        stepSince = Date()
+        took = [:]
+        buildSkipped = false
+    }
+
     private func update() {
         guard let vamp = Supervisor.current else { return }
+        // A start that began after the window opened (the window opens at
+        // launch, before the start), or a restart after an exit.
+        if web == nil, let start = vamp.startLogOffset, start != followedStart {
+            follow(start, replay: false)
+        }
         readLog()
         if web == nil {
             if vamp.pageUp {
@@ -135,31 +156,69 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
             return SupervisorRules.startRows(at: step, secondsInStep: inStep, took: took,
                                              buildSkipped: buildSkipped, failed: failed, finished: finished)
         }
+        /// A wait with no steps to read: one line, spinning and counting.
+        func waiting(_ title: String, _ detail: String) -> StartProgressView.Display {
+            let slow = SupervisorRules.isSlow(nil, secondsInStep: inStep, buildEstimate: buildEstimate)
+            return .init(label: "", detail: slow ? "\(detail)\n\(Self.slowNote)" : detail, fraction: nil,
+                         rows: [StartRow(title: title, state: .active, seconds: Int(inStep))],
+                         actions: slow ? [.showLog] : [])
+        }
         switch vamp.state {
         case .updating:
-            return .init(label: "Updating Vamp for Mac…", detail: "Vamp for Mac's code changed: rebuilding it, then it reopens", fraction: nil)
+            return .init(label: "", detail: "Its code changed since it was installed. It reopens by itself when done, then starts Vamp.",
+                         fraction: nil, rows: [StartRow(title: "Updating Vamp for Mac", state: .active, seconds: Int(inStep))])
         case .failed(let why):
             let reason = why.replacingOccurrences(of: "; see the log", with: "")
-            return .init(label: "Vamp didn't start", detail: "\(reason.prefix(1).uppercased() + reason.dropFirst()). Vamp's menu bar icon opens the log.",
-                         fraction: nil, rows: rows(failed: true), failed: true)
+            return .init(label: "Vamp didn't start", detail: (reason.hasPrefix("npm") ? reason : reason.prefix(1).uppercased() + reason.dropFirst()) + ".",
+                         fraction: nil, rows: rows(failed: true),
+                         actions: vamp.canStart ? [.start("Try Again"), .showLog] : [.showLog], failed: true)
+        case .stopped where !vamp.launchSettled && !vamp.fromNpm:
+            // The moment between the window opening and the start.
+            return .init(label: "", detail: nil, fraction: 0,
+                         rows: SupervisorRules.startRows(at: .preparing, secondsInStep: inStep, took: [:],
+                                                         buildSkipped: false, failed: false, finished: false))
+        case .stopped where vamp.fromNpm:
+            return waiting("Waiting for npm run ipad",
+                           "It builds and starts Vamp in the Terminal that ran it. The page opens here once it answers.")
         case .stopped, .stopping:
-            return .init(label: vamp.statusLine, detail: "Start Vamp from the menu bar", fraction: nil)
+            return .init(label: vamp.state == .stopping ? "Vamp is stopping" : "Vamp is stopped", detail: vamp.updateNote,
+                         fraction: nil, actions: vamp.canStart ? [.start("Start Vamp"), .showLog] : [.showLog], idle: true)
+        case .running where !vamp.pageUp && web == nil:
+            return waiting("Restarting the page server",
+                           "It stopped and restarts by itself, usually within a few seconds.")
         case .external where web == nil:
-            return .init(label: "Waiting for the page server…", detail: vamp.statusLine, fraction: nil)
+            return waiting("Waiting for the page server",
+                           "Vamp was started outside this app (a Terminal). The page opens here once it answers.")
         default:
             guard readsSteps else {
-                return .init(label: "Waiting for the page server…", detail: nil, fraction: nil)
+                return waiting("Waiting for the page server",
+                               "Vamp was already starting when this window opened, so its steps aren't shown here.")
             }
-            let detail = step == .building && !finished
-                ? "Only after an update · up to \(Int(buildEstimate.rounded())) s lately"
-                : nil
-            return .init(label: "", detail: detail, fraction: fraction, rows: rows(failed: false))
+            let slow = !finished && SupervisorRules.isSlow(step, secondsInStep: inStep, buildEstimate: buildEstimate)
+            var notes: [String] = []
+            if step == .building && !finished && !replaying {
+                notes.append("Only after an update · up to \(Int(buildEstimate.rounded())) s lately")
+            }
+            if slow { notes.append(Self.slowNote) }
+            return .init(label: "", detail: notes.isEmpty ? nil : notes.joined(separator: "\n"), fraction: fraction,
+                         rows: rows(failed: false), actions: slow ? [.showLog] : [])
         }
+    }
+
+    private static let slowNote = "Taking longer than usual. The log shows what it's doing."
+
+    private func act(_ action: StartProgressView.Action) {
+        guard let vamp = Supervisor.current else { return }
+        switch action {
+        case .start: vamp.start()
+        case .showLog: vamp.showLog()
+        }
+        update()
     }
 
     private func move(to next: StartStep) {
         guard next > step else { return }
-        took[step] = Date().timeIntervalSince(stepSince)
+        if !replaying { took[step] = Date().timeIntervalSince(stepSince) }
         step = next
         stepSince = Date()
     }
@@ -169,6 +228,7 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
         guard let offset = logOffset, let url = VampLog.url,
               let handle = try? FileHandle(forReadingFrom: url) else { return }
         defer { try? handle.close() }
+        defer { replaying = false }
         guard (try? handle.seek(toOffset: offset)) != nil, let data = try? handle.readToEnd(), !data.isEmpty else { return }
         logOffset = offset + UInt64(data.count)
         let text = partialLine + String(decoding: data, as: UTF8.self)
@@ -286,8 +346,26 @@ final class StartProgressView: NSView {
         var fraction: Double?
         /// The checklist; empty when there are no steps to show.
         var rows: [StartRow] = []
+        var actions: [Action] = []
         var failed = false
+        /// Nothing is under way: no bar.
+        var idle = false
     }
+
+    enum Action: Equatable {
+        /// Start Vamp, under this title ("Try Again", "Start Vamp").
+        case start(String)
+        case showLog
+
+        var title: String {
+            switch self {
+            case .start(let title): return title
+            case .showLog: return "Show Log"
+            }
+        }
+    }
+
+    var onAction: ((Action) -> Void)?
 
     /// The page's own background (app.html's theme-color), so nothing flashes.
     static let background = NSColor(srgbRed: 0x1f / 255.0, green: 0x21 / 255.0, blue: 0x26 / 255.0, alpha: 1)
@@ -299,6 +377,7 @@ final class StartProgressView: NSView {
     private var rowViews: [StartRowView] = []
     private let bar = NSProgressIndicator()
     private let detail = NSTextField(wrappingLabelWithString: "")
+    private let buttons = NSStackView()
     private var stack = NSStackView()
     private var shown: Display?
 
@@ -321,13 +400,14 @@ final class StartProgressView: NSView {
             field.lineBreakMode = .byTruncatingTail
         }
         label.setContentCompressionResistancePriority(.required, for: .horizontal)
-        detail.maximumNumberOfLines = 3
+        detail.maximumNumberOfLines = 5
         detail.lineBreakMode = .byWordWrapping
         detail.preferredMaxLayoutWidth = 340
 
         list.orientation = .vertical
         list.alignment = .leading
         list.spacing = 10
+        // As many lines as the longest list: the start's steps.
         for _ in StartStep.all {
             let row = StartRowView()
             rowViews.append(row)
@@ -340,7 +420,9 @@ final class StartProgressView: NSView {
         bar.maxValue = 1
         bar.controlSize = .small
 
-        stack = NSStackView(views: [icon, title, label, list, bar, detail])
+        buttons.orientation = .horizontal
+        buttons.spacing = 12
+        stack = NSStackView(views: [icon, title, label, list, bar, detail, buttons])
         stack.orientation = .vertical
         stack.alignment = .centerX
         stack.spacing = 10
@@ -349,6 +431,7 @@ final class StartProgressView: NSView {
         stack.setCustomSpacing(22, after: label)
         stack.setCustomSpacing(22, after: list)
         stack.setCustomSpacing(12, after: bar)
+        stack.setCustomSpacing(20, after: detail)
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -364,8 +447,17 @@ final class StartProgressView: NSView {
 
     required init?(coder: NSCoder) { fatalError("not used") }
 
-    /// Clicks stay off the page underneath until the screen has gone.
-    override func hitTest(_ point: NSPoint) -> NSView? { alphaValue > 0 ? self : nil }
+    @objc private func pressed(_ sender: NSButton) {
+        guard let actions = shown?.actions, actions.indices.contains(sender.tag) else { return }
+        onAction?(actions[sender.tag])
+    }
+
+    /// Clicks stay off the page underneath until the screen has gone; its
+    /// own buttons take theirs.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard alphaValue > 0 else { return nil }
+        return super.hitTest(point) ?? self
+    }
 
     func show(_ display: Display) {
         guard display != shown else { return }
@@ -378,8 +470,25 @@ final class StartProgressView: NSView {
         detail.stringValue = display.detail ?? ""
         detail.isHidden = display.detail == nil
         list.isHidden = display.rows.isEmpty
-        for (view, row) in zip(rowViews, display.rows) { view.show(row) }
-        bar.isHidden = display.failed
+        for (i, view) in rowViews.enumerated() {
+            view.isHidden = i >= display.rows.count
+            if i < display.rows.count { view.show(display.rows[i]) }
+        }
+        // Only a bar that can say how far: a wait without steps has its spinner.
+        bar.isHidden = display.failed || display.idle || display.fraction == nil
+        if display.actions != was?.actions {
+            buttons.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            for (i, action) in display.actions.enumerated() {
+                let button = NSButton(title: action.title, target: self, action: #selector(pressed(_:)))
+                button.bezelStyle = .rounded
+                button.controlSize = .large
+                button.tag = i
+                // Starting is the one to press: Return presses it.
+                if case .start = action { button.keyEquivalent = "\r" }
+                buttons.addArrangedSubview(button)
+            }
+        }
+        buttons.isHidden = display.actions.isEmpty
         if let fraction = display.fraction {
             if bar.isIndeterminate { bar.stopAnimation(nil); bar.isIndeterminate = false }
             bar.doubleValue = fraction

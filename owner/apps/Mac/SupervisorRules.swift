@@ -132,6 +132,26 @@ extension SupervisorRules {
         return nil
     }
 
+    /// Where, in a stretch of the log, the line saying this app started
+    /// `pid` ends (the last such line): the start's own output follows it.
+    static func startLineEnd(pid: Int32, in log: Data) -> Int? {
+        let marker = Data("started npm run ipad (pid \(pid)) —".utf8)
+        guard let found = log.range(of: marker, options: .backwards) else { return nil }
+        return log[found.upperBound...].firstIndex(of: 0x0A).map { $0 + 1 } ?? log.endIndex
+    }
+
+    /// A step running well past what it usually takes: the screen says so
+    /// and offers the log. A wait with no steps (nil) is slow after 30 s.
+    static func isSlow(_ step: StartStep?, secondsInStep: Double, buildEstimate: Double) -> Bool {
+        let limit: Double = switch step {
+        case .building: max(2 * buildEstimate, 40)
+        case .preparing, .startingServers: 20
+        case .loading: 15
+        case nil: 30
+        }
+        return secondsInStep > limit
+    }
+
     /// The interface was already built for this code: the build step is skipped.
     static func buildSkipped(in line: String) -> Bool { line.contains("Vite build skipped") }
 
