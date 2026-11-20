@@ -70,42 +70,64 @@
     orbPendingRadius = null;
   }
 
+  // Relative drag (2026-11-20, the user's call): touch-down never jumps the
+  // dot. The finger's travel moves it from where it was, one to one with the
+  // drawn disc, clamped to the rim; a tap writes nothing.
+  const TAP_SLOP = 5; // px
+  let downX = 0;
+  let downY = 0;
+  let startNX = 0; // the dot at touch-down, unit disc, +x right, +y down
+  let startNY = 0;
+  let unitPx = 1; // pixels per unit of radius, as drawn
+  let hasMoved = false;
+
   function handlePointerDown(event: PointerEvent) {
+    event.preventDefault();
     isDragging = true;
+    hasMoved = false;
     container.setPointerCapture(event.pointerId);
-    startOrbThrottle();
-    updatePosition(event);
+    const rect = container.getBoundingClientRect();
+    // The handle rides 40 viewBox units out at radius 1; the SVG fits its
+    // 100-unit box to the shorter side.
+    unitPx = (Math.min(rect.width, rect.height) / 100) * 40;
+    downX = event.clientX;
+    downY = event.clientY;
+    const a = localAngle * 2 * Math.PI;
+    startNX = localRadius * Math.sin(a);
+    startNY = -localRadius * Math.cos(a);
   }
 
   function handlePointerMove(event: PointerEvent) {
     if (!isDragging) return;
+    event.preventDefault();
+    if (!hasMoved) {
+      if (Math.abs(event.clientX - downX) < TAP_SLOP && Math.abs(event.clientY - downY) < TAP_SLOP) return;
+      hasMoved = true;
+      startOrbThrottle();
+    }
     updatePosition(event);
   }
 
   function handlePointerUp(event: PointerEvent) {
     isDragging = false;
-    container.releasePointerCapture(event.pointerId);
-    flushOrbThrottle();
+    if (container.hasPointerCapture(event.pointerId)) container.releasePointerCapture(event.pointerId);
+    if (hasMoved) flushOrbThrottle();
+    hasMoved = false;
   }
 
   function updatePosition(event: PointerEvent) {
-    const rect = container.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    // Calculate relative position from center
-    const dx = event.clientX - centerX;
-    const dy = event.clientY - centerY;
-
-    // Calculate angle (0° at top, clockwise)
-    let angleRad = Math.atan2(dy, dx);
-    let angleDeg = (angleRad * 180 / Math.PI + 90 + 360) % 360; // Convert to 0-360 with 0° at top
-    localAngle = angleDeg / 360; // Normalize to 0-1
-
-    // Calculate radius (distance from center, normalized to container)
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = Math.min(rect.width, rect.height) / 2;
-    localRadius = Math.max(0, Math.min(1, distance / maxDistance));
+    let nx = startNX + (event.clientX - downX) / unitPx;
+    let ny = startNY + (event.clientY - downY) / unitPx;
+    const r = Math.hypot(nx, ny);
+    if (r > 1) {
+      nx /= r;
+      ny /= r;
+    }
+    localRadius = Math.min(1, r);
+    // At the center the angle is undefined: keep the last one.
+    if (r > 1e-4) {
+      localAngle = ((Math.atan2(nx, -ny) / (2 * Math.PI)) + 1) % 1;
+    }
 
     // Queue for frame-synchronized send
     orbPendingAngle = localAngle;
@@ -120,6 +142,7 @@
     onpointerdown={handlePointerDown}
     onpointermove={handlePointerMove}
     onpointerup={handlePointerUp}
+    onpointercancel={handlePointerUp}
     role="slider"
     tabindex="0"
     aria-label="{title}: Angle {(localAngle * 360).toFixed(0)}°, Radius {(localRadius * 100).toFixed(0)}%"
@@ -184,7 +207,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    cursor: crosshair;
+    cursor: grab;
     touch-action: none;
   }
 
