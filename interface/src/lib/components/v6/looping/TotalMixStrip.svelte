@@ -102,7 +102,7 @@
 	/* Unavailable, the bars keep their words but lose the ramp: a bare well
 	   with nothing on it is not a level, an empty ramp could read as one. */
 	.tmh-strip.is-unavailable .tmh-item {
-		background: var(--surface-well);
+		background: var(--background);
 	}
 	.tmh-strip.is-unavailable .tmh-item::before,
 	.tmh-strip.is-unavailable .tmh-mask,
@@ -144,7 +144,7 @@
 		/* The act-monitor ramp, drawn across the FULL bar (see markup). */
 		background: linear-gradient(
 			to right,
-			color-mix(in oklab, var(--act-monitor) 30%, var(--surface-well)) 0%,
+			color-mix(in oklab, var(--act-monitor) 30%, var(--background)) 0%,
 			var(--act-monitor) 100%
 		);
 	}
@@ -155,7 +155,7 @@
 		content: '';
 		position: absolute;
 		inset: 0;
-		background: var(--surface-well);
+		background: var(--background);
 		opacity: 0.6;
 	}
 	/* Eats the ramp from the right. `.tmh-mask` is the 30Hz node — the width
@@ -165,7 +165,7 @@
 		top: 0;
 		right: 0;
 		bottom: 0;
-		background: var(--surface-well);
+		background: var(--background);
 		transition: width 0.08s linear;
 	}
 	/* The fader line: 2px of label ink with a 1px dark edge either side, so
@@ -224,7 +224,7 @@
 	   the disabled ink, never an opacity dim — and no VU ramp on a bar that
 	   has no level to show. */
 	:global([data-grammar="flat"]) .tmh-strip.is-unavailable .tmh-item {
-		background: var(--surface-well);
+		background: var(--background);
 	}
 	:global([data-grammar="flat"]) .tmh-strip.is-unavailable .tmh-label {
 		color: var(--flat-disabled-fg);
