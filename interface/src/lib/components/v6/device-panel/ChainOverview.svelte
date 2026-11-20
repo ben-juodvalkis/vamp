@@ -880,6 +880,11 @@
   let hotChip = $state<string | null>(null);
   let chipGesture = false;
   const barOpen = $derived(paletteOpen || palettePeek);
+  /* At rest the bar shows two rows of chips while the chain fits one row,
+   * and one once the chain wraps to two (Ben, 2026-11-20). The phone keeps
+   * its one fixed row (CSS hides the second there). */
+  const restRows = $derived(grid.rows > 1 ? 1 : 2);
+  const shownRows = $derived(barOpen ? 3 : restRows);
   const chipById = $derived.by(() => {
     const map = new Map<string, ChainEffect>();
     for (const { block, start } of placed.blocks) {
@@ -1390,7 +1395,7 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" class:palette-open={barOpen} class:two-rows={grid.rows > 1} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" class:palette-open={barOpen} class:two-rows={grid.rows > 1} class:rest-two={restRows === 2} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
 <!-- The palette bar: family blocks, a seam between them. Every chip in a
      fixed place; the + at its end opens the second and third rows, Gain
      beside it. -->
@@ -1450,17 +1455,17 @@
   }}
 >
   {#each placed.blocks as { block, start } (block.family)}
-    {#each barOpen ? block.rows : block.rows.slice(0, 1) as row, r (r)}
+    {#each block.rows.slice(0, shownRows) as row, r (r)}
       {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
-        <div class="palette-slot" class:blank={!fx} class:family-head={r === 0} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family} data-chip-id={fx ? `${r + 1}:${start + i}` : undefined}>
+        <div class="palette-slot" class:rest-extra={!barOpen && r > 0} class:blank={!fx} class:family-head={r === 0} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family} data-chip-id={fx ? `${r + 1}:${start + i}` : undefined}>
           {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(block.family)} passive hot={hotChip === `${r + 1}:${start + i}`} />{/if}
         </div>
       {/each}
     {/each}
   {/each}
-  {#if barOpen}
-    {#each placed.tailChips as { family, fx, row } (row)}
-      <div class="palette-slot" class:blank={!fx} style:grid-column={placed.tail} style:grid-row={row} data-family={family} data-chip-id={fx ? `${row}:${placed.tail}` : undefined}>
+  {#if shownRows > 1}
+    {#each placed.tailChips.filter((c) => c.row <= shownRows) as { family, fx, row } (row)}
+      <div class="palette-slot" class:rest-extra={!barOpen} class:blank={!fx} style:grid-column={placed.tail} style:grid-row={row} data-family={family} data-chip-id={fx ? `${row}:${placed.tail}` : undefined}>
         {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(family)} passive hot={hotChip === `${row}:${placed.tail}`} />{/if}
       </div>
     {/each}
@@ -1605,6 +1610,25 @@
   }
   :global([data-phone-layout]) .chain-wrap .chain {
     grid-row: 2 / span 2;
+  }
+  /* Two rows of chips at rest: the bar takes two sixths, the chain four,
+     and an open bar still covers three, over the chain's first row. */
+  .chain-wrap.rest-two .palette {
+    grid-row: 1 / span 2;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .chain-wrap.rest-two .chain {
+    grid-row: 3 / span 4;
+  }
+  :global([data-phone-layout]) .chain-wrap.rest-two .palette {
+    grid-row: 1;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  :global([data-phone-layout]) .chain-wrap.rest-two .chain {
+    grid-row: 2 / span 2;
+  }
+  :global([data-phone-layout]) .palette-slot.rest-extra {
+    display: none;
   }
   .chain-wrap.pad-scoped {
     outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));

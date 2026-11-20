@@ -73,7 +73,9 @@ effect chips in family blocks, each a faint wash of its family's colour (ADR-547
 (`services/effectPalette`, `chain/PaletteChip`), one grid with no gaps,
 closed by a downward chevron (ADR-548), with Utility and Pitch Shift
 under it as ordinary chips. The section is six equal rows, a row of chips
-each: the bar is its first row and the chain the other five. The chevron
+each: at rest the bar is its first two rows and the chain the other four,
+or, once the chain wraps to two rows, the bar one row and the chain five
+(the phone keeps one row). The chevron
 opens the bar to three rows (lit) at finger-down: a tap latches it open
 and a second tap closes it, a hold past `momentaryHoldMs` closes it on
 release (Solo's rule), and a slide from it onto a chip loads that chip

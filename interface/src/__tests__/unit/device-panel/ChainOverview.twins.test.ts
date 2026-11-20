@@ -232,3 +232,29 @@ describe("the palette bar's chevron", () => {
 		expect(loads.length).toBeGreaterThan(0);
 	});
 });
+
+describe("the palette bar's rows at rest", () => {
+	async function renderWith(count: number) {
+		const devices = Array.from({ length: count }, (_, i) => device(i, 'Saturator', 'Saturator'));
+		replaceTree(3, [track(devices, false)]);
+		selectedTrackStore.handleTrackSelected(0);
+		fxGrid.resetForTrackChange();
+		const { container } = render(ChainOverview, { props: {} });
+		await tick();
+		const wrap = container.querySelector('.chain-wrap')!;
+		const secondRow = container.querySelectorAll('[data-debug="chain-palette"] [data-chip-id^="2:"]').length;
+		return { twoRowChain: wrap.classList.contains('two-rows'), secondRow };
+	}
+
+	it('shows two rows of chips while the chain is one row', async () => {
+		const { twoRowChain, secondRow } = await renderWith(1);
+		expect(twoRowChain).toBe(false);
+		expect(secondRow).toBeGreaterThan(0);
+	});
+
+	it('shows one row of chips once the chain wraps to two', async () => {
+		const { twoRowChain, secondRow } = await renderWith(14);
+		expect(twoRowChain).toBe(true);
+		expect(secondRow).toBe(0);
+	});
+});
