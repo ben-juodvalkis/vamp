@@ -98,14 +98,27 @@ enum StartStep: Int, Comparable {
 
     static func < (a: StartStep, b: StartStep) -> Bool { a.rawValue < b.rawValue }
 
-    var label: String {
+    static let all: [StartStep] = [.preparing, .building, .startingServers, .loading]
+
+    /// Its line in the progress screen's checklist.
+    var title: String {
         switch self {
-        case .preparing: return "Starting Vamp…"
-        case .building: return "Building the interface…"
-        case .startingServers: return "Starting the bridge…"
-        case .loading: return "Loading the interface…"
+        case .preparing: return "Checking the setup"
+        case .building: return "Building the interface"
+        case .startingServers: return "Starting the bridge"
+        case .loading: return "Opening the interface"
         }
     }
+}
+
+/// One line of the progress screen's checklist: a step, whether it is done,
+/// under way or still to come, and how long it took or has taken so far.
+struct StartRow: Equatable {
+    enum State: Equatable { case pending, active, done, skipped, failed }
+    var title: String
+    var state: State
+    /// Whole seconds; nil for a step not reached or skipped.
+    var seconds: Int?
 }
 
 extension SupervisorRules {
@@ -117,6 +130,42 @@ extension SupervisorRules {
         if line.contains("Vite build skipped") || line.contains("Starting OSC bridge") { return .startingServers }
         if line.contains("[PREVIEW]") && line.contains("Local:") { return .loading }
         return nil
+    }
+
+    /// The interface was already built for this code: the build step is skipped.
+    static func buildSkipped(in line: String) -> Bool { line.contains("Vite build skipped") }
+
+    /// The checklist for a start at `step`: the steps before it done (with
+    /// the time each took), it under way (or where a start failed), the rest
+    /// to come. `finished`: the page has drawn, every step is done.
+    static func startRows(
+        at step: StartStep, secondsInStep: Double, took: [StartStep: Double],
+        buildSkipped: Bool, failed: Bool, finished: Bool
+    ) -> [StartRow] {
+        StartStep.all.map { s in
+            if s == .building && buildSkipped {
+                return StartRow(title: "Interface already up to date", state: .skipped, seconds: nil)
+            }
+            if finished || s < step {
+                return StartRow(title: s.title, state: .done, seconds: took[s].map { Int($0.rounded()) })
+            }
+            if s == step {
+                return StartRow(title: s.title, state: failed ? .failed : .active, seconds: Int(max(secondsInStep, 0)))
+            }
+            return StartRow(title: s.title, state: .pending, seconds: nil)
+        }
+    }
+
+    /// The recent builds' times, newest last, with this one added: the last three.
+    static func recentBuilds(_ recent: [Double], adding seconds: Double) -> [Double] {
+        Array((recent + [seconds]).suffix(3))
+    }
+
+    /// What the bar expects a build to take: the slowest of the recent ones,
+    /// so a build slower than the last runs to the end of its span instead
+    /// of sitting near-full. 20 s before any build has been seen.
+    static func buildEstimate(recent: [Double]) -> Double {
+        recent.filter { $0 > 0 }.max() ?? 20
     }
 
     /// The build's own time, from "✅ Vite build complete in 9.6s".

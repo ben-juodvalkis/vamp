@@ -84,4 +84,40 @@ final class SupervisorRulesTests: XCTestCase {
         // A slow build still leaves room for the steps after it.
         XCTAssertLessThan(SupervisorRules.startFraction(.building, secondsInStep: 600, buildEstimate: 10), 0.80 + 1e-9)
     }
+
+    func testTheChecklistTicksWhatIsDoneAndCountsTheStepUnderWay() {
+        let took: [StartStep: Double] = [.preparing: 4.2]
+        let rows = SupervisorRules.startRows(at: .building, secondsInStep: 13.7, took: took,
+                                             buildSkipped: false, failed: false, finished: false)
+        XCTAssertEqual(rows.map(\.state), [.done, .active, .pending, .pending])
+        XCTAssertEqual(rows.map(\.seconds), [4, 13, nil, nil])
+    }
+
+    func testASkippedBuildSaysTheInterfaceIsUpToDate() {
+        XCTAssertTrue(SupervisorRules.buildSkipped(in: "⚡ Vite build skipped — inputs unchanged (fingerprint 13ms)"))
+        XCTAssertFalse(SupervisorRules.buildSkipped(in: "🔨 Building the iPad app — about 40 s"))
+        let rows = SupervisorRules.startRows(at: .startingServers, secondsInStep: 1, took: [.preparing: 3],
+                                             buildSkipped: true, failed: false, finished: false)
+        XCTAssertEqual(rows[1], StartRow(title: "Interface already up to date", state: .skipped, seconds: nil))
+        XCTAssertEqual(rows[2].state, .active)
+    }
+
+    func testAFailedStartMarksTheStepItStoppedAtAndAFinishedOneTicksAll() {
+        let failed = SupervisorRules.startRows(at: .startingServers, secondsInStep: 181, took: [:],
+                                               buildSkipped: false, failed: true, finished: false)
+        XCTAssertEqual(failed.map(\.state), [.done, .done, .failed, .pending])
+        let finished = SupervisorRules.startRows(at: .loading, secondsInStep: 0, took: [.loading: 0.4],
+                                                 buildSkipped: false, failed: false, finished: true)
+        XCTAssertEqual(finished.map(\.state), [.done, .done, .done, .done])
+    }
+
+    func testTheBarExpectsTheSlowestRecentBuild() {
+        // Today's builds: 9.3 s, 11.8 s, then 21.3 s. Paced by the last one
+        // alone, the bar sat near-full through the 21 s build.
+        var recent: [Double] = []
+        for seconds in [30.0, 9.3, 11.8, 21.3] { recent = SupervisorRules.recentBuilds(recent, adding: seconds) }
+        XCTAssertEqual(recent, [9.3, 11.8, 21.3])
+        XCTAssertEqual(SupervisorRules.buildEstimate(recent: recent), 21.3)
+        XCTAssertEqual(SupervisorRules.buildEstimate(recent: []), 20)
+    }
 }

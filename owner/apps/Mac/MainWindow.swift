@@ -10,8 +10,9 @@ import WebKit
 /// the page goes with the window, so a closed window is not a client of
 /// the bridge.
 ///
-/// Until the page has drawn, a progress screen covers it: the start's steps,
-/// read from the log, or "Updating Vamp for Mac…" while it rebuilds itself.
+/// Until the page has drawn, a progress screen covers it: a checklist of the
+/// start's steps, read from the log, each with its time (the one under way
+/// counting up), and a bar; or "Updating Vamp for Mac…" while it rebuilds itself.
 @MainActor
 final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
     static let shared = MainWindow()
@@ -32,12 +33,22 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
     private var partialLine = ""
     private var step: StartStep = .preparing
     private var stepSince = Date()
+    /// How long each finished step took, by the window's own clock.
+    private var took: [StartStep: Double] = [:]
+    private var buildSkipped = false
     private var probing = false
 
     /// The page's own background (app.html's theme-color), so nothing flashes.
-    static let pageBackground = NSColor(srgbRed: 0x1f / 255.0, green: 0x21 / 255.0, blue: 0x26 / 255.0, alpha: 1)
-    /// The last build's time, for the bar's pace next time.
-    private static let buildKey = "lastInterfaceBuildSeconds"
+    static let pageBackground = StartProgressView.background
+    /// The recent builds' times, for the bar's pace next time.
+    private static let buildsKey = "recentInterfaceBuildSeconds"
+    /// The one build time kept before 2026-11-20, read until a build replaces it.
+    private static let oldBuildKey = "lastInterfaceBuildSeconds"
+    private var recentBuilds: [Double] {
+        if let list = UserDefaults.standard.array(forKey: Self.buildsKey) as? [Double] { return list }
+        let old = UserDefaults.standard.double(forKey: Self.oldBuildKey)
+        return old > 0 ? [old] : []
+    }
 
     var isOpen: Bool { window?.isVisible == true }
 
@@ -85,6 +96,8 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
         partialLine = ""
         step = vamp.startLogOffset == nil && vamp.pageUp ? .loading : .preparing
         stepSince = Date()
+        took = [:]
+        buildSkipped = false
         tick?.invalidate()
         tick = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.update() }
@@ -112,33 +125,41 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
     }
 
     /// What the progress screen says for the supervisor's state and the step.
-    private func display(_ vamp: Supervisor) -> StartProgressView.Display {
-        let estimate = UserDefaults.standard.double(forKey: Self.buildKey)
-        let buildEstimate = estimate > 0 ? estimate : 10
-        let fraction = SupervisorRules.startFraction(step, secondsInStep: Date().timeIntervalSince(stepSince),
-                                                    buildEstimate: buildEstimate)
+    private func display(_ vamp: Supervisor, finished: Bool = false) -> StartProgressView.Display {
+        let buildEstimate = SupervisorRules.buildEstimate(recent: recentBuilds)
+        let inStep = Date().timeIntervalSince(stepSince)
+        let fraction = finished ? 1 : SupervisorRules.startFraction(step, secondsInStep: inStep, buildEstimate: buildEstimate)
+        let readsSteps = logOffset != nil || step >= .loading
+        func rows(failed: Bool) -> [StartRow] {
+            guard readsSteps else { return [] }
+            return SupervisorRules.startRows(at: step, secondsInStep: inStep, took: took,
+                                             buildSkipped: buildSkipped, failed: failed, finished: finished)
+        }
         switch vamp.state {
         case .updating:
             return .init(label: "Updating Vamp for Mac…", detail: "Vamp for Mac's code changed: rebuilding it, then it reopens", fraction: nil)
         case .failed(let why):
-            return .init(label: "Vamp didn't start", detail: "\(why). Vamp's menu bar icon opens the log.".replacingOccurrences(of: "; see the log", with: ""), fraction: nil, failed: true)
+            let reason = why.replacingOccurrences(of: "; see the log", with: "")
+            return .init(label: "Vamp didn't start", detail: "\(reason.prefix(1).uppercased() + reason.dropFirst()). Vamp's menu bar icon opens the log.",
+                         fraction: nil, rows: rows(failed: true), failed: true)
         case .stopped, .stopping:
             return .init(label: vamp.statusLine, detail: "Start Vamp from the menu bar", fraction: nil)
         case .external where web == nil:
             return .init(label: "Waiting for the page server…", detail: vamp.statusLine, fraction: nil)
         default:
-            if logOffset == nil && step < .loading {
+            guard readsSteps else {
                 return .init(label: "Waiting for the page server…", detail: nil, fraction: nil)
             }
-            let detail = step == .building
-                ? "About \(Int(buildEstimate.rounded())) s · only when the interface's code has changed"
+            let detail = step == .building && !finished
+                ? "Only after an update · up to \(Int(buildEstimate.rounded())) s lately"
                 : nil
-            return .init(label: step.label, detail: detail, fraction: fraction)
+            return .init(label: "", detail: detail, fraction: fraction, rows: rows(failed: false))
         }
     }
 
     private func move(to next: StartStep) {
         guard next > step else { return }
+        took[step] = Date().timeIntervalSince(stepSince)
         step = next
         stepSince = Date()
     }
@@ -154,9 +175,10 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
         var lines = text.components(separatedBy: "\n")
         partialLine = lines.removeLast()
         for line in lines {
+            if SupervisorRules.buildSkipped(in: line) { buildSkipped = true }
             if let next = SupervisorRules.startStep(after: line) { move(to: next) }
             if let seconds = SupervisorRules.buildSeconds(in: line) {
-                UserDefaults.standard.set(seconds, forKey: Self.buildKey)
+                UserDefaults.standard.set(SupervisorRules.recentBuilds(recentBuilds, adding: seconds), forKey: Self.buildsKey)
             }
         }
     }
@@ -207,9 +229,12 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
         tick = nil
         guard let view = progress else { return }
         progress = nil
-        view.show(.init(label: "Loading the interface…", detail: nil, fraction: 1))
+        if let vamp = Supervisor.current {
+            took[step] = Date().timeIntervalSince(stepSince)
+            view.show(display(vamp, finished: true))
+        }
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.25
+            ctx.duration = 0.35
             view.animator().alphaValue = 0
         }, completionHandler: { view.removeFromSuperview() })
     }
@@ -248,28 +273,39 @@ final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
     }
 }
 
-/// The Vamp window's progress screen while Vamp starts: the app
-/// icon, its name, the step and a bar, on the page's own background.
+/// The Vamp window's progress screen while Vamp starts: the app icon, its
+/// name, a checklist of the start's steps (done ones ticked with the time
+/// they took, the one under way spinning and counting up), the bar, and a
+/// note, on the page's own background.
 final class StartProgressView: NSView {
     struct Display: Equatable {
+        /// Under the name; empty during a start, which the checklist tells.
         var label: String
         var detail: String?
         /// nil: indeterminate (no steps to read, or an update).
         var fraction: Double?
+        /// The checklist; empty when there are no steps to show.
+        var rows: [StartRow] = []
         var failed = false
     }
+
+    /// The page's own background (app.html's theme-color), so nothing flashes.
+    static let background = NSColor(srgbRed: 0x1f / 255.0, green: 0x21 / 255.0, blue: 0x26 / 255.0, alpha: 1)
 
     private let icon = NSImageView()
     private let title = NSTextField(labelWithString: "Vamp")
     private let label = NSTextField(labelWithString: "")
-    private let detail = NSTextField(wrappingLabelWithString: "")
+    private let list = NSStackView()
+    private var rowViews: [StartRowView] = []
     private let bar = NSProgressIndicator()
+    private let detail = NSTextField(wrappingLabelWithString: "")
+    private var stack = NSStackView()
     private var shown: Display?
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.backgroundColor = MainWindow.pageBackground.cgColor
+        layer?.backgroundColor = Self.background.cgColor
         appearance = NSAppearance(named: .darkAqua)
 
         icon.image = NSApp.applicationIconImage
@@ -284,27 +320,42 @@ final class StartProgressView: NSView {
             field.alignment = .center
             field.lineBreakMode = .byTruncatingTail
         }
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
         detail.maximumNumberOfLines = 3
         detail.lineBreakMode = .byWordWrapping
-        detail.preferredMaxLayoutWidth = 360
+        detail.preferredMaxLayoutWidth = 340
+
+        list.orientation = .vertical
+        list.alignment = .leading
+        list.spacing = 10
+        for _ in StartStep.all {
+            let row = StartRowView()
+            rowViews.append(row)
+            list.addArrangedSubview(row)
+            row.widthAnchor.constraint(equalToConstant: 300).isActive = true
+        }
+
         bar.style = .bar
         bar.minValue = 0
         bar.maxValue = 1
-        bar.controlSize = .regular
+        bar.controlSize = .small
 
-        let stack = NSStackView(views: [icon, title, label, bar, detail])
+        stack = NSStackView(views: [icon, title, label, list, bar, detail])
         stack.orientation = .vertical
         stack.alignment = .centerX
         stack.spacing = 10
-        stack.setCustomSpacing(18, after: icon)
-        stack.setCustomSpacing(14, after: label)
+        stack.setCustomSpacing(16, after: icon)
+        stack.setCustomSpacing(4, after: title)
+        stack.setCustomSpacing(22, after: label)
+        stack.setCustomSpacing(22, after: list)
+        stack.setCustomSpacing(12, after: bar)
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
-            icon.widthAnchor.constraint(equalToConstant: 96),
-            icon.heightAnchor.constraint(equalToConstant: 96),
-            bar.widthAnchor.constraint(equalToConstant: 280),
-            detail.widthAnchor.constraint(equalToConstant: 360),
+            icon.widthAnchor.constraint(equalToConstant: 88),
+            icon.heightAnchor.constraint(equalToConstant: 88),
+            bar.widthAnchor.constraint(equalToConstant: 300),
+            detail.widthAnchor.constraint(equalToConstant: 340),
             label.widthAnchor.constraint(lessThanOrEqualToConstant: 420),
             stack.centerXAnchor.constraint(equalTo: centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -20),
@@ -321,9 +372,13 @@ final class StartProgressView: NSView {
         let was = shown
         shown = display
         label.stringValue = display.label
+        label.isHidden = display.label.isEmpty
+        stack.setCustomSpacing(label.isHidden ? 22 : 4, after: title)
         label.textColor = display.failed ? .systemOrange : NSColor.white.withAlphaComponent(0.85)
         detail.stringValue = display.detail ?? ""
         detail.isHidden = display.detail == nil
+        list.isHidden = display.rows.isEmpty
+        for (view, row) in zip(rowViews, display.rows) { view.show(row) }
         bar.isHidden = display.failed
         if let fraction = display.fraction {
             if bar.isIndeterminate { bar.stopAnimation(nil); bar.isIndeterminate = false }
@@ -331,6 +386,85 @@ final class StartProgressView: NSView {
         } else if !bar.isIndeterminate || was == nil {
             bar.isIndeterminate = true
             bar.startAnimation(nil)
+        }
+    }
+}
+
+/// One checklist line: a tick, a spinner, an empty ring or a cross; the
+/// step's name; and its time on the right.
+final class StartRowView: NSView {
+    private let mark = NSImageView()
+    private let spinner = NSProgressIndicator()
+    private let name = NSTextField(labelWithString: "")
+    private let time = NSTextField(labelWithString: "")
+    private var shown: StartRow?
+
+    init() {
+        super.init(frame: .zero)
+        translatesAutoresizingMaskIntoConstraints = false
+        spinner.style = .spinning
+        spinner.controlSize = .small
+        spinner.isDisplayedWhenStopped = false
+        name.font = .systemFont(ofSize: 14)
+        name.lineBreakMode = .byTruncatingTail
+        time.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+        time.alignment = .right
+        for view in [mark, spinner, name, time] as [NSView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(view)
+        }
+        NSLayoutConstraint.activate([
+            heightAnchor.constraint(equalToConstant: 20),
+            mark.leadingAnchor.constraint(equalTo: leadingAnchor),
+            mark.centerYAnchor.constraint(equalTo: centerYAnchor),
+            mark.widthAnchor.constraint(equalToConstant: 18),
+            mark.heightAnchor.constraint(equalToConstant: 18),
+            spinner.centerXAnchor.constraint(equalTo: mark.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: mark.centerYAnchor),
+            name.leadingAnchor.constraint(equalTo: mark.trailingAnchor, constant: 12),
+            name.centerYAnchor.constraint(equalTo: centerYAnchor),
+            name.trailingAnchor.constraint(lessThanOrEqualTo: time.leadingAnchor, constant: -8),
+            time.trailingAnchor.constraint(equalTo: trailingAnchor),
+            time.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    func show(_ row: StartRow) {
+        guard row != shown else { return }
+        shown = row
+        name.stringValue = row.title
+        time.stringValue = row.seconds.map { $0 < 1 ? "<1 s" : "\($0) s" } ?? ""
+        let white = NSColor.white
+        let symbol: (String, NSColor)?
+        switch row.state {
+        case .done, .skipped:
+            symbol = ("checkmark.circle.fill", .systemGreen)
+            name.textColor = white.withAlphaComponent(0.75)
+            time.textColor = white.withAlphaComponent(0.4)
+        case .active:
+            symbol = nil
+            name.textColor = white
+            time.textColor = white.withAlphaComponent(0.75)
+        case .pending:
+            symbol = ("circle", white.withAlphaComponent(0.25))
+            name.textColor = white.withAlphaComponent(0.35)
+            time.textColor = white.withAlphaComponent(0.35)
+        case .failed:
+            symbol = ("xmark.circle.fill", .systemOrange)
+            name.textColor = .systemOrange
+            time.textColor = NSColor.systemOrange.withAlphaComponent(0.75)
+        }
+        if let (name, color) = symbol {
+            let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
+            mark.image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(config)
+            mark.contentTintColor = color
+            mark.isHidden = false
+            spinner.stopAnimation(nil)
+        } else {
+            mark.isHidden = true
+            spinner.startAnimation(nil)
         }
     }
 }
