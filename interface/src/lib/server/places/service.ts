@@ -61,7 +61,7 @@ import {
 import { FolderWatch, folderTreeStamp } from './folderWatch';
 import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
 import { MANIFEST_NAME, readManifest } from './placesManifest';
-import { readEffectsChoice, writeEffectsChoice } from './effectsChoice';
+import { readEffectsChoice, writeEffectsChoice, type EffectsChoice } from './effectsChoice';
 import { CATEGORY_ROLES, PACKS_SOURCE, type LiveCategory } from './categoryScan';
 
 /** Where + Effect opens when `catalog.effectsPlace` names no Place. */
@@ -267,7 +267,7 @@ export class PlacesService {
 	private readonly prefsDir: string;
 	private readonly ticksFile: string;
 	private readonly effectsFile: string;
-	private effectsChoice: string | null = null;
+	private effectsChoice: EffectsChoice | null = null;
 	private readonly cacheDir: string;
 	private readonly dbDir: string | null;
 	private readonly polls: boolean;
@@ -482,7 +482,15 @@ export class PlacesService {
 	 * (ADR-498), else `catalog.effectsPlace`; '' is Live's Audio Effects.
 	 */
 	effectsPlaceName(): string {
-		return this.effectsChoice ?? configSection<{ effectsPlace?: string }>('catalog').effectsPlace ?? '';
+		const choice = this.effectsChoice;
+		if (!choice) return configSection<{ effectsPlace?: string }>('catalog').effectsPlace ?? '';
+		// The Place by its saved name, else by its folder under whatever name
+		// Live gives it now: Live 13 reads the rig's "+Effect" as its folder's
+		// own name, "Audio-Midi Effects", and every effect file went missing
+		// from the palette (2026-11-20).
+		const places = this.sources.filter((s) => s.kind !== 'category' && s.kind !== 'collection');
+		if (!choice.place || places.some((s) => s.name === choice.place)) return choice.place;
+		return places.find((s) => choice.path && s.path === choice.path)?.name ?? choice.place;
 	}
 
 	/**
@@ -1023,9 +1031,10 @@ export class PlacesService {
 	 * Live's Audio Effects. A name no Place has is refused (null).
 	 */
 	setEffectsPlace(name: string): PlacesListing | null {
-		if (name && !this.sources.some((s) => s.name === name && s.kind !== 'category' && s.kind !== 'collection')) return null;
-		writeEffectsChoice(this.effectsFile, name);
-		this.effectsChoice = name;
+		const place = this.sources.find((s) => s.name === name && s.kind !== 'category' && s.kind !== 'collection');
+		if (name && !place) return null;
+		writeEffectsChoice(this.effectsFile, name, place?.path);
+		this.effectsChoice = place ? { place: name, path: place.path } : { place: name };
 		if (!this.rebuildTicked('effects folder saved')) this.bump('effects folder saved');
 		return this.listing();
 	}

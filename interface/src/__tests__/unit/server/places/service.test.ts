@@ -365,6 +365,26 @@ describe('PlacesService, the effects Place', () => {
 		expect(service!.setEffectsPlace('')!.effectsPlace).toBe('');
 	});
 
+	it('finds the saved effects folder by its folder when Live names the Place differently', () => {
+		preset('Sidebar/Key/Amps/Guitar.aupreset');
+		const s = make();
+		s.setEffectsPlace('Key');
+		expect(JSON.parse(readFileSync(join(root, 'logs', 'effects.json'), 'utf8')).path).toBe(join(root, 'Sidebar', 'Key'));
+		service?.stop();
+		// Live 13 reads the rig's "+Effect" as its folder's name.
+		libraryCfg(
+			[
+				['Drum', join(root, 'Sidebar', 'Drum')],
+				['Keys Renamed', join(root, 'Sidebar', 'Key')],
+				['Desktop', join(root, 'Desktop')]
+			],
+			'User Library'
+		);
+		const again = make();
+		expect(again.listing().effectsPlace).toBe('Keys Renamed');
+		expect(again.indexJson().places.find((p) => p.effects)?.devices).toMatchObject({ Guitar: 'Amps/Guitar.aupreset' });
+	});
+
 	it('names no effects Place by default on a Mac with no Live index', () => {
 		const s = make();
 		s.setTicks([firstPlace(s).key]);

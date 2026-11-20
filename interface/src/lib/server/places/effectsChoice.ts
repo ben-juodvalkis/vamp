@@ -11,22 +11,31 @@ export interface EffectsChoiceFile {
 	version: 1;
 	/** A Place's sidebar name, or '' for Live's Audio Effects. */
 	place: string;
+	/** The Place's folder, so a Place Live names differently (Live 13 drops a sidebar rename) is still found. */
+	path?: string;
 	savedAt: string;
 }
 
+/** The saved choice: the Place's name, and its folder when known. */
+export interface EffectsChoice {
+	place: string;
+	path?: string;
+}
+
 /** The saved choice, or null when none was ever saved (or it cannot be read). */
-export function readEffectsChoice(file: string): string | null {
+export function readEffectsChoice(file: string): EffectsChoice | null {
 	try {
 		if (!existsSync(file)) return null;
 		const raw = JSON.parse(readFileSync(file, 'utf8')) as Partial<EffectsChoiceFile>;
-		return typeof raw.place === 'string' ? raw.place : null;
+		if (typeof raw.place !== 'string') return null;
+		return typeof raw.path === 'string' && raw.path ? { place: raw.place, path: raw.path } : { place: raw.place };
 	} catch {
 		return null;
 	}
 }
 
-export function writeEffectsChoice(file: string, place: string): EffectsChoiceFile {
-	const data: EffectsChoiceFile = { version: 1, place, savedAt: new Date().toISOString() };
+export function writeEffectsChoice(file: string, place: string, path?: string): EffectsChoiceFile {
+	const data: EffectsChoiceFile = { version: 1, place, ...(path ? { path } : {}), savedAt: new Date().toISOString() };
 	mkdirSync(dirname(file), { recursive: true });
 	const tmp = `${file}.tmp`;
 	writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n');
