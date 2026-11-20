@@ -1681,12 +1681,15 @@ time quantized to sixteenths, weighted by role (bass 4, key 3, synth /
 inst / unset 2, fx 0) and beat position (downbeat 4, beat 3, off 2), picks
 the pitch-class set and the Live scales containing it (seven-note first);
 the bass's downbeat lows (4, 8 on the loop's first downbeat), first note
-(2) and lowest note (1) and the keys' **chord roots** (3 on a downbeat, 6
-on the first, 1 off; root by stacking — the note with a fifth above it,
+(2) and lowest note (1) and the **chord roots** of any part that plays
+chords — the keys rail, or any track a third of whose onsets are chords
+(ADR-553) — (3 on a downbeat, 6 on the first, 1 off; root by stacking — the note with a fifth above it,
 then a third, then the lowest, so an inverted chord still names its root)
 pick the tonic among the candidates' roots; a line votes only where it
-rests (2 per note followed by a beat of silence, 1 for its longest). The
-rig's melody sits on the fifth and must not decide. Shorter loops repeat
+rests (2 per note followed by a beat of silence, 1 for its longest). Any
+pitched track can name the key; the rig's melody sits on the fifth, so an
+answer only lines voted for is at most `plausible` and a bass or chords
+arriving later still move it (ADR-553). Shorter loops repeat
 inside the longest launched one.
 Clips are sorted canonically first, so the same set always gives the same
 `reasons` line, which the answer carries as text. With `apply = 1` the key

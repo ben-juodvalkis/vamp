@@ -17,9 +17,12 @@ always give the same line:
    classes are dropped as chromatic passing tones, and named.
 2. **Tonic.** Only the candidates' roots can win. The bass's lowest
    sounding note on each downbeat votes (double on the loop's first
-   downbeat), with its first and lowest notes; the keys' chord roots vote,
-   found by stacking and weighted by where they land; a line (synth,
-   inst, unset) votes only where it comes to rest. Ties break by the
+   downbeat), with its first and lowest notes; any part that strikes
+   chords — the keys rail or any other — votes its chord roots, found by
+   stacking and weighted by where they land; a single line votes only
+   where it comes to rest. Any pitched track can name the key (ADR-553):
+   an answer resting on lines alone is at most plausible, so a bass or
+   chords arriving later can still move it. Ties break by the
    sounding time of the candidate's tonic triad, then by how common the
    scale is (``SCALE_PREFERENCE``), then by the lower root. On one root,
    when the notes leave the mode open, the more common scale is named.
@@ -128,8 +131,6 @@ ROLE_WEIGHT = {"bass": 4, "key": 3, "synth": 2, "inst": 2, "": 2, "fx": 0}
 #: Dropped before anything else: their notes are pad numbers, not pitches.
 #: The component also skips them before reading, to save the note read.
 EXCLUDED_ROLES = ("drum", "perc")
-#: The roles whose votes can name a tonic; a set with neither is no-key.
-VOTING_ROLES = ("bass", "key")
 _ROLE_RANK = {"bass": 0, "key": 1}
 #: Evidence weight by where the note starts: on a downbeat, on a beat, between.
 POSITION_WEIGHT = (4, 3, 2)
@@ -147,6 +148,9 @@ KEY_CHORD_OFFBEAT_POINTS = 1
 LINE_REST_POINTS = 2
 LINE_LONGEST_POINTS = 1
 LINE_REST_GAP = TICKS_PER_BEAT
+#: A part off the keys rail votes chord roots when at least a third of its
+#: onsets are chords (ADR-553); fewer, and it is a line.
+CHORD_ONSET_DENOMINATOR = 3
 #: A reason line lists at most this many votes, then "… +N": the whole
 #: ladder is one OSC string, and the tonic votes and the verdict come last.
 REASON_LIST_MAX = 24
@@ -383,7 +387,18 @@ def _bass_votes(c, cycle, bar, votes):
     )
 
 
-def _key_votes(c, cycle, bar, votes):
+def _strikes_chords(c):
+    """Whether the part plays chords: at least ``CHORD_ONSET_DENOMINATOR``-th
+    of its onsets strike two notes or more. One collision — a melody's grace
+    note quantized onto the next — is still a line."""
+    counts = {}
+    for n in c["notes"]:
+        counts[n[1]] = counts.get(n[1], 0) + 1
+    chords = sum(1 for k in counts.values() if k >= 2)
+    return chords * CHORD_ONSET_DENOMINATOR >= len(counts)
+
+
+def _key_votes(c, cycle, bar, votes, label="keys"):
     """Each chord's root, by where it lands in the cycle. The chords are
     found once (one pass over the notes) and repeated, not re-found per
     repeat. A part with no two notes struck together — an arpeggio, a riff —
@@ -400,7 +415,7 @@ def _key_votes(c, cycle, bar, votes):
             pts = KEY_CHORD_TOP_POINTS if db == 0 else KEY_CHORD_DOWNBEAT_POINTS
             votes[pitch % 12] += pts
             listed.append(f"{PITCH_CLASS_NAMES[pitch % 12]}({pts})")
-        return "keys downbeat notes " + _listing(listed)
+        return f"{label} downbeat notes " + _listing(listed)
     for rep in range(_repeats(c, cycle)):
         for on, root in chords:
             at = on + rep * c["length"]
@@ -414,7 +429,7 @@ def _key_votes(c, cycle, bar, votes):
                 pts = KEY_CHORD_OFFBEAT_POINTS
             votes[root] += pts
             listed.append(f"{PITCH_CLASS_NAMES[root]}({pts})")
-    return "keys chord roots " + _listing(listed)
+    return f"{label} chord roots " + _listing(listed)
 
 
 def _line_votes(c, votes):
@@ -517,19 +532,22 @@ def detect(clips, bar=4 * TICKS_PER_BEAT):
 
     # 2. tonic
     votes = [0] * 12
-    voted = False
+    anchored = False  # a bass or a chord voted, not only lines
     for c in clips:
         cast = sum(votes)
         if c["role"] == "bass":
             reasons.append(_bass_votes(c, cycle, bar, votes))
         elif c["role"] == "key":
             reasons.append(_key_votes(c, cycle, bar, votes))
+        elif _strikes_chords(c):
+            reasons.append(_key_votes(c, cycle, bar, votes, label=c["role"] or "part"))
         else:
             reasons.append(_line_votes(c, votes))
-        voted = voted or (c["role"] in VOTING_ROLES and sum(votes) > cast)
+            continue
+        anchored = anchored or sum(votes) > cast
     result["votes"] = votes
-    if not voted:
-        reasons.append("no bass or keys vote cast: no key")
+    if not any(votes):
+        reasons.append("no note voted for a tonic: no key")
         return result
 
     ranked = _rank(cands, votes, evidence)
@@ -544,6 +562,11 @@ def detect(clips, bar=4 * TICKS_PER_BEAT):
     band = BAND_SURE if gap >= SURE_GAP else BAND_PLAUSIBLE if gap >= PLAUSIBLE_GAP else BAND_UNSURE
     if best_votes == 0:
         band = BAND_UNSURE
+    if not anchored and band == BAND_SURE:
+        # A melody often rests on the fifth (ADR-553): at most plausible, so
+        # a bass or chords that arrive later can still move the key.
+        band = BAND_PLAUSIBLE
+        reasons.append(f"lines only, no bass or chords: at most {band}")
     result.update({
         "band": band, "root": best["root"], "scale": best["scale"], "gap": gap,
         "runner_root": second["root"] if second else -1,

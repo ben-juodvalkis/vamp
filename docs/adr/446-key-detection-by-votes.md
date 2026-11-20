@@ -1,7 +1,7 @@
 # ADR-446: The key of the set, decided by votes the performer can read
 
 ## Status
-**Accepted** (2026-09-19; extends ADR-141 and ADR-178, the key signature on the surface and in the interface)
+**Accepted** (2026-09-19; extends ADR-141 and ADR-178, the key signature on the surface and in the interface). Amended by ADR-553: any pitched track can name the key, not only bass and keys
 
 ## Context
 

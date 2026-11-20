@@ -239,11 +239,30 @@ def test_nothing_launched_is_no_key():
     assert r["band"] == BAND_NO_KEY and r["root"] == -1 and r["scale"] == ""
 
 
-def test_melody_alone_is_no_key():
+def test_a_melody_alone_names_a_key_but_never_sure():
+    """ADR-553: any pitched track can name the key; lines alone stop at plausible."""
     melody = _clip("synth", 0.0, 4.0, [(67, 0.0, 1.0), (70, 1.0, 1.0), (72, 2.0, 1.0), (74, 3.0, 1.0)])
     r = detect([melody])
-    assert r["band"] == BAND_NO_KEY
-    assert "no bass or keys vote cast: no key" in r["reasons"]
+    assert (PITCH_CLASS_NAMES[r["root"]], r["scale"], r["band"]) == ("G", "Minor", BAND_PLAUSIBLE)
+    assert "lines only, no bass or chords: at most plausible" in r["reasons"]
+
+
+@pytest.mark.parametrize("role", ["synth", "inst", ""])
+def test_chords_on_any_track_vote_their_roots(role):
+    """A pad off the keys rail votes like keys, and chords are enough to be sure."""
+    pad = _clip(role, 0.0, 16.0, [
+        (57, 0.0, 8.0), (60, 0.0, 8.0), (64, 0.0, 8.0),     # A minor
+        (57, 8.0, 8.0), (62, 8.0, 8.0), (65, 8.0, 8.0),     # D minor, second inversion
+    ])
+    r = detect([pad])
+    assert (PITCH_CLASS_NAMES[r["root"]], r["scale"], r["band"]) == ("A", "Minor", BAND_SURE)
+    assert f"{role or 'part'} chord roots A(6) D(3)" in r["reasons"]
+
+
+def test_one_collision_does_not_make_a_line_a_chord_part():
+    line = _clip("synth", 0.0, 4.0, [(64, 0.0, 0.5), (67, 0.0, 0.5), (69, 1.0, 0.5),
+                                     (71, 2.0, 0.5), (72, 3.0, 0.5)])
+    assert any(x.startswith("synth rests") for x in detect([line])["reasons"])
 
 
 def test_two_pitch_classes_decide_by_the_votes():
@@ -288,9 +307,9 @@ def test_long_vote_listings_are_capped():
     line = next(x for x in r["reasons"] if x.startswith("keys chord roots"))
     assert "… +" in line and len(line) < 300
 
-def test_unset_role_alone_is_no_key_but_counts_beside_a_bass():
+def test_unset_role_alone_is_a_line_and_counts_beside_a_bass():
     unset = _clip("", 0.0, 4.0, [(60, 0.0, 1.0), (64, 1.0, 1.0), (67, 2.0, 1.0)])
-    assert detect([unset])["band"] == BAND_NO_KEY
+    assert detect([unset])["band"] == BAND_PLAUSIBLE
     bass = _clip("bass", 0.0, 4.0, [(36, 0.0, 4.0)])
     r = detect([unset, bass])
     assert (PITCH_CLASS_NAMES[r["root"]], r["scale"]) == ("C", "Major")

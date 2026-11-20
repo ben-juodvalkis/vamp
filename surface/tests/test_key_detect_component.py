@@ -394,7 +394,7 @@ def test_applied_is_zero_when_live_does_not_take_the_key(emits):
 
 
 def test_no_key_never_writes_even_when_asked(emits):
-    song, comp, _settings, _sched, sess = _rig(emits, [StubTrack(_melody(), "synth")])
+    song, comp, _settings, _sched, sess = _rig(emits, [StubTrack(None, "synth")])
     comp.handle_detect((1,), None)
     r = _reply(emits)
     assert (r["root"], r["scale"], r["band"], r["applied"]) == (-1, "", "no-key", 0)
