@@ -9,8 +9,9 @@
  * - **Move pad hold** (ADR-432). A Move pad held for
  *   `ui.gestures.momentaryHoldMs` sends `/looping/v3/move/pad_hold <note> 1`,
  *   its release `... <note> 0`. A pad released sooner sends nothing, so a
- *   drum hit is never a hold. The step buttons (`move.ignoreNotes`) are not
- *   pads.
+ *   drum hit is never a hold. Only the 32 pads (`move.padNotes`, 68..99)
+ *   count: the knobs' touch notes, the step buttons and every other button
+ *   send notes too, and a knob held must not hold a drum pad.
  * - **Move track-volume knob.** Its CC's raw relative value goes to
  *   `/looping/v3/selected_track/volume_relative`, as the patch sent it; the
  *   surface's `move_volume_knob` setting still decides whether it acts.
@@ -69,7 +70,7 @@ function createMidiControllers({
     timers = { setTimeout, clearTimeout }
 }) {
     const move = config.move;
-    const [ignoreLo, ignoreHi] = move.ignoreNotes || [16, 31];
+    const [padLo, padHi] = move.padNotes || [68, 99];
     const totalmixKnobs = Object.fromEntries(
         Object.entries(move.totalmixKnobs || {}).filter(([key]) => !key.startsWith('_'))
     );
@@ -80,7 +81,7 @@ function createMidiControllers({
     const pads = new Map();
 
     function padDown(note) {
-        if (note >= ignoreLo && note <= ignoreHi) return;
+        if (note < padLo || note > padHi) return;
         if (pads.has(note)) return;
         const pad = { fired: false, timer: null };
         pad.timer = timers.setTimeout(() => {

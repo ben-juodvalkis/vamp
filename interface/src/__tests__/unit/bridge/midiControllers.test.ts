@@ -70,48 +70,51 @@ describe('the config the bridge reads', () => {
 describe('Move pad hold', () => {
 	it('sends a hold once a pad has been down for the hold time, and its release', () => {
 		const c = make();
-		c.handleMidi(MOVE, noteOn(40));
+		c.handleMidi(MOVE, noteOn(70));
 		vi.advanceTimersByTime(PAD_MS - 1);
 		expect(sent).toEqual([]);
 		vi.advanceTimersByTime(1);
-		c.handleMidi(MOVE, noteOff(40));
+		c.handleMidi(MOVE, noteOff(70));
 		expect(addresses()).toEqual([
-			['/looping/v3/move/pad_hold', 40, 1],
-			['/looping/v3/move/pad_hold', 40, 0]
+			['/looping/v3/move/pad_hold', 70, 1],
+			['/looping/v3/move/pad_hold', 70, 0]
 		]);
 		expect(sent[0].args.map((a) => a.type)).toEqual(['i', 'i']);
 	});
 
 	it('sends nothing for a hit released before the hold time', () => {
 		const c = make();
-		c.handleMidi(MOVE, noteOn(40));
+		c.handleMidi(MOVE, noteOn(70));
 		vi.advanceTimersByTime(PAD_MS - 50);
-		c.handleMidi(MOVE, [0x90, 40, 0]); // note-on at velocity 0 is a release
+		c.handleMidi(MOVE, [0x90, 70, 0]); // note-on at velocity 0 is a release
 		vi.advanceTimersByTime(PAD_MS);
 		expect(sent).toEqual([]);
 	});
 
-	it('ignores the step buttons, other Move ports and other inputs', () => {
+	it('times only the pads: knob touches, buttons, other Move ports and other inputs send nothing', () => {
 		const c = make();
-		c.handleMidi(MOVE, noteOn(16));
-		c.handleMidi(MOVE, noteOn(31));
-		c.handleMidi('Ableton Move User Port', noteOn(40));
-		c.handleMidi(OTHER, noteOn(40));
+		c.handleMidi(MOVE, noteOn(0)); // a knob touched
+		c.handleMidi(MOVE, noteOn(9));
+		c.handleMidi(MOVE, noteOn(16)); // a step button
+		c.handleMidi(MOVE, noteOn(67));
+		c.handleMidi(MOVE, noteOn(100));
+		c.handleMidi('Ableton Move User Port', noteOn(70));
+		c.handleMidi(OTHER, noteOn(70));
 		vi.advanceTimersByTime(PAD_MS * 2);
 		expect(sent).toEqual([]);
 	});
 
 	it('holds two pads at once, and lets go of both when the inputs reopen', () => {
 		const c = make();
-		c.handleMidi(MOVE, noteOn(40));
-		c.handleMidi(MOVE, noteOn(41));
+		c.handleMidi(MOVE, noteOn(70));
+		c.handleMidi(MOVE, noteOn(71));
 		vi.advanceTimersByTime(PAD_MS);
 		c.inputsReset();
 		expect(addresses()).toEqual([
-			['/looping/v3/move/pad_hold', 40, 1],
-			['/looping/v3/move/pad_hold', 41, 1],
-			['/looping/v3/move/pad_hold', 40, 0],
-			['/looping/v3/move/pad_hold', 41, 0]
+			['/looping/v3/move/pad_hold', 70, 1],
+			['/looping/v3/move/pad_hold', 71, 1],
+			['/looping/v3/move/pad_hold', 70, 0],
+			['/looping/v3/move/pad_hold', 71, 0]
 		]);
 	});
 });

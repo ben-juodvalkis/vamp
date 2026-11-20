@@ -274,11 +274,11 @@
     "_description": "The owner's Ableton Move, read by the bridge only while features.midiControllers is on (ADR-537; interface/bridge/handlers/midiControllers.js). The bridge opens every MIDI input on the Mac in every edition, for the pedals (midiPedals), and re-checks the list every pollMs.",
     "pollMs": 2000,
     "move": {
-      "_description": "Ableton Move. Pads: a note held for ui.gestures.momentaryHoldMs sends /looping/v3/move/pad_hold (ADR-432); notes in ignoreNotes are its step buttons. Knobs, on knobChannel: trackVolumeCC's raw relative value goes to /looping/v3/selected_track/volume_relative; each totalmixKnobs CC nudges that TotalMix channel by totalmixStepDb per click (value 1 up, 127 down), only once a level is known. Every port whose name starts with portPrefix is the Move's: only portName is read, and none of them reaches a pedal except externalPortName, where a device plugged into the Move arrives (the rig's foot switch, measured 2026-11-13).",
+      "_description": "Ableton Move. Pads: a note held for ui.gestures.momentaryHoldMs sends /looping/v3/move/pad_hold (ADR-432); only notes in padNotes (the 32 pads, 68 + 8·row + col) are pads, so a knob touch or a button held is never a pad hold. Knobs, on knobChannel: trackVolumeCC's raw relative value goes to /looping/v3/selected_track/volume_relative; each totalmixKnobs CC nudges that TotalMix channel by totalmixStepDb per click (value 1 up, 127 down), only once a level is known. Every port whose name starts with portPrefix is the Move's: only portName is read, and none of them reaches a pedal except externalPortName, where a device plugged into the Move arrives (the rig's foot switch, measured 2026-11-13).",
       "portName": "Ableton Move Live Port",
       "portPrefix": "Ableton Move",
       "externalPortName": "Ableton Move External Port",
-      "ignoreNotes": [16, 31],
+      "padNotes": [68, 99],
       "knobChannel": 1,
       "trackVolumeCC": 71,
       "totalmixKnobs": { "75": "room", "76": "playback", "77": "click", "78": "phones" },
