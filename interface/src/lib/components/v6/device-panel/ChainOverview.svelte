@@ -1387,11 +1387,12 @@
       {/snippet}
       {@const macroGrid = cell.foldable ? macroGridOf(cell.device) : null}
       {#if macroGrid}
-        <!-- A rack: its visible macros as knobs, laid out as Live's panel, as much of it as the cell holds. -->
+        <!-- A rack: its visible macros as knobs, laid out as Live's panel, as much of it as the cell holds,
+             in the track's colour whatever kind of rack it is (ADR-544). -->
         <div class="cell-control" role="presentation"><CellSize><RackFace
           grid={macroGrid}
           valueOf={(i) => macroValue(cell.device, i)}
-          color={cell.kind === 'instrument' ? (trackScheme ?? schemeFromInk(cell.ink)) : schemeFromInk(cell.ink)}
+          color={trackScheme ?? schemeFromInk(cell.ink)}
           onChange={(i, v) => setMacro(cell.device, i, v)}
         /></CellSize></div>
       {:else}
