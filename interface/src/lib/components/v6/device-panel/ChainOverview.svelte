@@ -848,9 +848,14 @@
       paletteOpen = false;
     }
   }
-  /** A keyboard press on the chevron (a pointer's click is the gesture's). */
-  function keyToggle(event: MouseEvent) {
-    if (event.detail === 0) paletteOpen = !paletteOpen;
+  /** A keyboard press on the chevron (a pointer's press is the gesture's).
+   *  Taken on keydown, not click: click is no input on the performance
+   *  surface (ADR-427); preventing the default keeps the button from
+   *  clicking as well. */
+  function keyToggle(event: KeyboardEvent) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    paletteOpen = !paletteOpen;
   }
   function closePalette() {
     swallowNextClick();
@@ -1478,7 +1483,7 @@
       aria-label={paletteOpen ? 'Fewer effects' : 'More effects'}
       aria-expanded={paletteOpen}
       data-debug="chain-add"
-      onclick={keyToggle}
+      onkeydown={keyToggle}
     >
       <span class="chain-add-plus" aria-hidden="true">{#if paletteOpen}<ChevronUp />{:else}<ChevronDown />{/if}</span>
     </button>
