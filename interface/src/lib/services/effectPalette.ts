@@ -38,9 +38,10 @@ export function paletteLabel(effect: Pick<ChainEffect, 'name' | 'preset'>): stri
 
 /**
  * The palette is laid out in family blocks (the user, 2026-11-11): each
- * family a column or two, three rows deep (ADR-548, laid out by Ben in the
- * Palette Planner, 2026-11-18): its main effects on the first row, the one
- * that shows while the bar is closed, and its others under them.
+ * family one column, four rows deep (laid out by Ben in the Palette
+ * Planner, 2026-11-18, and given its fourth row there, 2026-11-23): its
+ * main effect on the first row, the one that shows while the bar is
+ * closed, and its others under it.
  */
 export interface PaletteBlock {
 	family: string;
@@ -60,23 +61,27 @@ type BlockSpec = { family: string; rows: readonly (readonly SlotSpec[])[] };
  * stretch to fill the row.
  */
 const BLOCKS: readonly BlockSpec[] = [
-	{ family: 'midi', rows: [['random'], ['arpeggiator'], [{ file: 'MidiWheels', kind: 'midi-effect' }]] },
-	{ family: 'tone', rows: [['filter'], ['eq'], ['toneShaper']] },
-	{ family: 'dynamics', rows: [['squash'], ['ott'], ['gate']] },
-	{ family: 'distortion', rows: [['drum', 'pedal'], ['roar', 'redux'], ['saturator', 'shifter']] },
-	{ family: 'guitar', rows: [['guitar'], ['bass'], ['wah']] },
-	{ family: 'modulation', rows: [['tremolo'], ['chorus'], ['smudge']] },
-	{ family: 'glitch', rows: [['variation'], ['glitchLoop'], ['pitchHack']] },
-	{ family: 'time', rows: [['echo'], ['reverb'], ['comb']] }
+	{ family: 'midi', rows: [['random'], ['arpeggiator'], [{ file: 'MidiWheels', kind: 'midi-effect' }], ['chord']] },
+	{ family: 'tone', rows: [['filter'], ['eq'], ['toneShaper'], ['eq8']] },
+	{ family: 'dynamics', rows: [['squash'], ['ott'], ['gate'], ['compressor']] },
+	{ family: 'distortion', rows: [['drum'], ['saturator'], ['roar'], ['redux']] },
+	{ family: 'guitar', rows: [['guitar'], ['bass'], ['pedal'], ['wah']] },
+	{ family: 'modulation', rows: [['tremolo'], ['chorus'], ['smudge'], ['phaser']] },
+	{ family: 'glitch', rows: [['variation'], ['glitchLoop'], ['pitchHack'], ['octave']] },
+	{ family: 'time', rows: [['echo'], ['reverb'], ['comb'], ['grainDelay']] }
 ];
 
+/** How many rows of chips the open bar shows. */
+export const PALETTE_ROWS = 4;
+
 /**
- * Under the chevron, rows two and three: Utility, a chip like the others,
- * and Pitch Shift, each in its own family's wash.
+ * Under the chevron, rows two to four: Utility, Shifter and Limiter,
+ * chips like the others, each in its own family's wash.
  */
 const TAIL: readonly { family: string; spec: SlotSpec }[] = [
 	{ family: 'utility', spec: 'utility' },
-	{ family: 'glitch', spec: 'octave' }
+	{ family: 'distortion', spec: 'shifter' },
+	{ family: 'dynamics', spec: 'limiter' }
 ];
 
 const MIDI_KEYS = new Set(['arpeggiator', 'chance', 'velocity', 'chord', 'random', 'randomOctave']);
@@ -119,7 +124,7 @@ export interface PaletteExtra {
 	fx: ChainEffect | null;
 }
 
-/** The chips under Gain, rows two and three. */
+/** The chips under the chevron, rows two to four. */
 export function paletteTail(): PaletteExtra[] {
 	return TAIL.map(({ family, spec }) => ({ family, fx: slot(spec) }));
 }

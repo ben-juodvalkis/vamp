@@ -79,7 +79,7 @@
   import PaletteChip from './chain/PaletteChip.svelte';
   import { addEffectToChain, type ChainEffect } from '$lib/services/chainEffects.svelte';
   import { drag as dragGesture } from '$lib/actions/drag';
-  import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel, paletteTail, type PaletteKind } from '$lib/services/effectPalette';
+  import { fitBlocks, PALETTE_ROWS, paletteBlocks, paletteColumns, paletteLabel, paletteTail, type PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
@@ -807,7 +807,7 @@
   );
   /*
    * The bar is one row (ADR-548): its first row of chips and the chevron,
-   * the chain under it taking the rest. The chevron opens it to three rows
+   * the chain under it taking the rest. The chevron opens it to four rows
    * and closes it, lit while open; a finger on a chip opens it for as long
    * as it is down: slide to any chip and let go to load it, and the bar
    * closes again. The bar has no way to the browser (Ben, 2026-11-18).
@@ -884,7 +884,7 @@
    * and one once the chain wraps to two (Ben, 2026-11-20). The phone keeps
    * its one fixed row (CSS hides the second there). */
   const restRows = $derived(grid.rows > 1 ? 1 : 2);
-  const shownRows = $derived(barOpen ? 3 : restRows);
+  const shownRows = $derived(barOpen ? PALETTE_ROWS : restRows);
   const chipById = $derived.by(() => {
     const map = new Map<string, ChainEffect>();
     for (const { block, start } of placed.blocks) {
@@ -911,7 +911,7 @@
   const placed = $derived.by(() => {
     const all = paletteBlocks(paletteKind);
     const room = paletteColumns(paletteWidth, PALETTE_TILE_MIN, 0);
-    // The chevron closes the bar, a chip's width, two chips under it.
+    // The chevron closes the bar, a chip's width, three chips under it.
     const blocks = paletteWidth > 0 ? fitBlocks(all, room - 1) : all;
     // One grid, no seams between the families: their washes divide them.
     let col = 1;
@@ -1594,7 +1594,7 @@
     /* Sixths (ADR-548, after ADR-535's thirds): a row of chips is one,
        half the rail's Record tile, as the two rows were. The palette is
        the first and the chain the other five; open, the palette covers
-       the first three, over the chain (ADR-549). Same row gap as the
+       the first four, over the chain (ADR-549). Same row gap as the
        rail's buttons, so the open bar ends on the seam under Record's
        neighbour. */
     grid-template-rows: repeat(6, minmax(0, 1fr));
@@ -1603,7 +1603,7 @@
     min-width: 0;
   }
   /* The phone has no rail to line up with, and a whole tab of height: the
-     palette's rows of chips are a fixed height, one or three. */
+     palette's rows of chips are a fixed height, one or four. */
   :global([data-phone-layout]) .chain-wrap {
     grid-template-rows: 44px repeat(2, minmax(0, 1fr));
     row-gap: 8px;
@@ -1612,7 +1612,7 @@
     grid-row: 2 / span 2;
   }
   /* Two rows of chips at rest: the bar takes two sixths, the chain four,
-     and an open bar still covers three, over the chain's first row. */
+     and an open bar still covers four, over the chain's first two rows. */
   .chain-wrap.rest-two .palette {
     grid-row: 1 / span 2;
     grid-template-rows: repeat(2, minmax(0, 1fr));
@@ -1799,14 +1799,14 @@
   .palette .chain-add {
     border-radius: 0;
   }
-  /* Three rows and the two gaps they replace, so the bar still ends on
-     the section's third sixth. */
+  /* Four rows and the three gaps they replace, so the bar ends on the
+     section's fourth sixth. */
   /* Open, the bar lies OVER the chain (ADR-549): the chain keeps its five
      sixths and never moves, held or latched. The bar is opaque and casts
      a shadow on the chain's cells under it. */
   .chain-wrap.palette-open .palette {
-    grid-row: 1 / span 3;
-    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-row: 1 / span 4;
+    grid-template-rows: repeat(4, minmax(0, 1fr));
     position: relative;
     z-index: 3;
     background: var(--background);
@@ -1815,7 +1815,10 @@
   :global([data-phone-layout]) .chain-wrap.palette-open .palette {
     grid-row: 1;
     align-self: start;
-    height: 140px;
+    height: 186px;
+    /* Restated: the phone's one-row rest rule outranks the open bar's,
+       which left the first row tall and the others squeezed. */
+    grid-template-rows: repeat(4, minmax(0, 1fr));
   }
   /* Under the open bar the chain dims, held or latched (Ben, 2026-11-19):
      it is out of play, its names at the cells' feet still read. Quick,

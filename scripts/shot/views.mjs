@@ -55,7 +55,7 @@ export const VIEWS = {
 		prefs: {}
 	},
 	'palette-open': {
-		description: 'The FX palette opened by its chevron: three rows of chips lying over the chain (ADR-548, ADR-549).',
+		description: 'The FX palette opened by its chevron: four rows of chips lying over the chain (ADR-548, ADR-549).',
 		prefs: {},
 		steps: [{ click: '[data-debug="chain-add"]' }]
 	},
@@ -151,7 +151,7 @@ export const VIEWS = {
 		steps: [phoneTab('track')]
 	},
 	'phone-track-palette': {
-		description: 'The phone layout, Track tab, the palette opened by its chevron: three rows of chips.',
+		description: 'The phone layout, Track tab, the palette opened by its chevron: four rows of chips.',
 		prefs: {},
 		viewport: PHONE_VIEWPORT,
 		steps: [phoneTab('track'), { click: '[data-debug="chain-add"]' }]

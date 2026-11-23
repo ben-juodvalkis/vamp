@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { afterEach, beforeEach } from 'vitest';
-import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel, paletteTail } from '$lib/services/effectPalette';
+import { fitBlocks, PALETTE_ROWS, paletteBlocks, paletteColumns, paletteLabel, paletteTail } from '$lib/services/effectPalette';
 import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
 
 const names = (row: ({ name: string } | null)[]) => row.map((e) => e?.name ?? null);
@@ -19,19 +19,19 @@ describe('effectPalette', () => {
 	it('keeps a slot for an effect not on this Mac', () => {
 		// Live's own Random over Arpeggiator: both load by name, no file needed.
 		const midi = paletteBlocks('kit')[0];
-		expect(midi.rows.map(names)).toEqual([['Random'], ['Arpeggiator'], [null]]);
+		expect(midi.rows.map(names)).toEqual([['Random'], ['Arpeggiator'], [null], ['Chord']]);
 		expect(midi.rows[0][0]).toMatchObject({ kind: 'midi-effect', preset: 'random', fullPath: 'default:random' });
 		const time = paletteBlocks('kit').find((b) => b.family === 'time')!;
 		// Comb is a file in the effects folder, absent here.
-		expect(time.rows.map(names)).toEqual([['Echo'], ['Reverb'], [null]]);
+		expect(time.rows.map(names)).toEqual([['Echo'], ['Reverb'], [null], ['Grain Delay']]);
 	});
 
-	it('is nine columns, three rows deep, the closed bar its first row', () => {
+	it('is eight columns, four rows deep, the closed bar its first row', () => {
 		const all = paletteBlocks('kit');
-		expect(all.reduce((n, b) => n + b.cols, 0)).toBe(9);
-		expect(all.every((b) => b.rows.length === 3)).toBe(true);
-		expect(fitBlocks(all, 9)).toHaveLength(all.length);
-		expect(fitBlocks(all, 8)).toHaveLength(all.length - 1);
+		expect(all.reduce((n, b) => n + b.cols, 0)).toBe(8);
+		expect(all.every((b) => b.cols === 1 && b.rows.length === PALETTE_ROWS)).toBe(true);
+		expect(fitBlocks(all, 8)).toHaveLength(all.length);
+		expect(fitBlocks(all, 7)).toHaveLength(all.length - 1);
 	});
 
 	it('loads as the defaults did, with short labels', () => {
@@ -63,18 +63,21 @@ describe('effectPalette', () => {
 		});
 	});
 
-	it('loads Live\'s own Shifter, by name, where Ring Mod was', () => {
-		const dist = paletteBlocks('kit').find((b) => b.family === 'distortion')!;
-		expect(dist.rows[2][1]).toMatchObject({ name: 'Shifter', preset: 'shifter', fullPath: 'default:shifter' });
-		expect(paletteLabel(dist.rows[2][1]!)).toBe('Shifter');
+	it('loads Live\'s own Shifter, by name, under the chevron', () => {
+		const shifter = paletteTail()[1];
+		expect(shifter.family).toBe('distortion');
+		expect(shifter.fx).toMatchObject({ name: 'Shifter', preset: 'shifter', fullPath: 'default:shifter' });
+		expect(paletteLabel(shifter.fx!)).toBe('Shifter');
 	});
 
-	it('puts Utility and Pitch Shift under the chevron, Blur with modulation', () => {
-		expect(paletteTail().map((t) => t.family)).toEqual(['utility', 'glitch']);
-		expect(paletteLabel(paletteTail()[0].fx!)).toBe('Utility');
+	it('puts Utility, Shifter and Limiter under the chevron, Blur with modulation, Pedal with the guitar', () => {
+		expect(paletteTail().map((t) => t.family)).toEqual(['utility', 'distortion', 'dynamics']);
+		expect(paletteTail().map((t) => paletteLabel(t.fx!))).toEqual(['Utility', 'Shifter', 'Limiter']);
 		const mod = paletteBlocks('kit').find((b) => b.family === 'modulation')!;
 		// Blur is a file in the effects folder, absent here: its slot stays.
-		expect(mod.rows.map((r) => r[0] && paletteLabel(r[0]))).toEqual(['Trem', 'Chorus', null]);
+		expect(mod.rows.map((r) => r[0] && paletteLabel(r[0]))).toEqual(['Trem', 'Chorus', null, 'Phaser']);
+		const guitar = paletteBlocks('kit').find((b) => b.family === 'guitar')!;
+		expect(paletteLabel(guitar.rows[2][0]!)).toBe('Pedal');
 		expect(paletteLabel({ name: 'Saturator', preset: 'saturator' })).toBe('Saturator');
 	});
 });

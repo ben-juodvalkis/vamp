@@ -71,12 +71,13 @@ never in a central view; a control's
 cell per device, each drawing its tile, across the whole width; above it the palette bar (ADR-523), a fixed set of
 effect chips in family blocks, each a faint wash of its family's colour (ADR-547), the same on every track
 (`services/effectPalette`, `chain/PaletteChip`), one grid with no gaps,
-closed by a downward chevron (ADR-548), with Utility and Pitch Shift
-under it as ordinary chips. The section is six equal rows, a row of chips
+closed by a downward chevron (ADR-548), with Utility, Shifter and
+Limiter under it as ordinary chips (each family one column, four deep,
+Ben's layout of 2026-11-23). The section is six equal rows, a row of chips
 each: at rest the bar is its first two rows and the chain the other four,
 or, once the chain wraps to two rows, the bar one row and the chain five
 (the phone keeps one row). The chevron
-opens the bar to three rows (lit) at finger-down: a tap latches it open
+opens the bar to four rows (lit) at finger-down: a tap latches it open
 and a second tap closes it, a hold past `momentaryHoldMs` closes it on
 release (Solo's rule), and a slide from it onto a chip loads that chip, while sliding back
 to let go on the chevron closes the bar and loads nothing (the chevron
@@ -87,7 +88,7 @@ opening. Open, held or latched, the bar lies over the chain, which never
 moves, dimmed. A latched bar (its chevron pointing up) stays open until the
 chevron or a touch outside it closes it: on the chain that touch presses
 nothing, anywhere else it does its own job too (ADR-549). The bar has no way to the browser (the phone keeps a fixed bar,
-44px or 140px). A tap on a cell's header bar is Device On (no power button);
+44px or 186px). A tap on a cell's header bar is Device On (no power button);
 a drag from it reorders.
 `FXGrid.svelte`, the grid/chain switch (`FxPanelSwitch`), the ten-column
 placement (`col` / `row` / `span`, `cellFor`, the `*_CELL`s) and the Drum
