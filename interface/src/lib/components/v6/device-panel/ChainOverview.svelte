@@ -1302,6 +1302,7 @@
                2026-11-17), at the bar's left end, ahead of the name. -->
           <span
             class="cell-fold"
+            style:--fold-ink={trackColor}
             role="button"
             tabindex="-1"
             aria-label="{rackFold.isOpen(cell.path) ? 'Fold' : 'Unfold'} {cell.device.name}"
@@ -1971,7 +1972,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--cell-ink);
+    /* The track's colour, as the rack's knobs are (ADR-544), not the rack's own. */
+    color: var(--fold-ink, var(--cell-ink));
     border-right: 1px solid var(--cell-line);
     cursor: pointer;
   }
@@ -1985,7 +1987,7 @@
     margin-left: -6px;
   }
   .chain-cell.unfolded .cell-fold {
-    background: color-mix(in oklab, var(--cell-ink) 30%, transparent);
+    background: color-mix(in oklab, var(--fold-ink, var(--cell-ink)) 30%, transparent);
   }
   /* An open rack's arm (ADR-529): the group panhandle's material
      (TracksPanelV6's .group-band) in the rack's ink — the rack cell's
