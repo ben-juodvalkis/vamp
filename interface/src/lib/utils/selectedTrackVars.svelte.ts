@@ -8,15 +8,14 @@
  *   --sel-ink       the ink an amount is drawn in (app.css `--amount`)
  *   --sel-shade     the selected strip's fill: a deep shade in dark, a pale
  *                   one in light
- * With no track selected (the master) they are unset and the tokens' own
- * fallbacks apply.
+ * The master selected wears Live's own master colour. With no record yet
+ * (cold start) they are unset and the tokens' own fallbacks apply.
  *
  * Called once, from the root layout, so the iPad and the phone layouts both
  * have them. Not a per-frame write: it runs when the selection, the track's
  * colour or the theme changes.
  */
-import { v3Store } from '$lib/stores/v3/normalized.svelte';
-import { session } from '$lib/stores/session.svelte';
+import { selectedRecord } from '$lib/utils/selectedTrackInk';
 import { amountInk, inkShade, rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 import { padTextCss } from '$lib/services/drumVirtualMacros/padLabels';
@@ -25,7 +24,7 @@ const NAMES = ['--sel-track', '--sel-track-fg', '--sel-ink', '--sel-shade'] as c
 
 export function useSelectedTrackVars(): void {
 	$effect(() => {
-		const rec = v3Store.tracks.get('tracks/' + session.selectedTrackIndex);
+		const rec = selectedRecord();
 		const mode = paintModeReactive();
 		const root = document.documentElement;
 		if (!rec) {

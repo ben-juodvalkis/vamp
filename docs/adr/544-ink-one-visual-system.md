@@ -68,8 +68,9 @@ How it is built:
   (`setAmountInkSource`, registered by `selectedTrackInk.ts`). The ~50
   call sites that hold a scheme were not rewritten. A scheme must not be
   spread or copied at module scope: the copy keeps the ink of that moment.
-- With no track selected (the master) an amount is a mid grey, clear of
-  on's white and black.
+- With the master selected an amount is in the master's own Live colour
+  (Ben, 2026-11-23; it was a mid grey). The mid grey, clear of on's white
+  and black, is left for a cold start with no track record yet.
 - **Two laws in `app.css` win over a view's own rule**, with `!important`
   and nowhere else: a lit `.physical-button` or `.device-segment` is on's
   block, and an unlit one's word is a label. Until the rollout has been

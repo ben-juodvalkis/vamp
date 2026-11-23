@@ -14,16 +14,21 @@ import { amountInk, registerFinishedInk, rgbToHex, trackInk } from '$lib/utils/f
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 import { schemeFromInk, setAmountInkSource, type DeviceColorScheme } from '$lib/config/devicePresets';
 
+/** The selected track's record: `master` at index -1, where Live's own master colour lives. */
+export function selectedRecord() {
+	const i = session.selectedTrackIndex;
+	return v3Store.tracks.get(i === -1 ? 'master' : 'tracks/' + i);
+}
+
 export function selectedTrackInk(): string | null {
-	const rec = v3Store.tracks.get('tracks/' + session.selectedTrackIndex);
+	const rec = selectedRecord();
 	return rec ? trackInk(rgbToHex(rec.color), paintModeReactive()) : null;
 }
 
 /**
  * The focused track's calibrated ink as a full DeviceColorScheme — the
  * trackTint treatment (primary/accent = the track ink, secondary = 10% wash,
- * via `schemeFromInk`), or `null` when no track record exists (cold start /
- * master).
+ * via `schemeFromInk`), or `null` when no track record exists (cold start).
  *
  * Instrument central views paint their body chrome with this so the whole
  * view reads as the track it's on — extending ADR-400 §4's `trackTint` from
@@ -36,23 +41,23 @@ export function selectedTrackInk(): string | null {
  * and theme changes propagate.
  */
 export function selectedTrackScheme(): DeviceColorScheme | null {
-	const rec = v3Store.tracks.get('tracks/' + session.selectedTrackIndex);
+	const rec = selectedRecord();
 	return rec ? schemeFromInk(amountInk(rgbToHex(rec.color), paintModeReactive())) : null;
 }
 
-/** The ink an amount takes with no track selected (the master): a mid grey, clear of ON's white and black. */
+/** The ink an amount takes with no track record (cold start): a mid grey, clear of ON's white and black. */
 const NO_TRACK_AMOUNT = { dark: registerFinishedInk('#a8a8a4'), light: registerFinishedInk('#55554f') } as const;
 
 /**
- * The ink every amount is drawn in (ADR-544): the selected track's, a
- * deeper one of its hue on the light theme, a mid grey with no track
- * selected. A hex, so a canvas can take it.
+ * The ink every amount is drawn in (ADR-544): the selected track's (the
+ * master's own Live colour when the master is selected), a deeper one of
+ * its hue on the light theme, a mid grey with no record yet. A hex, so a canvas can take it.
  *
  * Reads rune-backed stores; call it inside a `$derived` or a template.
  */
 export function selectedAmountInk(): string {
 	const mode = paintModeReactive();
-	const rec = v3Store.tracks.get('tracks/' + session.selectedTrackIndex);
+	const rec = selectedRecord();
 	return rec ? amountInk(rgbToHex(rec.color), mode) : NO_TRACK_AMOUNT[mode];
 }
 

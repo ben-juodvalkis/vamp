@@ -89,7 +89,16 @@ describe('selectedAmountInk', () => {
 		expect(sum(light)).toBeLessThan(sum(dark));
 	});
 
-	it('is a mid grey with no track selected (the master), never ON\'s white or black', () => {
+	it('is the master\'s own Live colour when the master is selected', () => {
+		h.tracks.set('tracks/0', { color: BASS });
+		const bass = selectedAmountInk();
+		h.tracks.set('master', { color: BASS });
+		h.session.selectedTrackIndex = -1;
+		expect(selectedAmountInk()).toBe(bass);
+		expect(selectedTrackInk()).toMatch(/^#[0-9a-f]{6}$/i);
+	});
+
+	it('is a mid grey with no record yet, never ON\'s white or black', () => {
 		h.session.selectedTrackIndex = -1;
 		expect(selectedAmountInk()).toBe('#a8a8a4');
 		h.mode = 'light';

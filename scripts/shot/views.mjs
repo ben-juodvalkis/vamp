@@ -752,7 +752,7 @@ export const TOURS = {
 				},
 				steps: [openInstrument(0)]
 			},
-			{ name: 'ipad-master', description: 'The master selected: no track colour, the System view', steps: [{ click: '[data-debug="master-card"]' }] }
+			{ name: 'ipad-master', description: "The master selected: the master's Live colour, the System view", steps: [{ click: '[data-debug="master-card"]' }] }
 		].map((state) => ({ ...state, shell: 'pad', layout: false }))
 	},
 
