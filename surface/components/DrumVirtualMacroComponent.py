@@ -1373,18 +1373,6 @@ class DrumVirtualMacroComponent:
                 )
         return counted, pitch_name
 
-    def _pad_instrument(self, pad):
-        """``(device, class_name)`` of the pad's instrument when it has a
-        binding; ``None`` for empty pads and for pads whose instrument is
-        unbound (a nested rack, Operator, a plugin, …)."""
-        devices = pad_devices(pad)
-        if devices is None:
-            return None
-        found = first_instrument(devices)
-        if found is None or found[1] not in BOUND_CLASSES:
-            return None
-        return found
-
     # --- member value space -----------------------------------------------
     #
     # A member's LOM value is its own, except a semitone macro (a pad
