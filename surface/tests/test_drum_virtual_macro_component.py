@@ -3358,3 +3358,14 @@ def test_a_rack_parked_at_a_vacated_path_is_released_once_idle(emits):
     assert upper.listener_count() == 0
     assert list(comp._states) == ["tracks/5/devices/0"]
     assert comp._states["tracks/5/devices/0"].device is lower
+
+
+def test_build_members_walks_the_kit_without_the_component():
+    from components.drum_vm_resolve import PadWalk, build_members
+    rack = make_rack([pad(36, drumcell()), pad(37, drumcell(values={"Transpose": 3.0}))], mapped=False)
+    warned = []
+    walk = build_members(rack, PATH, warn=lambda key, message: warned.append(key))
+    assert isinstance(walk, PadWalk)
+    assert walk.pad_count == 2 and walk.member_pads == 2
+    assert [row["note"] for row in walk.pad_list] == [36, 37]
+    assert len(walk.members["pitch"]) == 2 and warned == []

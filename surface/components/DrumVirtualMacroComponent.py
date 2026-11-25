@@ -262,9 +262,6 @@ from .drum_vm_functions import (
     BOUND_CLASSES,
     CENSUS_BYTES_SOFT_CAP,
     CENSUS_SILENT_FUNCTIONS,
-    CHAIN_VOLUME_NAME,
-    PAD_CHAIN_CLASS_NAME,
-    PAD_MUTE_NAME,
     DEV_EPSILON,
     EDIT_ABSORB_DELAY_MS,
     FUNCTIONS,
@@ -276,7 +273,6 @@ from .drum_vm_functions import (
     KIND_T,
     MACRO_FUNCTION_PREFIX,
     MACRO_PROPERTY_PREFIX,
-    MACRO_SLOTS,
     MEMBERS_KEY,
     MEMBERS_PROPERTY,
     PAD_NAME_MAX,
@@ -289,7 +285,6 @@ from .drum_vm_functions import (
     PROPERTY_NAMES,
     PROPERTY_PREFIX,
     PROVIDER_NAME,
-    RACK_NON_MACRO_PARAMS,
     RESEED_DELAY_MS,
     SELECTED_PAD_KEY,
     SHIFT_RELEASE_IDLE_MS,
@@ -309,17 +304,8 @@ from .drum_vm_functions import (
     parse_pad_function,
 )
 from .drum_vm_resolve import (
-    SAMPLE_PAD_DEFAULT_NAMES,
-    first_instrument,
-    index_params,
+    build_members,
     is_pipeline_family,
-    make_member,
-    pad_chain_volume,
-    PadMuteParam,
-    pad_color,
-    pad_devices,
-    pad_label,
-    pad_name,
 )
 from .drum_vm_state import (
     _Member,
@@ -1210,169 +1196,30 @@ class DrumVirtualMacroComponent(EditAbsorbMixin, PitchMixin):
         except _LOM_ERRORS:
             st.has_macro_mappings = any(st.macros_mapped)
 
-        members: Dict[str, List[_Member]] = {name: [] for name in FUNCTIONS}
-        macro_functions: Dict[str, VirtualMacro] = {}
-        pitch_macro: Optional[str] = None
-        missing: Dict[str, int] = {}
-        member_pads = 0
-        pad_count = 0
-        pad_classes: Dict[str, int] = {}
-        try:
-            pads = list(device.drum_pads or ())
-        except _LOM_ERRORS as e:
-            self._warn_once(st.device_path, "drum_pads", "drum_pads read raised: %s" % e)
-            pads = []
-        pad_list: List[Dict[str, object]] = []
-        instruments: list[object] = []
-        for pad in pads:
-            devices = pad_devices(pad)
-            if devices is None:
-                continue
-            pad_count += 1
-            try:
-                note = int(pad.note)
-            except _LOM_ERRORS + (ValueError,):
-                note = -1
-            found = first_instrument(devices)
-            if found is not None and found[1] in SAMPLE_PAD_DEFAULT_NAMES:
-                instruments.append(found[0])
-            if note >= 0:
-                pad_list.append({
-                    "note": note,
-                    # A sample pad's instrument name, not its chain's
-                    # (ADR-439): a swap renames the one and not the other.
-                    "name": pad_label(pad, found),
-                    "class": found[1] if found is not None else None,
-                    # The chain's colour as Live paints the pad (RGB int, the
-                    # track-colour convention), or None — measured 2026-09-08:
-                    # ``chains[0].color`` 8754719 = #85961f on the Croydon kit.
-                    "color": pad_color(pad),
-                })
-                # The pad's own mixer strip, whatever its instrument.
-                chain_volume = pad_chain_volume(pad)
-                if chain_volume is not None:
-                    members["chainVolume"].append(make_member(
-                        chain_volume, note, PAD_CHAIN_CLASS_NAME, CHAIN_VOLUME_NAME,
-                    ))
-                members["chainMute"].append(make_member(
-                    PadMuteParam(pad), note, PAD_CHAIN_CLASS_NAME, PAD_MUTE_NAME,
-                ))
-            if found is None:
-                continue
-            inst, cls = found
-            pad_classes[cls] = pad_classes.get(cls, 0) + 1
-            if cls == INSTRUMENT_RACK_CLASS_NAME:
-                # A nested rack's members are its named macros: one
-                # ``macro.<name>`` function per name, discovered in the
-                # rack's own order, the first pad's rack setting the order
-                # for the kit — and its transpose-named macro, if any, is
-                # the pad's ``pitch`` member in semitones.
-                counted, pitch_name = self._resolve_rack_macros(inst, note, members, macro_functions)
-                # ``gain`` is the exception to "a nested rack's members are
-                # its macros": the pad's level is its CHAIN volume, not a
-                # macro the kit may or may not carry (2026-09-08). A kit
-                # whose racks happen to name a macro "Volume" still gets
-                # that macro as its own ``macro.Volume`` control — this is
-                # a different knob and does not collide.
-                chain_volume = pad_chain_volume(pad)
-                if chain_volume is not None:
-                    members["gain"].append(make_member(
-                        chain_volume, note, INSTRUMENT_RACK_CLASS_NAME, CHAIN_VOLUME_NAME,
-                    ))
-                    counted = True
-                if counted:
-                    member_pads += 1
-                if pitch_name is not None and pitch_macro is None:
-                    pitch_macro = pitch_name
-                continue
-            if cls not in BOUND_CLASSES:
-                continue
-            by_name = None
-            counted = False
-            for fn in FUNCTIONS.values():
-                names = fn.bindings.get(cls)
-                if not names:
-                    continue
-                if by_name is None:
-                    by_name = index_params(inst)
-                for pname in names:
-                    param = by_name.get(pname)
-                    if param is None:
-                        missing[fn.name] = missing.get(fn.name, 0) + 1
-                        logger.debug(
-                            "DrumVirtualMacroComponent: %s: %s on pad %d has no parameter "
-                            "named %r (section never enabled?); skipping that member",
-                            st.device_path, cls, note, pname,
-                        )
-                        continue
-                    members[fn.name].append(make_member(param, note, cls, pname))
-                    counted = True
-            if counted:
-                member_pads += 1
-        st.members = members
-        st.member_pads = member_pads
-        st.pad_count = pad_count
-        st.pad_classes = pad_classes
-        st.macro_functions = macro_functions
-        st.pitch_macro = pitch_macro
-        st.missing = missing
-        st.pad_list = pad_list
+        walk = build_members(
+            device, st.device_path,
+            warn=lambda key, message: self._warn_once(st.device_path, key, message),
+        )
+        st.members = walk.members
+        st.member_pads = walk.member_pads
+        st.pad_count = walk.pad_count
+        st.pad_classes = walk.pad_classes
+        st.macro_functions = walk.macro_functions
+        st.pitch_macro = walk.pitch_macro
+        st.missing = walk.missing
+        st.pad_list = walk.pad_list
         # A held value for a rack macro the kit no longer carries (racks
         # swapped on the pads) describes nothing: drop it so a subscriber
         # reads nil rather than the old kit's number.
-        for key in [k for k in st.values if is_macro_function(k) and k not in macro_functions]:
+        for key in [k for k in st.values if is_macro_function(k) and k not in walk.macro_functions]:
             del st.values[key]
         logger.debug(
             "DrumVirtualMacroComponent: resolved %s family=%s pads=%d/%d classes=%s members=%s macros=%s",
-            st.device_path, st.family, member_pads, pad_count, pad_classes,
-            {k: len(v) for k, v in members.items()}, list(macro_functions),
+            st.device_path, st.family, walk.member_pads, walk.pad_count, walk.pad_classes,
+            {k: len(v) for k, v in walk.members.items()}, list(walk.macro_functions),
         )
         self._attach_member_listeners(st)
-        self._attach_name_listeners(st, instruments)
-
-    def _resolve_rack_macros(
-        self, rack, note: int, members: Dict[str, List[_Member]],
-        macro_functions: Dict[str, VirtualMacro],
-    ) -> Tuple[bool, Optional[str]]:
-        """Add one pad rack's named macros to ``members`` (and any name not
-        seen yet to ``macro_functions``); its first transpose-named macro
-        (:data:`PITCH_MACRO_NAMES`) also joins ``members["pitch"]`` as a
-        semitone member. Returns ``(contributed a member, pitch macro name
-        or None)``. ``Device On`` and ``Chain Selector`` are skipped by
-        name; at most :data:`MACRO_SLOTS` macros count; a default-named
-        macro is not a control."""
-        try:
-            params = list(rack.parameters or ())
-        except _LOM_ERRORS:
-            return False, None
-        counted = False
-        pitch_name: Optional[str] = None
-        slots = 0
-        for p in params:
-            if slots >= MACRO_SLOTS:
-                break
-            try:
-                name = p.name
-            except _LOM_ERRORS:
-                continue
-            if name in RACK_NON_MACRO_PARAMS:
-                continue
-            slots += 1
-            if is_empty_macro_name(name):
-                continue
-            key = MACRO_FUNCTION_PREFIX + name
-            fn = macro_functions.get(key)
-            if fn is None:
-                fn = macro_functions[key] = macro_function(name)
-            member = make_member(p, note, INSTRUMENT_RACK_CLASS_NAME, name)
-            members.setdefault(key, []).append(member)
-            counted = True
-            if pitch_name is None and is_pitch_macro_name(name):
-                pitch_name = name
-                members["pitch"].append(
-                    make_member(p, note, INSTRUMENT_RACK_CLASS_NAME, name, semitone_macro=True),
-                )
-        return counted, pitch_name
+        self._attach_name_listeners(st, walk.instruments)
 
     # --- member value space (``drum_vm_values``) ---------------------------
     #
