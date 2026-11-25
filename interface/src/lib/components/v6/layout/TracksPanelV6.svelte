@@ -19,8 +19,7 @@
 	import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
 	import { setTrackFoldState } from '$lib/services/trackCommands';
-	import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import { trackInkFor } from '$lib/utils/trackInkFor';
 	import { press } from '$lib/actions/press';
 	import { boxSize } from '$lib/actions/boxSize';
 	import { sessionRowPitch } from '$lib/utils/sessionRowPitch';
@@ -125,7 +124,7 @@
 			return {
 				...band,
 				name: record?.name ?? `Group ${band.groupIndex + 1}`,
-				ink: trackInk(rgbToHex(record?.color ?? 0x808080), paintModeReactive()),
+				ink: trackInkFor(`tracks/${band.groupIndex}`),
 				selected: session.selectedTrackIndex === band.groupIndex,
 				muted: record?.mute ?? false
 			};
@@ -471,10 +470,7 @@
 						<div class="slot-col" style="grid-column: {col + 1};">
 							<SlotGrid
 								trackPath={`tracks/${trackIndex}`}
-								trackColor={trackInk(
-									rgbToHex(v3Store.tracks.get(`tracks/${trackIndex}`)?.color ?? 0x808080),
-									paintModeReactive()
-								)}
+								trackColor={trackInkFor(`tracks/${trackIndex}`)}
 								{trackIndex}
 								isGroup={clipStateStore.isGroupTrack(trackIndex)}
 								onSelect={(slotIndex) => selectSlot(trackIndex, slotIndex, slotActionOptions)}
@@ -505,10 +501,7 @@
 							class:is-track-selected={session.selectedTrackIndex === trackIndex}
 							data-debug="stop-button"
 							data-track-stop={trackIndex}
-							style="grid-column: {col + 1}; --stop-ink: {trackInk(
-								rgbToHex(v3Store.tracks.get(`tracks/${trackIndex}`)?.color ?? 0x808080),
-								paintModeReactive()
-							)};"
+							style="grid-column: {col + 1}; --stop-ink: {trackInkFor(`tracks/${trackIndex}`)};"
 							aria-label="Stop clips on {v3Store.tracks.get(`tracks/${trackIndex}`)?.name ??
 								`track ${trackIndex + 1}`}"
 							use:press={{

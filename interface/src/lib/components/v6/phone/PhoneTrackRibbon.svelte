@@ -10,8 +10,7 @@
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
 	import { meterStore } from '$lib/stores/v3/meters.svelte';
 	import { session } from '$lib/stores/session.svelte';
-	import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import { trackInkFor } from '$lib/utils/trackInkFor';
 	import { press } from '$lib/actions/press';
 
 	interface Props {
@@ -31,7 +30,7 @@
 			return {
 				trackIndex,
 				name: record?.name ?? `Track ${trackIndex + 1}`,
-				ink: trackInk(rgbToHex(record?.color ?? 0x808080), paintModeReactive()),
+				ink: trackInkFor(path),
 				muted: record?.mute ?? false,
 				soloed: record?.solo === true,
 				level: Math.max(0, Math.min(1, meterStore.get(path)?.left ?? 0)),

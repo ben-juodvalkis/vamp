@@ -41,8 +41,7 @@
     import { session } from '$lib/stores/session.svelte';
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
-    import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
-    import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+    import { trackInkFor } from '$lib/utils/trackInkFor';
     import { press } from '$lib/actions/press';
     import { boxSize } from '$lib/actions/boxSize';
     import { sessionRowPitch } from '$lib/utils/sessionRowPitch';
@@ -74,7 +73,7 @@
     const trackPath = $derived(`tracks/${trackIndex}`);
     const record = $derived(hasTrack ? v3Store.tracks.get(trackPath) : undefined);
     const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Main'));
-    const ink = $derived(trackInk(rgbToHex(record?.color ?? 0x808080), paintModeReactive()));
+    const ink = $derived(trackInkFor(hasTrack ? trackPath : null));
     const isGroup = $derived(hasTrack && clipStateStore.isGroupTrack(trackIndex));
 
     // ---- Row pitch ------------------------------------------------------

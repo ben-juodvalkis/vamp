@@ -27,8 +27,8 @@
 	import { session } from '$lib/stores/session.svelte';
 	import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
-	import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import { rgbToHex } from '$lib/utils/formatters/trackFormatters';
+	import { trackInkFor } from '$lib/utils/trackInkFor';
 	import { padTextCss } from '$lib/services/drumVirtualMacros';
 	import { press } from '$lib/actions/press';
 	import { boxSize } from '$lib/actions/boxSize';
@@ -67,7 +67,7 @@
 				name: record?.name ?? `Track ${trackIndex + 1}`,
 				fill: rgbToHex(color),
 				text: padTextCss(color),
-				ink: trackInk(rgbToHex(color), paintModeReactive()),
+				ink: trackInkFor(`tracks/${trackIndex}`),
 				muted: record?.mute ?? false,
 				isGroup: clipStateStore.isGroupTrack(trackIndex)
 			};

@@ -17,6 +17,7 @@
     import { detectKey, setSignatureNumerator } from '$lib/services/sessionCommands';
     import { drag, type DragInfo, type DragOptions } from '$lib/actions/drag';
     import { createStepDrag } from '$lib/actions/stepDrag';
+    import { abbreviateScale } from '$lib/data/scaleAbbreviations';
 
     interface Props {
         onSelect?: () => void;
@@ -53,44 +54,6 @@
     // Derive if selected
     let isSelected = $derived(session.selectedTrackIndex === MASTER_INDEX);
 
-    // Scale name abbreviations for compact display
-    const SCALE_ABBREVIATIONS: Record<string, string> = {
-        'Major': 'Maj',
-        'Minor': 'Min',
-        'Dorian': 'Dor',
-        'Mixolydian': 'Mix',
-        'Lydian': 'Lyd',
-        'Phrygian': 'Phr',
-        'Locrian': 'Loc',
-        'Whole Tone': 'WT',
-        'Half-whole Dim.': 'HW Dim',
-        'Whole-half Dim.': 'WH Dim',
-        'Minor Blues': 'Min Bl',
-        'Minor Pentatonic': 'Min Pent',
-        'Major Pentatonic': 'Maj Pent',
-        'Harmonic Minor': 'Harm Min',
-        'Harmonic Major': 'Harm Maj',
-        'Dorian #4': 'Dor #4',
-        'Phrygian Dominant': 'Phr Dom',
-        'Melodic Minor': 'Mel Min',
-        'Lydian Augmented': 'Lyd Aug',
-        'Lydian Dominant': 'Lyd Dom',
-        'Super Locrian': 'Sup Loc',
-        '8-Tone Spanish': '8T Span',
-        'Bhairav': 'Bhai',
-        'Hungarian Minor': 'Hung',
-        'Hirajoshi': 'Hira',
-        'In-Sen': 'InSen',
-        'Iwato': 'Iwato',
-        'Kumoi': 'Kumoi',
-        'Pelog Selisir': 'Pelog S',
-        'Pelog Tembung': 'Pelog T',
-        'Messiaen 3': 'Mes 3',
-        'Messiaen 4': 'Mes 4',
-        'Messiaen 5': 'Mes 5',
-        'Messiaen 6': 'Mes 6',
-        'Messiaen 7': 'Mes 7'
-    };
 
     // PR-5b: name/color/volume/mute arrive via the v3 normalized store.
     // PR-5c: meter arrives via the v3 meter store (see `masterMeter`
@@ -264,7 +227,7 @@
                 <Lock size={12} class="key-lock" aria-hidden="true" />
             {/if}
         </span>
-        <span class="key-scale">{SCALE_ABBREVIATIONS[session.scaleDisplayName] || session.scaleDisplayName}</span>
+        <span class="key-scale">{abbreviateScale(session.scaleDisplayName)}</span>
     </button>
 
     <!-- Time signature: the band's right half. Drag sets the numerator. -->
