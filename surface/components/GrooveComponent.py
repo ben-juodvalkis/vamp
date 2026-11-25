@@ -130,6 +130,8 @@ import math
 from typing import Callable, Dict, Optional, Tuple
 
 from . import path_resolver
+from ._common import LOM_ERRORS
+from .component_util import first_time, parse_int_arg as _parse_int_arg
 from .GroovePoolComponent import (
     BLANK_NAME,
     GroovePoolComponent,
@@ -146,7 +148,7 @@ logger = logging.getLogger("looping")
 # Same tuple shape as ClipPropertiesComponent — see that module's
 # commentary on ``Boost.Python.ArgumentError`` being a TypeError
 # subclass (Merge-gate rule #9).
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum) -----------------------------------------
@@ -987,14 +989,11 @@ class GrooveComponent:
     # --- diagnostics -------------------------------------------------------
 
     def _warn_once(self, key: str, context: str, exc: BaseException) -> None:
-        slot = (key, context)
-        if slot in self._warned:
-            return
-        self._warned.add(slot)
-        logger.warning(
-            "GrooveComponent %s (%s): %s (suppressing further warnings)",
-            key, context, exc,
-        )
+        if first_time(self._warned, (key, context)):
+            logger.warning(
+                "GrooveComponent %s (%s): %s (suppressing further warnings)",
+                key, context, exc,
+            )
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -1034,15 +1033,6 @@ def _encode_wire(wire_type: str, raw):
         except (TypeError, ValueError):
             return None
     return None
-
-
-def _parse_int_arg(args, index: int) -> Optional[int]:
-    if len(args) <= index:
-        return None
-    try:
-        return int(args[index])
-    except (TypeError, ValueError):
-        return None
 
 
 def _parse_track_and_slot(song, slot_path: str):

@@ -246,6 +246,7 @@ import time
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .DrumPadChainComponent import PadChainWatcher
+from .component_util import first_time, safe_emit
 from .path_resolver import PAD_NOTE_MAX, find_drum_pad, same_lom_handle
 
 logger = logging.getLogger("looping")
@@ -2680,14 +2681,8 @@ class DrumVirtualMacroComponent:
     def _safe_emit(self, address: str, payload: tuple) -> None:
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning("DrumVirtualMacroComponent: emit %s failed: %s", address, e)
+        safe_emit("DrumVirtualMacroComponent", self._emit, address, payload)
 
     def _warn_once(self, device_path: str, key: str, message: str) -> None:
-        k = (device_path, key)
-        if k in self._warned:
-            return
-        self._warned.add(k)
-        logger.warning("DrumVirtualMacroComponent: %s: %s", device_path, message)
+        if first_time(self._warned, (device_path, key)):
+            logger.warning("DrumVirtualMacroComponent: %s: %s", device_path, message)

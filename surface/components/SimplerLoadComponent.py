@@ -48,6 +48,8 @@ from typing import Callable, Dict, Optional, Tuple
 from . import alc_resolver
 from . import path_resolver
 from . import sample_normalize
+from ._common import LOM_ERRORS, coerce_str
+from .component_util import begin_undo_step, emit_error, end_undo_step
 from .drum_vm_functions import DEVICE_TYPE_INSTRUMENT, DEVICE_TYPE_MIDI_EFFECT, device_type
 
 logger = logging.getLogger("looping")
@@ -111,9 +113,8 @@ V3_ERROR_REPLACE_SAMPLE_FAILED = "replace-sample-failed"
 SIMPLER_DEVICE_NAME = "Simpler"
 
 
-
 # Tuple of exceptions every LOM touch catches. Same as DeviceLoadComponent.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 class SimplerLoadComponent:
@@ -518,20 +519,10 @@ class SimplerLoadComponent:
     def _begin_undo_step(self) -> bool:
         """Open an undo step; ``False`` when Live refused, so the caller
         does not close a step that never opened."""
-        try:
-            self._song.begin_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("SimplerLoadComponent: begin_undo_step raised %s: %s", type(e).__name__, e)
-            return False
-        return True
+        return begin_undo_step("SimplerLoadComponent", self._song)
 
     def _end_undo_step(self, began: bool) -> None:
-        if not began:
-            return
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("SimplerLoadComponent: end_undo_step raised %s: %s", type(e).__name__, e)
+        end_undo_step("SimplerLoadComponent", self._song, began)
 
     def _apply_peak_normalization(self, simpler, file_path: str) -> None:
         """Peak-normalize the Simpler sample to -1 dBFS.
@@ -832,42 +823,11 @@ class SimplerLoadComponent:
         address: str = V3_SIMPLER_REPLACE_SAMPLE_ADDRESS,
     ) -> None:
         """Emit ``/looping/v3/error [address, code, path, detail]``.
-
-        Same four-arg shape as DeviceLoadComponent. ``address`` defaults
-        to the clip-flow address so existing callers don't need to pass
-        it; the capture-flow handler threads
-        ``V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS`` through so its
-        errors correlate correctly on the UI side.
-        """
+        ``address`` defaults to the clip flow's; the capture flow passes its
+        own so its errors correlate on the UI side."""
         if self._disconnected:
             return
-        logger.warning(
-            "SimplerLoadComponent: emit error code=%r path=%r detail=%r address=%r",
-            code, path, detail, address,
-        )
-        try:
-            self._emit(
-                V3_ERROR_ADDRESS,
-                (address, code, path, detail),
-            )
-        except Exception as e:
-            logger.warning(
-                "SimplerLoadComponent: emit %s failed: %s",
-                V3_ERROR_ADDRESS, e,
-            )
+        emit_error("SimplerLoadComponent", self._emit, address, code, path, detail)
 
 
-def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; ``None`` → ``""``.
-
-    Mirrors ``DeviceLoadComponent._coerce_str``. Kept local so the
-    resolver pipeline doesn't pick up a cross-module dependency.
-    """
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str

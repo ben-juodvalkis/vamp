@@ -149,6 +149,8 @@ import math
 from typing import Callable, Dict, List, Optional, Tuple
 
 from . import path_resolver
+from ._common import LOM_ERRORS
+from .component_util import parse_int_arg as _parse_int_arg
 from .LOMListeners import _is_stale_handle_error
 from .path_resolver import ResolveStatus
 
@@ -162,7 +164,7 @@ logger = logging.getLogger("looping")
 # Live has already torn down (focused clip deletion). It is not
 # importable at module scope in Live's bundled Python, so we catch
 # TypeError (its base) plus the pre-existing LOM error shapes.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum) -----------------------------------------
@@ -1097,15 +1099,6 @@ def _encode_wire(wire_type: str, raw):
         except (TypeError, ValueError):
             return None
     return None
-
-
-def _parse_int_arg(args, index: int) -> Optional[int]:
-    if len(args) <= index:
-        return None
-    try:
-        return int(args[index])
-    except (TypeError, ValueError):
-        return None
 
 
 def _parse_bool01_arg(args, index: int) -> Optional[bool]:

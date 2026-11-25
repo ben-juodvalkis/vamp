@@ -17,8 +17,10 @@ import re
 from typing import Dict, Optional, Tuple
 
 from .path_resolver import PAD_NOTE_MAX
+from ._common import LOM_ERRORS
+from .component_util import safe_class_name as _safe_class_name  # noqa: F401  (re-exported)
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 # --- wire ---------------------------------------------------------------
 
@@ -466,13 +468,6 @@ def function_for_property(property_name: str) -> Optional[VirtualMacro]:
 
 def _clamp(v: float, lo: float, hi: float) -> float:
     return lo if v < lo else hi if v > hi else v
-
-
-def _safe_class_name(device) -> str:
-    try:
-        return getattr(device, "class_name", "") or ""
-    except Exception:
-        return ""
 
 
 def _is_instrument(device) -> bool:

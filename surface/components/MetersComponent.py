@@ -81,6 +81,8 @@ import logging
 import time
 from typing import Any, Callable, Dict, List, Tuple
 
+from .component_util import first_time, safe_emit
+
 logger = logging.getLogger("looping")
 
 
@@ -437,23 +439,15 @@ class MetersComponent:
     def _safe_emit(self, address: str, payload: tuple) -> None:
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning(
-                "MetersComponent: emit %s failed: %s", address, e,
-            )
+        safe_emit("MetersComponent", self._emit, address, payload)
 
     def _warn_once(self, key: str, context: str, exc: BaseException) -> None:
-        wkey: Tuple[str, str] = (key, context)
-        if wkey in self._warned:
-            return
-        self._warned.add(wkey)
-        logger.warning(
-            "MetersComponent %s: %s access raised %s: %s "
-            "(suppressing further warnings)",
-            key, context, type(exc).__name__, exc,
-        )
+        if first_time(self._warned, (key, context)):
+            logger.warning(
+                "MetersComponent %s: %s access raised %s: %s "
+                "(suppressing further warnings)",
+                key, context, type(exc).__name__, exc,
+            )
 
     # --- lifecycle --------------------------------------------------------
 

@@ -51,6 +51,8 @@ from typing import Callable, Optional, Tuple
 
 from . import alc_resolver
 from . import path_resolver
+from ._common import LOM_ERRORS, coerce_str
+from .component_util import begin_undo_step, emit_error, end_undo_step
 from .LOMListeners import _is_stale_handle_error
 from .PlayheadComponent import read_file_span
 from .path_resolver import ResolveStatus
@@ -62,7 +64,7 @@ logger = logging.getLogger("looping")
 # Includes ``TypeError`` to cover ``Boost.Python.ArgumentError`` (a
 # ``TypeError`` subclass) raised when a C++ handle is torn down — see
 # [CLAUDE.md] merge-gate rule (9).
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum; renames fail at import time) ------------
@@ -186,16 +188,7 @@ def _file_stem(path: str) -> str:
     return os.path.splitext(os.path.basename(path))[0]
 
 
-def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; ``None`` → ``""``."""
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 def _parse_slot_path(path: str) -> Optional[Tuple[str, int]]:
@@ -1895,25 +1888,11 @@ class ClipsComponent:
 
     def _begin_undo_step(self) -> bool:
         """Open an undo step; ``False`` when Live refused, so nothing closes
-        a step that never opened (DeviceLoadComponent's rule)."""
-        try:
-            self._song.begin_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning(
-                "ClipsComponent: begin_undo_step raised %s: %s", type(e).__name__, e,
-            )
-            return False
-        return True
+        a step that never opened."""
+        return begin_undo_step("ClipsComponent", self._song)
 
     def _end_undo_step(self, began: bool) -> None:
-        if not began:
-            return
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning(
-                "ClipsComponent: end_undo_step raised %s: %s", type(e).__name__, e,
-            )
+        end_undo_step("ClipsComponent", self._song, began)
 
     def _emit_error(
         self,
@@ -1922,27 +1901,10 @@ class ClipsComponent:
         path: str,
         detail: str,
     ) -> None:
-        """Emit ``/looping/v3/error [address, code, path, detail]``.
-
-        Four-arg shape — same as DevicesComponent /
-        DeviceLoadComponent / ClipPropertiesComponent.
-        """
+        """Emit ``/looping/v3/error [address, code, path, detail]``."""
         if self._disconnected:
             return
-        logger.warning(
-            "ClipsComponent: emit error addr=%r code=%r path=%r detail=%r",
-            originating_address, code, path, detail,
-        )
-        try:
-            self._emit(
-                V3_ERROR_ADDRESS,
-                (originating_address, code, path, detail),
-            )
-        except Exception as e:
-            logger.warning(
-                "ClipsComponent: emit %s failed: %s",
-                V3_ERROR_ADDRESS, e,
-            )
+        emit_error("ClipsComponent", self._emit, originating_address, code, path, detail)
 
     # --- lifecycle --------------------------------------------------------
 

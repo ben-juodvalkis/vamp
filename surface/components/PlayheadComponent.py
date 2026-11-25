@@ -89,6 +89,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from . import path_resolver
 from .LOMListeners import _safe_int_id
 
+from ._common import LOM_ERRORS
+from .component_util import first_time, safe_emit
+
 logger = logging.getLogger("looping")
 
 
@@ -129,7 +132,7 @@ _EDIT_PROPERTIES: Tuple[str, ...] = (
 
 # --- LOM error tuple -----------------------------------------------------
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- audio file span -------------------------------------------------------
@@ -1309,23 +1312,15 @@ class PlayheadComponent:
     def _safe_emit(self, address: str, payload: tuple) -> None:
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning(
-                "PlayheadComponent: emit %s failed: %s", address, e,
-            )
+        safe_emit("PlayheadComponent", self._emit, address, payload)
 
     def _warn_once(self, key: str, context: str, exc: BaseException) -> None:
-        wkey: Tuple[str, str] = (key, context)
-        if wkey in self._warned:
-            return
-        self._warned.add(wkey)
-        logger.warning(
-            "PlayheadComponent %s: %s access raised %s: %s "
-            "(suppressing further warnings)",
-            key, context, type(exc).__name__, exc,
-        )
+        if first_time(self._warned, (key, context)):
+            logger.warning(
+                "PlayheadComponent %s: %s access raised %s: %s "
+                "(suppressing further warnings)",
+                key, context, type(exc).__name__, exc,
+            )
 
     # --- lifecycle -------------------------------------------------------
 

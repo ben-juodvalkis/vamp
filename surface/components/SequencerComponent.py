@@ -211,13 +211,15 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from . import sequencer_math as sm
 from . import sequencer_shuffle as shuffle
+from ._common import LOM_ERRORS
+from .component_util import first_time, safe_class_name
 from .DrumPadChainComponent import PadChainWatcher
 from .drum_vm_resolve import find_track_drum_rack
 from .LOMListeners import _safe_int_id
 
 logger = logging.getLogger("looping")
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 # --- wire -----------------------------------------------------------------
 
@@ -2117,12 +2119,7 @@ class SequencerComponent:
         except (_LOM_ERRORS, ValueError):
             return None
 
-    @staticmethod
-    def _safe_class_name(device) -> str:
-        try:
-            return getattr(device, "class_name", "") or ""
-        except _LOM_ERRORS:
-            return ""
+    _safe_class_name = staticmethod(safe_class_name)
 
     @staticmethod
     def _safe_bool(obj, attr: str) -> bool:
@@ -2146,11 +2143,8 @@ class SequencerComponent:
             return []
 
     def _warn_once(self, key: str, context: str, message: str) -> None:
-        k = (key, context)
-        if k in self._warned:
-            return
-        self._warned.add(k)
-        logger.warning("SequencerComponent %s: %s: %s", key, context, message)
+        if first_time(self._warned, (key, context)):
+            logger.warning("SequencerComponent %s: %s: %s", key, context, message)
 
     # --- lifecycle --------------------------------------------------------------------
 

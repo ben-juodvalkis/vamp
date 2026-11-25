@@ -85,6 +85,8 @@ from collections import OrderedDict
 from typing import Callable, Iterable, List, Optional, Tuple
 
 from . import path_resolver
+from ._common import LOM_ERRORS, coerce_str
+from .component_util import emit_error, first_time, parse_int_arg, safe_emit
 from .path_resolver import ResolveStatus
 
 try:  # pragma: no cover - real Live runtime only
@@ -100,7 +102,7 @@ logger = logging.getLogger("looping")
 # Tuple of exceptions every LOM touch must catch. ``TypeError`` covers
 # ``Boost.Python.ArgumentError`` (TypeError subclass) raised when a
 # C++ handle is torn down — see CLAUDE.md merge-gate rule (9).
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum; renames fail at import time) ------------
@@ -254,31 +256,13 @@ _MIDI_PITCH_MAX = 127
 # --- helpers --------------------------------------------------------------
 
 
-def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; ``None`` → ``""``."""
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 def _parse_int_arg(args, index: int) -> Optional[int]:
-    """Parse ``args[index]`` as an ``int``. ``None`` on any failure."""
-    if len(args) <= index:
-        return None
-    raw = args[index]
-    if isinstance(raw, bool):
-        # bool is an int subclass; reject explicitly so True → 1
-        # doesn't silently transpose.
-        return None
-    try:
-        return int(raw)
-    except (TypeError, ValueError):
-        return None
+    """Parse ``args[index]`` as an ``int``; ``None`` on any failure. A bool
+    is refused so a stray ``True`` does not transpose by one."""
+    return parse_int_arg(args, index, allow_bool=False)
 
 
 # Per-note properties we copy through into the rebuilt
@@ -1747,38 +1731,15 @@ class ClipNotesComponent:
         path: str,
         detail: str,
     ) -> None:
-        """Emit ``/looping/v3/error [address, code, path, detail]``.
-
-        Four-arg shape — same as DevicesComponent / DeviceLoadComponent
-        / ClipsComponent / ClipPropertiesComponent.
-        """
+        """Emit ``/looping/v3/error [address, code, path, detail]``."""
         if self._disconnected:
             return
-        logger.warning(
-            "ClipNotesComponent: emit error addr=%r code=%r path=%r detail=%r",
-            originating_address, code, path, detail,
-        )
-        try:
-            self._emit(
-                V3_ERROR_ADDRESS,
-                (originating_address, code, path, detail),
-            )
-        except Exception as e:
-            logger.warning(
-                "ClipNotesComponent: emit %s failed: %s",
-                V3_ERROR_ADDRESS, e,
-            )
+        emit_error("ClipNotesComponent", self._emit, originating_address, code, path, detail)
 
     def _safe_emit(self, address: str, payload: tuple) -> None:
-        """Emit while suppressed-disconnected; mirrors MetersComponent."""
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning(
-                "ClipNotesComponent: emit %s failed: %s", address, e,
-            )
+        safe_emit("ClipNotesComponent", self._emit, address, payload)
 
     def _record_lru(
         self, request_id: str, address: str, payload: tuple,
@@ -1866,14 +1827,11 @@ class ClipNotesComponent:
             self._rich_lru.pop(k, None)
 
     def _warn_once(self, key: str, context: str, exc: BaseException) -> None:
-        slot = (key, context)
-        if slot in self._warned:
-            return
-        self._warned.add(slot)
-        logger.warning(
-            "ClipNotesComponent %s (%s): %s (suppressing further warnings)",
-            key, context, exc,
-        )
+        if first_time(self._warned, (key, context)):
+            logger.warning(
+                "ClipNotesComponent %s (%s): %s (suppressing further warnings)",
+                key, context, exc,
+            )
 
     # --- lifecycle --------------------------------------------------------
 
