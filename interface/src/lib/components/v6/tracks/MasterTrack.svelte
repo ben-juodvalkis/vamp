@@ -14,7 +14,8 @@
     import { HOLD_MS } from '$lib/actions';
     import Lock from '@lucide/svelte/icons/lock';
     import { detectKey, setSignatureNumerator } from '$lib/services/sessionCommands';
-    import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
+    import { drag as dragAction } from '$lib/actions/drag';
+    import { createStepDrag } from '$lib/actions/stepDrag';
 
     interface Props {
         onSelect?: () => void;
@@ -139,28 +140,15 @@
      * Live answers. The denominator stays in the System view.
      */
     let sigDragging = $state(false);
-    let sigDragStart = 4;
-    let sigLastSent: number | null = null;
 
-    const numeratorDrag: DragOptions = {
-        commit: 'immediate',
-        touchAction: 'none',
-        onStart: () => {
-            sigDragging = true;
-            sigDragStart = session.timeSignature.numerator;
-            sigLastSent = null;
-        },
-        onMove: ({ dy }: DragInfo) => {
-            const next = Math.max(1, Math.min(32, Math.round(sigDragStart + dy * 0.05)));
-            if (next !== sigLastSent && next !== session.timeSignature.numerator) {
-                sigLastSent = next;
-                setSignatureNumerator(next);
-            }
-        },
-        onEnd: () => {
-            sigDragging = false;
-        }
-    };
+    const numeratorDrag = createStepDrag({
+        read: () => session.timeSignature.numerator,
+        perPx: 0.05,
+        min: 1,
+        max: 32,
+        send: setSignatureNumerator,
+        onActiveChange: (active) => (sigDragging = active)
+    });
 
     // Handle selection (Python v3 wire — ROW 2-F4)
     function handleSelect() {
