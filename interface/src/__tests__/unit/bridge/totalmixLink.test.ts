@@ -30,7 +30,7 @@ import {
 // and these tests hand it the tracked file's unless a test brings its own.
 const TOTALMIX = constants.osc.totalmix;
 const createTotalMixLink = (deps: Record<string, unknown> = {}) => createLinkWith({ config: TOTALMIX, ...deps });
-const clampDb = (db: unknown) =>
+const clampDb = (db: number) =>
 	clampDbWith(db, { minDb: TOTALMIX.minDb, maxDb: TOTALMIX.maxDb, silenceDb: TOTALMIX.silenceDb });
 
 const MIN_DB = -65;

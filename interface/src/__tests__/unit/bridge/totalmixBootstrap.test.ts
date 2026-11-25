@@ -30,7 +30,7 @@ import { createTotalMixLink as createLinkWith } from '../../../../bridge/handler
 
 // The modules read no config: the bridge hands them its blocks, and so do
 // these tests, the tracked file's.
-const parseDbString = (text: unknown) => parseDbStringWith(text, constants.osc.totalmix.silenceDb);
+const parseDbString = (text: string) => parseDbStringWith(text, constants.osc.totalmix.silenceDb);
 const createTotalMixLink = () => createLinkWith({ config: constants.osc.totalmix });
 
 // The bridge's own OSC codec, required as the bridge requires it: `osc` ships
