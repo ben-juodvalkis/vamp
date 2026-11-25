@@ -44,6 +44,7 @@
     import { session } from '$lib/stores/session.svelte';
     import { useStripGestures } from '../../composables/useStripGestures.svelte';
     import { logger } from '$lib/utils/logger';
+    import { boxSize } from '$lib/actions/boxSize';
     import { deriveSlotCellState } from '../utils/slotCellState';
     import type { SlotState } from '$lib/stores/v3/normalized.svelte';
     import { triggeredSlotsStore } from '$lib/stores/v6/triggeredSlotsStore.svelte';
@@ -207,19 +208,6 @@
     let zoneWidthPx = $state(0);
     const actionWidthPx = $derived(actionStripWidth(zoneWidthPx));
 
-    $effect(() => {
-        const el = zone;
-        if (!el || typeof ResizeObserver === 'undefined') return;
-        const measure = () => {
-            const w = el.getBoundingClientRect().width;
-            if (w > 0) zoneWidthPx = w;
-        };
-        measure();
-        const ro = new ResizeObserver(measure);
-        ro.observe(el);
-        return () => ro.disconnect();
-    });
-
     // ---- Selection (the pedal's aim) -----------------------------------
     //
     // The highlighted clip slot is the intersection of Live's selected
@@ -378,6 +366,7 @@
 
 <div
     bind:this={zone}
+    use:boxSize={{ axis: 'width', keepLastNonZero: true, onSize: (w) => (zoneWidthPx = w) }}
     class="slot-zone"
     class:is-track-selected={isSelectedTrack}
     data-debug="slot-zone"

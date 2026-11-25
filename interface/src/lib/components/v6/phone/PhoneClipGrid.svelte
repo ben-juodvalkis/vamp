@@ -32,6 +32,8 @@
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { padTextCss } from '$lib/services/drumVirtualMacros';
 	import { press } from '$lib/actions/press';
+	import { boxSize } from '$lib/actions/boxSize';
+	import { sessionRowPitch } from '$lib/utils/sessionRowPitch';
 	import { ribbonWindow } from '$lib/utils/phoneLayout';
 	import {
 		PHONE_COLUMN_PITCH,
@@ -75,24 +77,9 @@
 	);
 
 	let scroller = $state<HTMLDivElement | null>(null);
-	let body = $state<HTMLDivElement | null>(null);
+	// Measured by `use:boxSize` on the pinned rail's body.
 	let bodyHeightPx = $state(0);
-	const rowPitchPx = $derived(
-		sceneWindowStore.renderedRows > 0 ? bodyHeightPx / (sceneWindowStore.renderedRows + 1) : 0
-	);
-
-	$effect(() => {
-		const el = body;
-		if (!el || typeof ResizeObserver === 'undefined') return;
-		const measure = () => {
-			const h = el.getBoundingClientRect().height;
-			if (h > 0) bodyHeightPx = h;
-		};
-		measure();
-		const ro = new ResizeObserver(measure);
-		ro.observe(el);
-		return () => ro.disconnect();
-	});
+	const rowPitchPx = $derived(sessionRowPitch(bodyHeightPx, sceneWindowStore.renderedRows));
 
 	function report() {
 		if (!scroller) return;
@@ -201,7 +188,7 @@
 	{/each}
 	<div class="rail-col" data-debug="phone-scene-rail">
 		<div class="col-name is-blank" aria-hidden="true"></div>
-		<div class="col-body" bind:this={body}>
+		<div class="col-body" use:boxSize={{ keepLastNonZero: true, onSize: (h) => (bodyHeightPx = h) }}>
 			<SceneRail />
 		</div>
 	</div>
