@@ -14,7 +14,6 @@
 	 * tabs divided by the rows drawn plus the stop row. The rail measures
 	 * the same box the same way, so the two land on the same pitch.
 	 */
-	import { tick, untrack } from 'svelte';
 	import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
 	import SceneRail from '$lib/components/v6/tracks/SceneRail.svelte';
 	import {
@@ -34,9 +33,8 @@
 	import { press } from '$lib/actions/press';
 	import { boxSize } from '$lib/actions/boxSize';
 	import { sessionRowPitch } from '$lib/utils/sessionRowPitch';
-	import { ribbonWindow } from '$lib/utils/phoneLayout';
+	import { usePhoneScroller } from './usePhoneScroller.svelte';
 	import {
-		PHONE_COLUMN_PITCH,
 		PHONE_ROW_INSET,
 		PHONE_RAIL_WIDTH,
 		PHONE_COLUMN_GAP,
@@ -81,56 +79,14 @@
 	let bodyHeightPx = $state(0);
 	const rowPitchPx = $derived(sessionRowPitch(bodyHeightPx, sceneWindowStore.renderedRows));
 
-	function report() {
-		if (!scroller) return;
-		onWindow(
-			ribbonWindow({
-				scrollLeft: scroller.scrollLeft,
-				clientWidth: scroller.clientWidth,
-				pitch: PHONE_COLUMN_PITCH,
-				count: tracks.length,
-				inset: PHONE_ROW_INSET,
-				pinned: PHONE_RAIL_WIDTH + PHONE_COLUMN_GAP + PHONE_ROW_INSET
-			})
-		);
-	}
-
-	function handleScroll() {
-		if (!scroller) return;
-		onScroll(scroller.scrollLeft);
-		report();
-	}
-
-	$effect(() => {
-		if (!active || !scroller) return;
-		const el = scroller;
-		tick().then(() => {
-			el.scrollLeft = untrack(() => scrollLeft);
-			report();
-		});
-	});
-
-	// The ribbon's frame follows the scroller's size and the column count.
-	$effect(() => {
-		void tracks.length;
-		const el = scroller;
-		if (!active || !el || typeof ResizeObserver === 'undefined') return;
-		tick().then(report);
-		const ro = new ResizeObserver(() => report());
-		ro.observe(el);
-		return () => ro.disconnect();
-	});
-
-	$effect(() => {
-		const idx = session.selectedTrackIndex;
-		void tracks.join(',');
-		if (!active || !scroller || idx < 0) return;
-		const el = scroller;
-		tick().then(() =>
-			el
-				.querySelector(`[data-track-index="${idx}"]`)
-				?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
-		);
+	const phoneScroller = usePhoneScroller({
+		getElement: () => scroller,
+		isActive: () => active,
+		tracks: () => tracks,
+		scrollLeft: () => scrollLeft,
+		onScroll: (left) => onScroll(left),
+		onWindow: (w) => onWindow(w),
+		pinned: PHONE_RAIL_WIDTH + PHONE_COLUMN_GAP + PHONE_ROW_INSET
 	});
 
 	function showClip(trackIndex: number, slotPath: string) {
@@ -143,7 +99,7 @@
 	class="phone-clips"
 	data-debug="phone-clips"
 	bind:this={scroller}
-	onscroll={handleScroll}
+	onscroll={phoneScroller.handleScroll}
 	style={rowPitchPx > 0 ? `--session-row-h: ${rowPitchPx}px;` : ''}
 >
 	{#each columns as c (c.trackIndex)}
