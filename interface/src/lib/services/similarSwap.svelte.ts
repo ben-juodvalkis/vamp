@@ -17,11 +17,7 @@
 import { SvelteMap } from 'svelte/reactivity';
 import { holdSwapError, dropSwapError } from './swapErrors';
 import { send } from '$lib/api/simpleClient';
-import {
-	addOscMessageListener,
-	removeOscMessageListener,
-	type OscBusMessage
-} from '$lib/api/connection/oscMessageBus';
+import { oscRequest } from '$lib/api/connection/oscRequest';
 import { logger } from '$lib/utils/logger';
 
 export const SWAP_SIMILAR_ADDRESS = '/looping/v3/drum/swap_similar';
@@ -49,11 +45,6 @@ export interface SimilarSwapState {
 const IDLE: SimilarSwapState = Object.freeze({ working: false, error: null });
 
 type Sender = (address: string, args: Array<string | number>) => void;
-
-function requestId(): string {
-	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-	return `swap-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 /** `kit`, or `pad:<note>` for a held pad. */
 export function swapScope(note: number | null): string {
@@ -99,21 +90,17 @@ class SimilarSwapStore {
 	}
 
 	#request(args: Array<string | number>): Promise<unknown[]> {
-		const id = requestId();
-		return new Promise((resolve, reject) => {
-			const listener = (message: OscBusMessage) => {
-				if (message.address !== SWAP_SIMILAR_REPLY_ADDRESS || !message.args) return;
-				if (String(message.args[0]) !== id) return;
-				clearTimeout(timer);
-				removeOscMessageListener(listener);
-				resolve(message.args);
-			};
-			const timer = setTimeout(() => {
-				removeOscMessageListener(listener);
-				reject(new Error(`swap-timeout: no reply within ${Math.round(this.#timeoutMs / 1000)} s`));
-			}, this.#timeoutMs);
-			addOscMessageListener(listener);
-			this.#send(SWAP_SIMILAR_ADDRESS, [id, ...args]);
+		return oscRequest<unknown[]>({
+			address: SWAP_SIMILAR_ADDRESS,
+			idPrefix: 'swap',
+			args,
+			replies: [SWAP_SIMILAR_REPLY_ADDRESS],
+			timeoutMs: this.#timeoutMs,
+			send: (address, sent) => this.#send(address, sent as Array<string | number>),
+			onReply: (_address, reply) => ({ value: reply }),
+			onTimeout: () => ({
+				error: new Error(`swap-timeout: no reply within ${Math.round(this.#timeoutMs / 1000)} s`)
+			})
 		});
 	}
 

@@ -1,11 +1,12 @@
 /**
  * The inbound "every message" bus — the Open Channel Architecture channel that
- * `trackPreparation` and `trackOperations` correlate their request/ack pairs on.
+ * correlated request/reply pairs settle on, through `oscRequest.ts` (track
+ * prepare, duplicate and group, kit transpose, pad and clip swaps).
  *
  * It used to be a `CustomEvent` on `window`, constructed and dispatched once
  * per inbound message — the batcher's disassembly loop included, so a
  * `/bridge/batch` of twelve meter frames cost twelve of them. Its listener
- * count in the steady state is **zero**: both consumers register inside a
+ * count in the steady state is **zero**: every request registers inside a
  * per-request Promise and remove on settle, so outside the few hundred
  * milliseconds around a preset load or a track duplicate there is nobody to
  * deliver to. Meters and playheads alone kept that allocation running all set.

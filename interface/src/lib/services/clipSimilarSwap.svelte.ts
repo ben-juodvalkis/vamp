@@ -28,7 +28,6 @@
 import { SvelteMap } from 'svelte/reactivity';
 import { holdSwapError, dropSwapError } from './swapErrors';
 import { logger } from '$lib/utils/logger';
-import type { OscBusMessage } from '$lib/api/connection/oscMessageBus';
 
 export const SIMILAR_LIMIT = 24;
 export const CLIP_SWAP_FILE_ADDRESS = '/looping/v3/clip/swap_file';
@@ -90,11 +89,6 @@ function fileName(path: string): string {
 	return path.slice(path.lastIndexOf('/') + 1);
 }
 
-function requestId(): string {
-	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-	return `clip-swap-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
 const DEFAULT_DEPS: Deps = {
 	async find(filePath, signal) {
 		const response = await fetch(
@@ -114,25 +108,21 @@ const DEFAULT_DEPS: Deps = {
 		return (await response.json()) as SimilarSamplesAnswer;
 	},
 	async swap(clipPath, filePath) {
-		const [{ send }, { addOscMessageListener, removeOscMessageListener }] = await Promise.all([
-			import('$lib/api/simpleClient'),
-			import('$lib/api/connection/oscMessageBus')
-		]);
-		const id = requestId();
-		return new Promise<SwapFileReply>((resolve, reject) => {
-			const listener = (message: OscBusMessage) => {
-				if (message.address !== CLIP_SWAP_FILE_REPLY_ADDRESS || String(message.args?.[0]) !== id) return;
-				clearTimeout(timer);
-				removeOscMessageListener(listener);
-				const [, ok, code, detail] = message.args ?? [];
-				resolve({ ok: Number(ok) === 1, code: String(code ?? ''), detail: String(detail ?? '') });
-			};
-			const timer = setTimeout(() => {
-				removeOscMessageListener(listener);
-				reject(new Error(`swap-timeout: Live did not answer within ${REPLY_TIMEOUT_MS / 1000} s`));
-			}, REPLY_TIMEOUT_MS);
-			addOscMessageListener(listener);
-			send(CLIP_SWAP_FILE_ADDRESS, [id, clipPath, filePath]);
+		// Imported at call time, as before: this store stays off the
+		// client's static import graph.
+		const { oscRequest } = await import('$lib/api/connection/oscRequest');
+		return oscRequest<SwapFileReply>({
+			address: CLIP_SWAP_FILE_ADDRESS,
+			idPrefix: 'clip-swap',
+			args: [clipPath, filePath],
+			replies: [CLIP_SWAP_FILE_REPLY_ADDRESS],
+			timeoutMs: REPLY_TIMEOUT_MS,
+			onReply: (_address, [, ok, code, detail]) => ({
+				value: { ok: Number(ok) === 1, code: String(code ?? ''), detail: String(detail ?? '') }
+			}),
+			onTimeout: () => ({
+				error: new Error(`swap-timeout: Live did not answer within ${REPLY_TIMEOUT_MS / 1000} s`)
+			})
 		});
 	},
 	async forget(clipPath) {
