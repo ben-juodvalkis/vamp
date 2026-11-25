@@ -245,6 +245,7 @@ import logging
 import time
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from . import drum_vm_values
 from .DrumPadChainComponent import PadChainWatcher
 from .component_util import first_time, safe_emit
 from .path_resolver import PAD_NOTE_MAX, find_drum_pad, same_lom_handle
@@ -1373,40 +1374,17 @@ class DrumVirtualMacroComponent:
                 )
         return counted, pitch_name
 
-    # --- member value space -----------------------------------------------
+    # --- member value space (``drum_vm_values``) ---------------------------
     #
     # A member's LOM value is its own, except a semitone macro (a pad
     # rack's transpose macro standing in for a Transpose): read and written
     # in semitones, −48..48 across the macro's 0..127 (the convention).
 
-    @staticmethod
-    def _member_bounds(m: _Member) -> Tuple[float, float]:
-        if m.semitone_macro:
-            return float(PITCH_MIN), float(PITCH_MAX)
-        return m.min, m.max
+    _member_bounds = staticmethod(drum_vm_values.member_bounds)
 
-    def _member_read(self, m: _Member) -> Optional[float]:
-        raw = _float_or_none(self._read_value(m.param))
-        if raw is None or not m.semitone_macro:
-            return raw
-        span = m.max - m.min
-        if span <= 0:
-            return None
-        return PITCH_MIN + (raw - m.min) / span * (PITCH_MAX - PITCH_MIN)
+    _member_read = staticmethod(drum_vm_values.member_read)
 
-    def _member_fn_value(self, m: _Member) -> Optional[float]:
-        """A member's current value as the function's own ``t`` (0..1) —
-        the exact inverse of the fan-out's ``min + t·(max−min)``, so a
-        deviation measured here writes back to the value it was read
-        from. ``None`` when the parameter cannot be read or has no span."""
-        v = self._member_read(m)
-        if v is None:
-            return None
-        lo, hi = self._member_bounds(m)
-        span = hi - lo
-        if span <= 0:
-            return None
-        return _clamp((v - lo) / span, 0.0, 1.0)
+    _member_fn_value = staticmethod(drum_vm_values.member_fn_value)
 
     @staticmethod
     def _tracks_edits(fn: VirtualMacro, m: _Member) -> bool:
@@ -1425,13 +1403,7 @@ class DrumVirtualMacroComponent:
         - a pad with no note (``-1``) cannot be addressed per pad."""
         return fn.kind == KIND_T and not m.quantized and m.note >= 0
 
-    @staticmethod
-    def _member_write(m: _Member, value) -> None:
-        if not m.semitone_macro:
-            m.param.value = value
-            return
-        t = (float(value) - PITCH_MIN) / float(PITCH_MAX - PITCH_MIN)
-        m.param.value = m.min + _clamp(t, 0.0, 1.0) * (m.max - m.min)
+    _member_write = staticmethod(drum_vm_values.member_write)
 
     # --- seeding ----------------------------------------------------------
 
@@ -1645,75 +1617,19 @@ class DrumVirtualMacroComponent:
         # shift into the global (permute ADR-020).
         return int(_clamp(round(v) - st.shift, PITCH_MIN, PITCH_MAX))
 
-    @staticmethod
-    def _read_value(param):
-        try:
-            return param.value
-        except _LOM_ERRORS:
-            return None
+    _read_value = staticmethod(drum_vm_values.read_value)
 
-    @staticmethod
-    def _normalized(param) -> Optional[float]:
-        v = _float_or_none(DrumVirtualMacroComponent._read_value(param))
-        if v is None:
-            return None
-        try:
-            lo = float(param.min)
-            hi = float(param.max)
-        except _LOM_ERRORS + (ValueError,):
-            lo, hi = 0.0, 127.0
-        span = hi - lo
-        return _clamp((v - lo) / span, 0.0, 1.0) if span > 0 else 0.0
+    _normalized = staticmethod(drum_vm_values.normalized)
 
     # --- value conversions ------------------------------------------------
 
-    @staticmethod
-    def _coerce(fn: VirtualMacro, value):
-        v = _float_or_none(value)
-        if v is None:
-            return None
-        if fn.kind == KIND_T:
-            return _clamp(v, 0.0, 1.0)
-        if fn.kind == KIND_ENUM:
-            return int(_clamp(round(v), 0, FX_TYPE_MAX))
-        return int(_clamp(round(v), PITCH_MIN, PITCH_MAX))
+    _coerce = staticmethod(drum_vm_values.coerce)
 
-    @staticmethod
-    def _to_t(fn: VirtualMacro, value) -> float:
-        """Held value → macro travel ``0..1`` (for the legacy macro)."""
-        if fn.kind == KIND_ENUM:
-            return _clamp(float(value) / FX_TYPE_MAX, 0.0, 1.0)
-        if fn.kind == KIND_SEMITONES:
-            return _clamp((float(value) - PITCH_MIN) / (PITCH_MAX - PITCH_MIN), 0.0, 1.0)
-        return _clamp(float(value), 0.0, 1.0)
+    _to_t = staticmethod(drum_vm_values.to_t)
 
-    @staticmethod
-    def _from_t(fn: VirtualMacro, t: float):
-        """Macro travel ``0..1`` → held value (seeding from a mapped macro)."""
-        if fn.kind == KIND_ENUM:
-            return int(_clamp(round(t * FX_TYPE_MAX), 0, FX_TYPE_MAX))
-        if fn.kind == KIND_SEMITONES:
-            return int(_clamp(round(PITCH_MIN + t * (PITCH_MAX - PITCH_MIN)), PITCH_MIN, PITCH_MAX))
-        return _clamp(t, 0.0, 1.0)
+    _from_t = staticmethod(drum_vm_values.from_t)
 
-    @staticmethod
-    def _member_target(fn: VirtualMacro, m: _Member, value):
-        """The LOM value one member receives for the held ``value``."""
-        if fn.kind == KIND_SEMITONES:
-            return int(_clamp(int(value), m.min, m.max))
-        if fn.kind == KIND_ENUM:
-            return int(_clamp(int(value), m.min, m.max))
-        t = float(value)
-        span = m.max - m.min
-        if m.quantized:
-            if span <= 1.0 + 1e-9:
-                # Two-state switch: measured macro threshold, not half
-                # travel — or always on, for a bipolar amount's section.
-                if not fn.switch_off_at_floor:
-                    return m.max
-                return m.max if t > TOGGLE_ON_ABOVE_T else m.min
-            return int(round(m.min + t * span))
-        return m.min + t * span
+    _member_target = staticmethod(drum_vm_values.member_target)
 
     # --- routing + apply --------------------------------------------------
 
