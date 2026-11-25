@@ -65,9 +65,7 @@ function readPermuteMuteCurrent(trackPath: string): boolean {
     const stepIdx0 = permuteStepStore.get(permute.devicePath).mute;
     if (stepIdx0 < 0 || stepIdx0 >= MUTE_STEP_INDICES.length) return false;
     const stepParamIdx = MUTE_STEP_INDICES[stepIdx0];
-    const stepValue = v3Store.paramByPath.get(
-        `${permute.devicePath}/params/${stepParamIdx}`
-    )?.value;
+    const stepValue = v3Store.param(`${permute.devicePath}/params/${stepParamIdx}`)?.value;
     // Step plays when value === 1; "muted" is the absence of that.
     return stepValue !== undefined && stepValue !== 1;
 }
@@ -176,8 +174,7 @@ export async function selectTrackByIndex(
     // highlight, central view, and FX grid update immediately. The echo
     // from Ableton confirms or corrects this when it arrives.
     if (!wasAlreadySelected) {
-        session.selectTrackOptimistically(trackIndex);
-        selectedTrackStore.handleTrackSelected(trackIndex);
+        selectedTrackStore.selectTrackLocally(trackIndex);
     }
     // Aim the pedal at this track's running clip, when it has one.
     //

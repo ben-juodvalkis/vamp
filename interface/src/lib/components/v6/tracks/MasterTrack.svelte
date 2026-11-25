@@ -132,8 +132,7 @@
         // is swallowed rather than switching the central view out from
         // under the gesture.
         if (interceptForGroupGesture(MASTER_INDEX, true)) return;
-        session.selectTrackOptimistically(MASTER_INDEX);
-        selectedTrackStore.handleTrackSelected(MASTER_INDEX);
+        selectedTrackStore.selectTrackLocally(MASTER_INDEX);
         selectTrack('master');
         onSelect?.();
     }
