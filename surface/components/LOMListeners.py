@@ -188,6 +188,12 @@ class LOMListeners:
         # structural-change on a genuine increase.
         self._post_add_param_count_snapshot: dict[int, int] = {}
 
+        # Which track scheduled each pending reconcile, ``id(device)`` →
+        # ``id(track)``, so a devices change on one track prunes only the
+        # entries that track lost and leaves another track's pending
+        # reconcile alone.
+        self._post_add_track_of: dict[int, int] = {}
+
         # Structural-change callback. Fires on ``_on_tracks_changed``
         # and on any per-track ``_on_track_devices_changed``.
         #
@@ -671,11 +677,18 @@ class LOMListeners:
         # protects correctness (a stale callback finds no matching
         # epoch and no-ops); this just keeps the maps from growing
         # unbounded on long-running sessions with frequent swaps.
+        # Only this track's entries: a key another track scheduled is not
+        # in ``devices_now`` by construction, and dropping it cancelled
+        # that track's pending reconcile.
         live_device_keys = {id(d) for d in devices_now}
-        for dkey in list(self._post_add_reconciler_epochs.keys()):
-            if dkey not in live_device_keys:
-                self._post_add_reconciler_epochs.pop(dkey, None)
-                self._post_add_param_count_snapshot.pop(dkey, None)
+        tkey = id(track)
+        for dkey in [
+            k for k, owner in self._post_add_track_of.items()
+            if owner == tkey and k not in live_device_keys
+        ]:
+            self._post_add_track_of.pop(dkey, None)
+            self._post_add_reconciler_epochs.pop(dkey, None)
+            self._post_add_param_count_snapshot.pop(dkey, None)
 
         self._last_device_ids_per_track[id(track)] = after_ids
 
@@ -810,6 +823,7 @@ class LOMListeners:
         self._post_add_epoch_counter += 1
         epoch = self._post_add_epoch_counter
         self._post_add_reconciler_epochs[dkey] = epoch
+        self._post_add_track_of[dkey] = id(track)
 
         def _reconcile(d=device, t=track, captured_epoch=epoch,
                        captured_initial=initial_count):
@@ -1383,6 +1397,7 @@ class LOMListeners:
         # garbage-collected.
         self._post_add_reconciler_epochs.clear()
         self._post_add_param_count_snapshot.clear()
+        self._post_add_track_of.clear()
 
     # --- safe LOM access --------------------------------------------------
 

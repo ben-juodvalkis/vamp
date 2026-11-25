@@ -1461,6 +1461,49 @@ def test_post_add_reconciler_disconnect_cancels_pending():
 # rebinding. Here the closure reads `_param_paths` at fire time instead.
 
 
+def test_post_add_reconciler_survives_a_devices_change_on_another_track():
+    """A plugin added on track A, then a devices change on track B inside
+    the 750 ms window: A's reconcile still runs. The prune used to walk
+    every pending key and drop any not on B, cancelling A's."""
+    initial = [StubParam(pid=9301)]
+    post = initial + [StubParam(pid=9302), StubParam(pid=9303)]
+    plugin = _HydratingDevice(did=530, initial_params=initial, post_hydrate_params=post)
+    track_a = StubTrack(tid=110, devices=[])
+    track_b = StubTrack(tid=111, devices=[])
+    song = StubSong(tracks=[track_a, track_b])
+    scheduler = _ManualScheduler()
+    fires: list[int] = []
+    reg = LOMListeners(
+        song=song,
+        on_structural_change=lambda: fires.append(1),
+        schedule_delayed=scheduler,
+    )
+
+    track_a.set_devices([plugin])
+    track_b.set_devices([make_device(531, [9310])])
+    plugin.hydrate()
+    fires.clear()
+    scheduler.fire_all()
+
+    assert fires == [1], "track A's reconcile was cancelled by track B's change"
+    assert next(p for p in plugin.parameters if p.id == 9303).has_value_listener()
+    reg.disconnect()
+
+
+def test_post_add_reconciler_bookkeeping_dropped_when_its_own_track_loses_the_device():
+    plugin = _HydratingDevice(did=540, initial_params=[StubParam(pid=9401)], post_hydrate_params=[])
+    track = StubTrack(tid=120, devices=[])
+    song = StubSong(tracks=[track])
+    scheduler = _ManualScheduler()
+    reg = LOMListeners(song=song, schedule_delayed=scheduler)
+    track.set_devices([plugin])
+    assert id(plugin) in reg._post_add_reconciler_epochs
+    track.set_devices([])
+    assert id(plugin) not in reg._post_add_reconciler_epochs
+    assert id(plugin) not in reg._post_add_track_of
+    reg.disconnect()
+
+
 def _reg_recording_paths(song):
     seen = []
     reg = LOMListeners(
