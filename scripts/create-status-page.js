@@ -15,6 +15,7 @@ const os = require('os');
 // records that 8080 produces RSV1 protocol errors here — so the bridge has
 // never listened on 8080 and the page was aiming a debugger at a dead port.
 const constants = require('../interface/bridge/utils/constants').loadConstants();
+const PAGE_PORT = constants.padLink.pagePort;
 
 function getNetworkInterfaces() {
     const interfaces = os.networkInterfaces();
@@ -26,10 +27,10 @@ function getNetworkInterfaces() {
     // to save on the iPad's home screen.
     const name = os.hostname();
     const results = {
-        stable: name.endsWith('.local') ? `http://${name}:8889` : null,
+        stable: name.endsWith('.local') ? `http://${name}:${PAGE_PORT}` : null,
         wifi: null,
         usbc: null,
-        localhost: 'http://localhost:8889'
+        localhost: `http://localhost:${PAGE_PORT}`
     };
 
     Object.keys(interfaces).forEach(name => {
@@ -40,11 +41,11 @@ function getNetworkInterfaces() {
             if (details.family === 'IPv4' && !details.internal) {
                 // USB-C interface - prioritize this first
                 if (details.address === usbcAddress || details.address.startsWith('169.254.')) {
-                    results.usbc = `http://${details.address}:8889`;
+                    results.usbc = `http://${details.address}:${PAGE_PORT}`;
                 }
                 // WiFi interface (192.168.x.x or 10.x.x.x)
                 else if (details.address.startsWith('192.168.') || details.address.startsWith('10.')) {
-                    results.wifi = `http://${details.address}:8889`;
+                    results.wifi = `http://${details.address}:${PAGE_PORT}`;
                 }
             }
         });
@@ -200,7 +201,7 @@ function generateStatusHTML(interfaces) {
 
         <div class="status-bar">
             <span>OSC: ${constants.osc.webSocket.port}</span>
-            <span>Preview: 8889</span>
+            <span>Preview: ${PAGE_PORT}</span>
             <span>Ready</span>
         </div>
 
@@ -229,9 +230,9 @@ function createStatusPage() {
     const statusPath = path.join(statusDir, 'index.html');
     fs.writeFileSync(statusPath, html);
     
-    // Start simple HTTP server for status page on port 8890
+    // Start simple HTTP server for status page on http.statusPagePort
     const http = require('http');
-    const statusPort = 8890;
+    const statusPort = constants.http.statusPagePort;
     
     // Kill any existing server on this port
     try {

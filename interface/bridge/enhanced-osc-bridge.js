@@ -1068,7 +1068,7 @@ logger.info('WebSocket-OSC Bridge ready', {
     },
     bonjour: {
         bridge: `${stableHostname}.local:${OSC_CONFIG.webSocket.port}`,
-        interface: `${stableHostname}.local:3000`,
+        interface: `${stableHostname}.local:${constants.http.interfacePort}`,
         fallback: `${systemHostname}.local`
     }
 });

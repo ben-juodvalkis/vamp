@@ -238,7 +238,9 @@
     "_note": "Vamp for iPad over the USB cable (owner/apps). devicePort: where the iPad app listens for the Mac, reached through usbmux (loopback on the iPad, so nothing on a network can). pagePort: the Mac's page server the Mac app splices each stream to, the one npm run ipad serves on; the iPad app also loads the page at localhost on this port. The iPad app compiles both in (owner/apps/Pad/VampPadApp.swift); a test keeps the copies equal."
   },
   "http": {
-    "interfacePort": 3000
+    "interfacePort": 3000,
+    "statusPagePort": 8890,
+    "_note": "interfacePort: npm run dev's interface server (vite dev). statusPagePort: npm run ipad's status page (scripts/create-status-page.js). The iPad's page server is padLink.pagePort, the bridge osc.webSocket.port; scripts/cleanup.sh frees all four."
   },
 
   "debug": {

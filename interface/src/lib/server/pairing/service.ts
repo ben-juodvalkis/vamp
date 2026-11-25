@@ -35,8 +35,8 @@ export function pairingEnabled(): boolean {
 
 async function notifyBridge(event: PairingEvent): Promise<void> {
 	const secret = resolveSecret();
-	const port = configSection<{ webSocket?: { port?: number } }>('osc').webSocket?.port ?? 8081;
-	if (!secret) return;
+	const port = configSection<{ webSocket?: { port?: number } }>('osc').webSocket?.port;
+	if (!secret || !port) return;
 	try {
 		await fetch(`http://127.0.0.1:${port}/pairing`, {
 			method: 'POST',
