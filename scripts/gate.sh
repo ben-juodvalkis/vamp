@@ -89,8 +89,10 @@ classify() {
         docs/reference/instruments/dumps/*) CLS="vitest" ;;
         # Read by no test (sourceBytes' NUL walk aside, covered below).
         *.md|docs/*|LICENSE) CLS="" ;;
-        # The screenshot rig: it makes PNGs, and no test imports or reads it.
-        scripts/shot/*) CLS="" ;;
+        # The screenshot rig: the demo (lib/demo, in the client bundle through
+        # hooks.client.ts) imports $shot's mock engine, scenes and fixtures,
+        # and tests (AnalogCentralView.test.ts) import its fixtures.
+        scripts/shot/*) CLS="types vitest build serve" ;;
         interface/*) CLS="types vitest build serve" ;;
         # config/, scripts/, data/, the rest of owner/, package files, the
         # hook and this script: read across suites, so everything.
