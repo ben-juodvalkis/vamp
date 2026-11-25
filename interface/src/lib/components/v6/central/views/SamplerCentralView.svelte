@@ -87,23 +87,10 @@
 
   const CONTROLS = Object.keys(SAMPLER_ROW_PARAM_NAMES) as SamplerRowControl[];
 
-  // The device's parameter names, first index per name (the store's
-  // list is re-derived on every tree mutation, so a section that
-  // appears after its switch is written shows up here on its own).
-  let names = $derived(device ? selectedTrackStore.paramNamesForDevice(device) : []);
-  let indexByName = $derived.by(() => {
-    const m = new Map<string, number>();
-    names.forEach((name, i) => {
-      if (!m.has(name)) m.set(name, i);
-    });
-    return m;
-  });
-
-  function pathOf(name: string | undefined): string | undefined {
-    if (!device || !name) return undefined;
-    const i = indexByName.get(name);
-    return i === undefined ? undefined : selectedTrackStore.paramPath(device, i);
-  }
+  // A parameter's path by name (`params`, above: the store's list is
+  // re-derived on every tree mutation, so a section that appears after its
+  // switch is written shows up here on its own).
+  const pathOf = (name: string | undefined) => (name ? params.pathOf(name) : undefined);
 
   // A parameter's value as a control wants it: `t` through the parameter's
   // own range, or raw (Trnsp's semitones); `undefined` (at rest) when unlisted.

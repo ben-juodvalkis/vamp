@@ -38,7 +38,7 @@
   // (2026-09-07) list the filter section and not the pitch envelope, and
   // there `Ve Attack` sits at 21 and `Ve Release` at 24 while 26 is
   // `Ve Loop` and 29 `Trigger Mode`. So every parameter is resolved by
-  // NAME off the device's own list first (`paramIndex`), and the index
+  // NAME off the device's own list first (`paramPathOf`), and the index
   // below is used only when the name is not listed.
   const SIMPLER_PARAMS = {
     START: 3,          // Sample start position (0-1)
@@ -174,24 +174,13 @@
   // PR-3.5.7-impl: v3 path-keyed lookup for property reads/writes.
   let devicePath = $derived(device?.devicePath);
 
-  // The device's parameter names, first index per name — re-derived on
-  // every tree mutation, so a section that appears later is found too.
-  let paramNames = $derived(device ? selectedTrackStore.paramNamesForDevice(device) : []);
-  let paramIndexByName = $derived.by(() => {
-    const m = new Map<string, number>();
-    paramNames.forEach((name, i) => {
-      if (!m.has(name)) m.set(name, i);
-    });
-    return m;
-  });
-  /** The parameter's index on THIS device: by name when listed, else the table's index. */
-  function paramIndex(key: keyof typeof SIMPLER_PARAMS): number {
-    const name = SIMPLER_PARAM_NAMES[key];
-    const byName = name ? paramIndexByName.get(name) : undefined;
-    return byName ?? SIMPLER_PARAMS[key];
-  }
+  // The device's parameters by name, resolved over its live list, so a
+  // section that appears later is found too (`usePanelParams`).
+  const params = usePanelParams(() => device);
+  /** The parameter's path on THIS device: by name when listed, else the table's index. */
   function paramPathOf(key: keyof typeof SIMPLER_PARAMS): string {
-    return selectedTrackStore.paramPath(device!, paramIndex(key));
+    const name = SIMPLER_PARAM_NAMES[key];
+    return (name ? params.pathOf(name) : undefined) ?? selectedTrackStore.paramPath(device!, SIMPLER_PARAMS[key]);
   }
 
   // All parameter values as $derived - always reactive to store changes
@@ -394,9 +383,9 @@
     simplerWarpDouble(devicePath);
   }
 
-  // The full-screen board (ADR-521) binds by Live's names, like the other
-  // instruments' boards: the filter's pad and curve, the LFO's wave and rate.
-  const params = usePanelParams(() => device);
+  // The full-screen board (ADR-521) binds by Live's names (`params`, above),
+  // like the other instruments' boards: the filter's pad and curve, the
+  // LFO's wave and rate.
   let filterCurve = $derived(
     liveFilterCurve(params.raw('Filter Type') ?? 0, params.raw('Filter Slope') ?? 1, params.raw('Filter Morph') ?? 0)
   );
