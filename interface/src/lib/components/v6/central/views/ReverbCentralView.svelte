@@ -89,6 +89,7 @@
   } from '$lib/components/v6/device-panel/hybridReverbParams';
 
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
+  import { useDeviceProperties } from '../useDeviceProperties.svelte';
 
   const fx = useFxGridSlot('reverb');
 
@@ -178,30 +179,29 @@
   let reverbMode = $derived(raw(HYBRID.routing));
   let algorithmicType = $derived(raw(HYBRID.algoType));
   let algorithm = $derived(algorithmFor(algorithmicType));
-  let irCategoryIndex = $derived<number>(
-    (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_category_index') as number | undefined : undefined) ?? 0
-  );
-  let irFileIndex = $derived<number>(
-    (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_file_index') as number | undefined : undefined) ?? 0
-  );
-  let irAttackTime = $derived<number>(
-    (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_attack_time') as number | undefined : undefined) ?? 0.0
-  );
-  let irDecayTime = $derived<number>(
-    (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_decay_time') as number | undefined : undefined) ?? 0.02
-  );
-  let irSizeValue = $derived<number>(
-    (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_size_factor') as number | undefined : undefined) ?? 1
-  );
+  // The IR's properties, subscribed while the view is mounted on a device.
+  const deviceProps = useDeviceProperties(() => fx.devicePath, [
+    'ir_category_index',
+    'ir_file_index',
+    'ir_attack_time',
+    'ir_decay_time',
+    'ir_size_factor',
+    'ir_time_shaping_on',
+    'ir_category_list',
+    'ir_file_list'
+  ]);
+  let irCategoryIndex = $derived(deviceProps.get('ir_category_index', 0));
+  let irFileIndex = $derived(deviceProps.get('ir_file_index', 0));
+  let irAttackTime = $derived(deviceProps.get('ir_attack_time', 0.0));
+  let irDecayTime = $derived(deviceProps.get('ir_decay_time', 0.02));
+  let irSizeValue = $derived(deviceProps.get('ir_size_factor', 1));
   // Unknown (a surface from before 2026-10-02 does not send it): shaping on,
   // Live's default.
-  let irShaping = $derived<boolean>(
-    ((fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_time_shaping_on') as number | undefined : undefined) ?? 1) !== 0
-  );
+  let irShaping = $derived(deviceProps.get('ir_time_shaping_on', 1) !== 0);
 
   /** A JSON-string property (Live's IR name lists) as an array of names. */
   function nameList(name: string): string[] {
-    const value = fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, name) : undefined;
+    const value = deviceProps.raw(name);
     if (Array.isArray(value)) return value as string[];
     if (typeof value !== 'string') return [];
     try {
@@ -246,26 +246,6 @@
    * nothing.
    */
   let irAxis = $derived(irAxisHeld ?? (ir.wave && ir.wave.seconds > 0 ? ir.wave.seconds * irSizeShown : IR_ATTACK_MAX));
-
-  // Mount property subscriptions: refcount manager fires the
-  // wire-level subscribe on first acquire, unsubscribe on last
-  // release. The $effect runs once per devicePath value; teardown
-  // calls release.
-  $effect(() => {
-    const path = fx.devicePath;
-    if (!path) return;
-    const releases = [
-      selectedTrackStore.subscribeProperty(path, 'ir_category_index'),
-      selectedTrackStore.subscribeProperty(path, 'ir_file_index'),
-      selectedTrackStore.subscribeProperty(path, 'ir_attack_time'),
-      selectedTrackStore.subscribeProperty(path, 'ir_decay_time'),
-      selectedTrackStore.subscribeProperty(path, 'ir_size_factor'),
-      selectedTrackStore.subscribeProperty(path, 'ir_time_shaping_on'),
-      selectedTrackStore.subscribeProperty(path, 'ir_category_list'),
-      selectedTrackStore.subscribeProperty(path, 'ir_file_list')
-    ];
-    return () => releases.forEach((fn) => fn());
-  });
 
   // Helper functions to check if a specific type is active
   function isConvolutionTypeActive(index: number): boolean {

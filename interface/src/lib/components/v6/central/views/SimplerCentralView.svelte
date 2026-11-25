@@ -27,6 +27,7 @@
   import { onDestroy } from 'svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { useDeviceProperties } from '../useDeviceProperties.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { SIMPLER_PANEL, SAMPLE_LFO_WAVES, sampleEnvelope } from './panel/samplePanels';
   import EnvelopeGraph from '../EnvelopeGraph.svelte';
@@ -191,36 +192,48 @@
   let transposeValue = $derived(device ? selectedTrackStore.paramValueArmed(paramPathOf('TRANSPOSE')) ?? 0 : 0);
   let fadeValue = $derived(device ? selectedTrackStore.paramValueArmed(paramPathOf('FADE')) ?? 0.5 : 0.5);
 
-  // PR-3.5.7-impl: v3 property reads. Same `?? default` posture as
-  // before — `undefined` while the cold-read echo is in flight.
-  let playbackMode = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'playback_mode') as number | undefined : undefined) ?? 0);
-  let warpMode = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.warp_mode') as number | undefined : undefined) ?? 0);
+  // PR-3.5.7-impl: v3 property reads, subscribed for as long as this view
+  // is mounted with a resolved devicePath (re-subscribed on an instrument
+  // switch). Each reads its default while the cold-read echo is in flight.
+  const deviceProps = useDeviceProperties(() => devicePath, [
+    'playback_mode',
+    'slicing_playback_mode',
+    'sample.warp_mode',
+    'sample.warping',
+    'sample.slicing_sensitivity',
+    'sample.gain',
+    'sample.start_marker',
+    'sample.end_marker',
+    'sample.length',
+    'sample.slices'
+  ]);
+  let playbackMode = $derived(deviceProps.get('playback_mode', 0));
+  let warpMode = $derived(deviceProps.get('sample.warp_mode', 0));
   // sample.warping is bool on LOM but ships as int 0/1 on the wire (see
   // PropertyComponent.PropertySpec.coerce_bool_to_int) — coerce here.
-  let warping = $derived<boolean>(devicePath ? Boolean(selectedTrackStore.propertyValue(devicePath, 'sample.warping') ?? 0) : false);
+  let warping = $derived(Boolean(deviceProps.get('sample.warping', 0)));
   // Loop is Simpler DeviceParameter index 5 ("S Loop On"), bool-as-float 0/1.
   let loopOnValue = $derived(device ? selectedTrackStore.paramValueArmed(paramPathOf('LOOP_ON')) ?? 0 : 0);
   let loopOn = $derived<boolean>(Boolean(loopOnValue));
-  let slicingSensitivity = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.slicing_sensitivity') as number | undefined : undefined) ?? 0.5);
+  let slicingSensitivity = $derived(deviceProps.get('sample.slicing_sensitivity', 0.5));
   // Slicing-mode voicing (Poly/Thru tab in the top-left column when
   // in Slice mode). Default to Thru while the cold-read is in flight
   // so the UI matches the post-swap default that SimplerLoadComponent
   // pins on the device.
-  let slicingPlaybackMode = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'slicing_playback_mode') as number | undefined : undefined) ?? SLICING_PLAYBACK_MODE.THRU);
-  let sampleGain = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.gain') as number | undefined : undefined) ?? 1.0);
+  let slicingPlaybackMode = $derived<number>(deviceProps.get('slicing_playback_mode', SLICING_PLAYBACK_MODE.THRU));
+  let sampleGain = $derived(deviceProps.get('sample.gain', 1.0));
 
   // Sample marker properties (for syncing between modes)
-  let sampleStartMarker = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.start_marker') as number | undefined : undefined) ?? 0);
-  let sampleEndMarker = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.end_marker') as number | undefined : undefined) ?? 0);
-  let sampleLengthFrames = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.length') as number | undefined : undefined) ?? 1);
+  let sampleStartMarker = $derived(deviceProps.get('sample.start_marker', 0));
+  let sampleEndMarker = $derived(deviceProps.get('sample.end_marker', 0));
+  let sampleLengthFrames = $derived(deviceProps.get('sample.length', 1));
   // Slice frame positions (Live 11+). Wire shape is a JSON-stringified
   // list-of-int — same lane Compressor2's routing pair uses. Parse
   // here so the canvas in SimplerLoopControl receives a numeric array;
   // empty array on cold-start / parse failure (matches the "no slices
   // yet" UI state where no lines render).
-  let sampleSlicesRaw = $derived<unknown>(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.slices') : undefined);
   let sampleSlices = $derived.by<number[]>(() => {
-    const raw = sampleSlicesRaw;
+    const raw = deviceProps.raw('sample.slices');
     if (typeof raw !== 'string' || !raw) return [];
     try {
       const parsed = JSON.parse(raw);
@@ -228,28 +241,6 @@
     } catch {
       return [];
     }
-  });
-
-  // PR-3.5.7-impl: refcount the 8 property subscriptions for as long as
-  // this component is mounted with a resolved devicePath. The manager
-  // sends `/looping/v3/property/subscribe` on first acquire and
-  // `unsubscribe` on last release. Effect cleanup runs on unmount AND
-  // whenever `devicePath` changes (e.g. instrument switch).
-  $effect(() => {
-    if (!devicePath) return;
-    const release = [
-      selectedTrackStore.subscribeProperty(devicePath, 'playback_mode'),
-      selectedTrackStore.subscribeProperty(devicePath, 'slicing_playback_mode'),
-      selectedTrackStore.subscribeProperty(devicePath, 'sample.warp_mode'),
-      selectedTrackStore.subscribeProperty(devicePath, 'sample.warping'),
-      selectedTrackStore.subscribeProperty(devicePath, 'sample.slicing_sensitivity'),
-      selectedTrackStore.subscribeProperty(devicePath, 'sample.gain'),
-      selectedTrackStore.subscribeProperty(devicePath, 'sample.start_marker'),
-      selectedTrackStore.subscribeProperty(devicePath, 'sample.end_marker'),
-      selectedTrackStore.subscribeProperty(devicePath, 'sample.length'),
-      selectedTrackStore.subscribeProperty(devicePath, 'sample.slices')
-    ];
-    return () => release.forEach((fn) => fn());
   });
 
   // Classic mode parameters (for syncing between modes)

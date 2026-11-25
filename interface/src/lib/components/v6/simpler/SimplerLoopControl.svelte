@@ -19,6 +19,7 @@
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
 	import { getPeaks, cancelPeaks } from '$lib/services/clipWaveformService';
 	import { logger } from '$lib/utils/logger';
+	import { useDeviceProperties } from '$lib/components/v6/central/useDeviceProperties.svelte';
 
 	const PEAK_BINS = 1024;
 
@@ -74,34 +75,20 @@
 		selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, SIMPLER_PARAMS.FADE)) ?? 0
 	);
 
-	// Slicing mode: Read properties (frame-based) via v3 path-keyed API.
-	let startMarker = $derived<number>(
-		(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.start_marker') as number | undefined : undefined) ?? 0
-	);
-	let endMarker = $derived<number>(
-		(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.end_marker') as number | undefined : undefined) ?? 0
-	);
-	let sampleLengthFrames = $derived<number>(
-		(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.length') as number | undefined : undefined) ?? 1
-	);
-	let sampleFilePath = $derived<string>(
-		(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.file_path') as string | undefined : undefined) ?? ''
-	);
-
-	// PR-3.5.7-impl: own subscriptions for the four `sample.*` properties
-	// this control reads. SimplerCentralView also subscribes to these —
+	// Slicing mode: Read properties (frame-based) via v3 path-keyed API,
+	// subscribed here too. SimplerCentralView also subscribes to these —
 	// the refcount manager idempotently dedupes (refcount → 2, then → 1
 	// when one consumer leaves), no second wire subscribe.
-	$effect(() => {
-		if (!devicePath) return;
-		const release = [
-			selectedTrackStore.subscribeProperty(devicePath, 'sample.start_marker'),
-			selectedTrackStore.subscribeProperty(devicePath, 'sample.end_marker'),
-			selectedTrackStore.subscribeProperty(devicePath, 'sample.length'),
-			selectedTrackStore.subscribeProperty(devicePath, 'sample.file_path')
-		];
-		return () => release.forEach((fn) => fn());
-	});
+	const deviceProps = useDeviceProperties(() => devicePath, [
+		'sample.start_marker',
+		'sample.end_marker',
+		'sample.length',
+		'sample.file_path'
+	]);
+	let startMarker = $derived(deviceProps.get('sample.start_marker', 0));
+	let endMarker = $derived(deviceProps.get('sample.end_marker', 0));
+	let sampleLengthFrames = $derived(deviceProps.get('sample.length', 1));
+	let sampleFilePath = $derived(deviceProps.get('sample.file_path', ''));
 
 	// Unified normalized values (0-1) for display - adapts based on mode
 	let sampleStart = $derived(
