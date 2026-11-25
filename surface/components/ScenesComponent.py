@@ -27,8 +27,9 @@ Rows landed so far
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
+from ._common import coerce_str, LOM_ERRORS
 from . import path_resolver
 from .path_resolver import ResolveStatus
 
@@ -38,7 +39,7 @@ logger = logging.getLogger("looping")
 # Tuple of exceptions every LOM touch in this module must catch.
 # Includes ``TypeError`` for ``Boost.Python.ArgumentError`` per
 # [CLAUDE.md] merge-gate rule (9).
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum; renames fail at import time) ------------
@@ -60,16 +61,7 @@ V3_ERROR_PATH_NOT_SUPPORTED = "path-not-supported"
 # --- helpers --------------------------------------------------------------
 
 
-def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; ``None`` → ``""``."""
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 # ResolveStatus → wire-error-code mapping for scenePath. NOT_FOUND

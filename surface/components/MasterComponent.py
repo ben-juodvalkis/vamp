@@ -106,6 +106,8 @@ import logging
 import math
 from typing import Callable, Dict, Optional, Tuple
 
+from ._common import coerce_str, safe_emit
+
 logger = logging.getLogger("looping")
 
 
@@ -176,16 +178,8 @@ _MIXER_PARAM_FOR: Dict[str, str] = {
 
 
 def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; everything else → ``str()``.
-
-    Mirrors TrackMetadataComponent._coerce_str.
-    """
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+    """``coerce_str``, keeping this component's ``None`` → ``"None"``."""
+    return coerce_str(x, none="None")
 
 
 # --- component ------------------------------------------------------------
@@ -579,12 +573,7 @@ class MasterComponent:
     def _safe_emit(self, address: str, payload: tuple) -> None:
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning(
-                "MasterComponent: emit %s failed: %s", address, e,
-            )
+        safe_emit(self._emit, address, payload, "MasterComponent")
 
     def _emit_error(
         self,

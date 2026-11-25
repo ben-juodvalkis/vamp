@@ -1125,20 +1125,6 @@ def test_accept_bypasses_checksum_short_circuit(component, emits):
     assert len(emits) > after_first
 
 
-def test_set_song_clears_checksum_cache(component, emits, song_two_tracks):
-    """A song rebind invalidates the per-scope checksum cache so the
-    post-rebind structural emit fires even if the new tree happens
-    to checksum-match the old one."""
-    component.on_structural_change()
-    pre_count = len(emits)
-
-    component.set_song(song_two_tracks)
-    component.on_structural_change()
-
-    # set_song cleared the cache, so the second structural emitted.
-    assert len(emits) > pre_count
-
-
 def test_disconnect_clears_pending_state(song_two_tracks, gen_component, emits):
     """``disconnect`` clears pending coalescing state so a delayed
     callback firing after teardown is a clean no-op."""

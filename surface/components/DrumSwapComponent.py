@@ -40,6 +40,7 @@ import logging
 import re
 from collections.abc import Callable
 
+from ._common import coerce_str, LOM_ERRORS
 from .drum_vm_functions import PAD_NAME_MAX
 from .drum_vm_resolve import first_instrument, instrument_name, pad_devices, pad_name
 from .path_resolver import ResolveStatus, resolve_device, resolve_track
@@ -51,7 +52,7 @@ except Exception:  # pragma: no cover — only if LOMListeners cannot import
 
 logger = logging.getLogger("looping")
 
-_LOM_ERRORS = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 V3_DRUM_SHOW_FOR_SWAP_ADDRESS = "/looping/v3/drum/show_for_swap"
 V3_DRUM_SHOW_FOR_SWAP_ACK_ADDRESS = "/looping/v3/drum/show_for_swap/ack"
@@ -92,12 +93,7 @@ SWAP_UNDO_MAX_MS = 60_000
 _RACK_PATH = re.compile(r"^tracks/(\d+)/devices/(\d+)$")
 
 
-def _coerce_str(x) -> str:
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 def scroll_for(note: int, current: int) -> int:

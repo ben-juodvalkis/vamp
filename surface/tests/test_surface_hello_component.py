@@ -182,3 +182,10 @@ def test_protocol_version_matches_handshake_supported():
     pre-reject a surface that would then successfully handshake (or
     vice-versa). This test is the belt against a one-sided bump."""
     assert PROTOCOL_VERSION in SUPPORTED_VERSIONS
+
+
+def test_both_protocol_versions_are_the_handshake_head():
+    """Derived, not copied: a bump prepends to SUPPORTED_VERSIONS only."""
+    from components.DebugComponent import PROTOCOL_VERSION as debug_version
+
+    assert PROTOCOL_VERSION == SUPPORTED_VERSIONS[0] == debug_version

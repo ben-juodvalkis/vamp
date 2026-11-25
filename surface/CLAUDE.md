@@ -13,12 +13,13 @@
   `from .key_detect import …`). The absolute `from components.x import` form
   passes pytest, because the tests put the surface root on `sys.path`, and
   fails inside Live, which loads the package relatively.
-- A protocol bump changes six literals in one commit:
-  `DebugComponent.PROTOCOL_VERSION`, `SurfaceHelloComponent.PROTOCOL_VERSION`,
-  `HandshakeComponent.SUPPORTED_VERSIONS` (prepend), the UI's
+- A protocol bump changes four literals in one commit:
+  `HandshakeComponent.SUPPORTED_VERSIONS` (prepend; `DebugComponent` and
+  `SurfaceHelloComponent` derive `PROTOCOL_VERSION` from its head), the UI's
   `v3Handshake.ts` `UI_SUPPORTED_VERSIONS`, and the screenshot mock's
   `scripts/shot/scene.mjs` `PROTOCOL_VERSION` and `scripts/shot/capture.mjs`
-  `UI_SUPPORTED_VERSIONS`. Then grep for the old version string.
+  `UI_SUPPORTED_VERSIONS`. Then grep for the old version string (the
+  tests pin it too).
 
 Python Control Surface is the sole live backend bridging the
 SvelteKit interface to Ableton Live's internal API. The last legacy
@@ -202,10 +203,10 @@ inside `resetForSurfaceRestart` / `resetTree` rather than at each call
 site, and by recording an ETag only after a bundle applies cleanly.
 
 Version constants that must move together:
-`HandshakeComponent.SUPPORTED_VERSIONS`,
-`DebugComponent.PROTOCOL_VERSION`,
-`SurfaceHelloComponent.PROTOCOL_VERSION`, and the UI's
-`UI_SUPPORTED_VERSIONS`. 3.5.0 was the **first bump that is not an
+`HandshakeComponent.SUPPORTED_VERSIONS` (whose head
+`DebugComponent.PROTOCOL_VERSION` and
+`SurfaceHelloComponent.PROTOCOL_VERSION` are derived from since
+2026-11-25) and the UI's `UI_SUPPORTED_VERSIONS`. 3.5.0 was the **first bump that is not an
 arity change**, and for one release the UI advertised two versions
 because it could decode a 3.4.0 surface's bundles exactly as well.
 3.6.0 took it back to one — see below.

@@ -24,16 +24,14 @@ import collections
 import logging
 import re as _re
 
+from .HandshakeComponent import SUPPORTED_VERSIONS
+
 logger = logging.getLogger("looping")
 
 
 # Wire addresses — class-level constants so renames fail scope-partition
 # and fixture tests, not at runtime.
 PROTOCOL_VERSION_ADDRESS = "/looping/protocol/version"
-REGISTRY_DUMP_ADDRESS = "/looping/v2/registry/dump"
-REGISTRY_DUMP_REPLY_ADDRESS = "/looping/v2/registry/dump_reply"
-REGISTRY_PROBE_RESOLVE_ADDRESS = "/looping/v2/registry/probe_resolve"
-REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS = "/looping/v2/registry/probe_resolve_reply"
 LOM_INTROSPECT_ADDRESS = "/looping/probe/lom_introspect"
 LOM_INVOKE_ADDRESS = "/looping/probe/lom_invoke"
 LOM_SET_ADDRESS = "/looping/probe/lom_set"
@@ -58,7 +56,9 @@ CLIP_JUMP_PROBE_ADDRESS = "/looping/probe/clip_jump_probe"
 # 2026-09-10 bumped to 3.8.0 (issue #491): the ``pads/<note>`` path
 # segment and the pad-scoped ``state/full/tree``.
 # 2026-09-15 bumped to 3.9.0 (ADR-439): T record 14 -> 15, ``preset``.
-PROTOCOL_VERSION = "3.13.0"
+# Derived: the head of ``HandshakeComponent.SUPPORTED_VERSIONS`` is the
+# one literal a bump changes on this side.
+PROTOCOL_VERSION = SUPPORTED_VERSIONS[0]
 
 
 # --- probe chain grammar ---------------------------------------------------
@@ -225,173 +225,6 @@ class DebugComponent:
         Reply shape matches [04 §1]: one string arg with the semver.
         """
         self._emit(PROTOCOL_VERSION_ADDRESS, (PROTOCOL_VERSION,))
-        return None
-
-    # --- /looping/v2/registry/dump ----------------------------------------
-
-    def handle_registry_dump(self, args, source_addr):
-        """Probe address — emits the listener bookkeeper's walk counts.
-
-        Reply: ``/looping/v2/registry/dump_reply
-        [tracks, devices, params, fresh_tracks, fresh_devices, fresh_params]``.
-
-        Wire address still uses the historical ``registry`` segment
-        (the underlying class is now ``LOMListeners`` post-Phase-1
-        Commit A; the wire name is preserved for tooling
-        compatibility — see ``registry_probe_resolve_shot.js``).
-
-        After PR-4g there is no longer any stored-vs-fresh
-        distinction — both number sets are walk-derived. Reply
-        shape is preserved so existing diagnostic drivers stay
-        wire-compatible.
-        """
-        if self._registry is None:
-            self._emit(REGISTRY_DUMP_REPLY_ADDRESS, (-1, -1, -1, -1, -1, -1))
-            return None
-        s = self._registry.dump_state()
-        logger.info(
-            "registry dump: stored=(t=%d d=%d p=%d) fresh=(t=%d d=%d p=%d)",
-            s["tracks"], s["devices"], s["params"],
-            s["fresh_tracks"], s["fresh_devices"], s["fresh_params"],
-        )
-        self._emit(
-            REGISTRY_DUMP_REPLY_ADDRESS,
-            (
-                s["tracks"], s["devices"], s["params"],
-                s["fresh_tracks"], s["fresh_devices"], s["fresh_params"],
-            ),
-        )
-        return None
-
-    # --- /looping/v2/registry/probe_resolve -------------------------------
-
-    def handle_registry_probe_resolve(self, args, source_addr):
-        """Probe ``resolve_device`` and report the outcome.
-
-        Reply: ``/looping/v2/registry/probe_resolve_reply
-        [found:int, was_rebuild:int,
-         stored_tracks_before, stored_devices_before, stored_params_before,
-         stored_tracks_after,  stored_devices_after,  stored_params_after]``.
-
-        ``found`` is 1 iff ``resolve_device(device_id)`` returned a
-        tuple.
-
-        **PR-4g:** ``was_rebuild`` is always 0 in walk mode. The reply
-        shape is preserved so existing driver tools
-        (``registry_probe_resolve_shot.js``) stay wire-compatible, but
-        the F1 "lazy rebuild on miss" path retired with the registry's
-        forward maps — there is no rebuild to observe. The three
-        stored-count fields now return the same walk-derived value
-        before and after the resolve, since ``resolve_device`` mutates
-        nothing.
-
-        Expected arg: ``[device_id:int]``. ``-1`` is reserved for
-        "registry absent" sentinels in the reply — mirrors the
-        convention in ``handle_registry_dump``.
-        """
-        if self._registry is None or not args:
-            self._emit(
-                REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS,
-                (-1, -1, -1, -1, -1, -1, -1, -1),
-            )
-            return None
-        try:
-            device_id = int(args[0])
-        except (TypeError, ValueError):
-            self._emit(
-                REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS,
-                (-1, -1, -1, -1, -1, -1, -1, -1),
-            )
-            return None
-        before_t = self._registry.track_count
-        before_d = self._registry.device_count
-        before_p = self._registry.param_count
-        resolved = self._registry.resolve_device(device_id)
-        after_t = self._registry.track_count
-        after_d = self._registry.device_count
-        after_p = self._registry.param_count
-        found = 1 if resolved is not None else 0
-        was_rebuild = 1 if (
-            before_t != after_t
-            or before_d != after_d
-            or before_p != after_p
-        ) else 0
-        logger.info(
-            "registry probe_resolve: id=%d found=%d rebuild=%d "
-            "before=(t=%d d=%d p=%d) after=(t=%d d=%d p=%d)",
-            device_id, found, was_rebuild,
-            before_t, before_d, before_p,
-            after_t, after_d, after_p,
-        )
-        self._emit(
-            REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS,
-            (
-                found, was_rebuild,
-                before_t, before_d, before_p,
-                after_t, after_d, after_p,
-            ),
-        )
-        return None
-
-    # --- /looping/v2/registry/introspect_track -----------------------------
-
-    def handle_registry_introspect_track(self, args, source_addr):
-        """One-shot: dump the id-like attributes of the first regular track.
-
-        Reply: ``/looping/v2/registry/introspect_reply [json_str]``.
-
-        05a PR-1 diagnostic: `_live_ptr` is a Python-wrapper pointer,
-        not the LOM id M4L uses. We need to find the attribute that
-        returns the SAME integer as M4L's `LiveAPI.id`. This probe
-        reads several candidates off the first non-master track and
-        hands the JSON back for a side-by-side comparison. Remove
-        once we've picked the right attribute and fixed _safe_int_id.
-        """
-        import json
-        payload = {"error": None, "tracks": []}
-        if self._registry is None:
-            payload["error"] = "no registry"
-            self._emit(
-                "/looping/v2/registry/introspect_reply", (json.dumps(payload),),
-            )
-            return None
-        try:
-            song = self._registry._song
-            candidates = ["id", "_live_ptr", "live_id", "live_object_id",
-                          "_live_object", "_live_object_id"]
-            # First regular track
-            tracks = list(song.tracks)[:2]
-            for i, t in enumerate(tracks):
-                entry = {"index": i, "type": type(t).__name__, "attrs": {}}
-                for a in candidates:
-                    try:
-                        v = getattr(t, a, "<missing>")
-                        entry["attrs"][a] = repr(v)[:80]
-                    except Exception as e:
-                        entry["attrs"][a] = "raised: %s" % e
-                # Also show all public-ish attrs that might contain "id"
-                id_like = [n for n in dir(t) if "id" in n.lower() or "ptr" in n.lower()]
-                entry["id_like_attrs"] = sorted(id_like)[:30]
-                # Check for .canonical_parent chain & devices ids
-                try:
-                    devs = list(getattr(t, "devices", ()))[:1]
-                    if devs:
-                        d = devs[0]
-                        entry["device0"] = {
-                            "type": type(d).__name__,
-                            "id": repr(getattr(d, "id", "<missing>"))[:80],
-                            "_live_ptr": repr(getattr(d, "_live_ptr", "<missing>"))[:80],
-                            "id_like": sorted([n for n in dir(d)
-                                               if "id" in n.lower() or "ptr" in n.lower()])[:20],
-                        }
-                except Exception as e:
-                    entry["device0_err"] = str(e)
-                payload["tracks"].append(entry)
-        except Exception as e:
-            payload["error"] = "%s: %s" % (type(e).__name__, e)
-        blob = json.dumps(payload)
-        logger.info("registry introspect: %s", blob[:500])
-        self._emit("/looping/v2/registry/introspect_reply", (blob,))
         return None
 
     # --- /looping/probe/lom_introspect ------------------------------------

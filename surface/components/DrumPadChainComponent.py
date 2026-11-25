@@ -68,6 +68,7 @@ import json
 import logging
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from ._common import safe_emit, WarnOnce
 from .drum_vm_functions import (
     _LOM_ERRORS,
     DEVICE_TYPE_INSTRUMENT,
@@ -345,7 +346,7 @@ class DrumPadChainComponent:
         self._on_param_value_changed = on_param_value_changed
         self._states: Dict[str, _PadChainState] = {}
         self._disconnected = False
-        self._warned: Set[Tuple[str, str]] = set()
+        self._warned = WarnOnce("DrumPadChainComponent")
         logger.info(
             "DrumPadChainComponent: ready (presence=%s; subscription=%s<note>; provider=%s)",
             PAD_FX_PROPERTY, PAD_CHAIN_PROPERTY_PREFIX, PROVIDER_NAME,
@@ -671,17 +672,10 @@ class DrumPadChainComponent:
     def _safe_emit(self, address: str, payload: tuple) -> None:
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning("DrumPadChainComponent: emit %s failed: %s", address, e)
+        safe_emit(self._emit, address, payload, "DrumPadChainComponent")
 
     def _warn_once(self, device_path: str, key: str, message: str) -> None:
-        k = (device_path, key)
-        if k in self._warned:
-            return
-        self._warned.add(k)
-        logger.warning("DrumPadChainComponent: %s: %s", device_path, message)
+        self._warned(device_path, key, message)
 
 
 __all__ = [

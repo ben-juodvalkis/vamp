@@ -2205,3 +2205,57 @@ def test_a_sample_marker_moved_in_live_reaches_the_ui(emits, generation):
     assert emits == [
         (V3_PROPERTY_VALUE_ADDRESS, ("tracks/0/devices/0", "sample.start_marker", 4410)),
     ]
+
+
+# --- detach goes to the object the listener was added to -------------------
+
+
+def test_unsubscribe_detaches_from_the_container_it_attached_to(
+    component, song_with_simpler_and_drift,
+):
+    """Live replaced ``device.sample`` without the safety net seeing it
+    yet. A detach that re-walked ``listener_path`` reached the newcomer
+    (which never held the listener) and left the old one attached."""
+    _song, simpler, _drift = song_with_simpler_and_drift
+    old_sample = simpler.sample
+    component.handle_subscribe(args=("tracks/0/devices/0", "sample.warping"), source_addr=None)
+    assert len(old_sample.listeners_for("warping")) == 1
+
+    simpler.sample = StubLOMContainer(warping=True)  # no sample listener fire
+    component.handle_unsubscribe(args=("tracks/0/devices/0", "sample.warping"), source_addr=None)
+
+    assert old_sample.listeners_for("warping") == []
+    assert simpler.sample.listeners_for("warping") == []
+
+
+def test_disconnect_detaches_from_the_container_it_attached_to(
+    component, song_with_simpler_and_drift,
+):
+    _song, simpler, _drift = song_with_simpler_and_drift
+    old_sample = simpler.sample
+    component.handle_subscribe(args=("tracks/0/devices/0", "sample.warping"), source_addr=None)
+    simpler.sample = StubLOMContainer(warping=True)
+    component.disconnect()
+    assert old_sample.listeners_for("warping") == []
+
+
+def test_detach_from_a_torn_down_container_does_not_raise(
+    component, song_with_simpler_and_drift,
+):
+    """The recorded container may be a stale handle by the time we detach;
+    Live's ``Boost.Python.ArgumentError`` is swallowed."""
+    _song, _simpler, _drift = song_with_simpler_and_drift
+    component.handle_subscribe(args=("tracks/0/devices/0", "sample.warping"), source_addr=None)
+
+    class _Dead:
+        def remove_warping_listener(self, cb):
+            raise TypeError(
+                "Python argument types in Sample.remove_warping_listener did "
+                "not match C++ signature: (TPyHandle<ASample>, object)"
+            )
+
+    key = ("tracks/0/devices/0", "sample.warping")
+    device, spec, cb, _target = component._subscriptions[key]
+    component._subscriptions[key] = (device, spec, cb, _Dead())
+    component.handle_unsubscribe(args=key, source_addr=None)
+    assert key not in component._subscriptions

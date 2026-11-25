@@ -35,8 +35,9 @@ wire error is overkill.
 from __future__ import annotations
 
 import logging
-from typing import Callable, Tuple
+from typing import Callable
 
+from ._common import LOM_ERRORS
 from .path_resolver import same_lom_handle
 
 logger = logging.getLogger("looping")
@@ -45,7 +46,7 @@ logger = logging.getLogger("looping")
 # Tuple of exceptions every LOM touch must catch. ``TypeError`` covers
 # ``Boost.Python.ArgumentError`` (TypeError subclass) raised when a
 # C++ handle is torn down — see CLAUDE.md merge-gate rule (9).
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum; renames fail at import time) ------------

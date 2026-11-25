@@ -39,6 +39,7 @@ import time
 import unicodedata
 from typing import Callable, Dict, List, Optional, Tuple
 
+from ._common import LOM_ERRORS
 from .live_library import M4L_DEVICES_PLACE, LiveLibrary
 
 logger = logging.getLogger("looping")
@@ -69,7 +70,7 @@ def browser_name(segment: str) -> str:
 # Tuple of exceptions every LOM touch must catch. ``TypeError`` covers
 # ``Boost.Python.ArgumentError`` (TypeError subclass) raised when a
 # C++ handle is torn down — see CLAUDE.md merge-gate rule (9).
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # Ableton-native extensions Live strips from BrowserItem display names.

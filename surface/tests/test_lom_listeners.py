@@ -3,8 +3,7 @@
 Covers the Phase 1 Commit A listener-bookkeeper surface: LOM listener
 lifecycle (root ``tracks`` + per-track ``devices`` + per-param
 ``value``), the structural-change fan-out, the mutation callbacks
-(``on_device_added``, ``on_device_removed``, ``on_param_value_changed``),
-and the ``track_id_for`` reverse lookup used by ``MutationComponent``.
+(``on_device_added``, ``on_device_removed``, ``on_param_value_changed``).
 
 The forward-map surface (``resolve_param`` / ``resolve_legacy_param``
 / ``device_params``) that pre-existed Commit A retired with the class
@@ -323,38 +322,6 @@ def test_tracks_changed_attaches_devices_listener_on_new_track():
     new_device = make_device(250, [350])
     t1.set_devices([t1.devices[0], new_device])
     assert reg.resolve_device(250) is not None
-
-
-# --- track_id_for ----------------------------------------------------------
-
-
-def test_track_id_for_master_is_sentinel():
-    song = StubSong(tracks=[])
-    reg = LOMListeners(song=song)
-    assert reg.track_id_for(song.master_track) == MASTER_TRACK_ID
-
-
-def test_track_id_for_regular_is_live_ptr_masked():
-    t1 = make_track(100, [])
-    song = StubSong(tracks=[t1])
-    reg = LOMListeners(song=song)
-    assert reg.track_id_for(t1) == _safe_int_id(t1)
-
-
-def test_track_id_for_unknown_track_returns_none():
-    song = StubSong(tracks=[])
-    reg = LOMListeners(song=song)
-    stray = make_track(999, [])
-    assert reg.track_id_for(stray) is None
-
-
-def test_track_id_for_after_disconnect_returns_none():
-    t1 = make_track(100, [])
-    song = StubSong(tracks=[t1])
-    reg = LOMListeners(song=song)
-    reg.disconnect()
-    assert reg.track_id_for(t1) is None
-    assert reg.track_id_for(song.master_track) is None
 
 
 # --- disconnect ------------------------------------------------------------
@@ -1022,19 +989,6 @@ def test_listener_attaches_when_song_tracks_rewraps_each_read():
     assert path == "tracks/0/devices/0/params/0"
 
 
-def test_track_id_for_returns_id_across_wrapper_rewrap():
-    """``track_id_for`` compares by LOM identity, not Python ``is``."""
-    canon = make_track(100, [])
-    song = _FreshWrapperSong(canonical_tracks=[canon])
-    reg = LOMListeners(song=song)
-
-    # Ask about a fresh wrapper, not the canonical object.
-    fresh_wrapper = song.tracks[0]
-    assert fresh_wrapper is not canon  # sanity: really a different object
-
-    assert reg.track_id_for(fresh_wrapper) == _safe_int_id(canon)
-
-
 def test_same_lom_track_helper_behaviour():
     """``_same_lom_track`` helper: None-safe, identity fast path, id fallback."""
     from components.LOMListeners import _same_lom_track
@@ -1459,6 +1413,49 @@ def test_post_add_reconciler_disconnect_cancels_pending():
 #
 # Same bug class as Issue #399 in TrackMetadataComponent, fixed there by
 # rebinding. Here the closure reads `_param_paths` at fire time instead.
+
+
+def test_post_add_reconciler_survives_a_devices_change_on_another_track():
+    """A plugin added on track A, then a devices change on track B inside
+    the 750 ms window: A's reconcile still runs. The prune used to walk
+    every pending key and drop any not on B, cancelling A's."""
+    initial = [StubParam(pid=9301)]
+    post = initial + [StubParam(pid=9302), StubParam(pid=9303)]
+    plugin = _HydratingDevice(did=530, initial_params=initial, post_hydrate_params=post)
+    track_a = StubTrack(tid=110, devices=[])
+    track_b = StubTrack(tid=111, devices=[])
+    song = StubSong(tracks=[track_a, track_b])
+    scheduler = _ManualScheduler()
+    fires: list[int] = []
+    reg = LOMListeners(
+        song=song,
+        on_structural_change=lambda: fires.append(1),
+        schedule_delayed=scheduler,
+    )
+
+    track_a.set_devices([plugin])
+    track_b.set_devices([make_device(531, [9310])])
+    plugin.hydrate()
+    fires.clear()
+    scheduler.fire_all()
+
+    assert fires == [1], "track A's reconcile was cancelled by track B's change"
+    assert next(p for p in plugin.parameters if p.id == 9303).has_value_listener()
+    reg.disconnect()
+
+
+def test_post_add_reconciler_bookkeeping_dropped_when_its_own_track_loses_the_device():
+    plugin = _HydratingDevice(did=540, initial_params=[StubParam(pid=9401)], post_hydrate_params=[])
+    track = StubTrack(tid=120, devices=[])
+    song = StubSong(tracks=[track])
+    scheduler = _ManualScheduler()
+    reg = LOMListeners(song=song, schedule_delayed=scheduler)
+    track.set_devices([plugin])
+    assert id(plugin) in reg._post_add_reconciler_epochs
+    track.set_devices([])
+    assert id(plugin) not in reg._post_add_reconciler_epochs
+    assert id(plugin) not in reg._post_add_track_of
+    reg.disconnect()
 
 
 def _reg_recording_paths(song):

@@ -1773,8 +1773,8 @@ source (§2.8): a tile names a native device instead of a preset file; arities
 are unchanged. 3.11.0 (2026-09-26) is the loads that name their Place
 (§2.8, §2.9): two optional trailing args on `prepare_for_preset` and
 `device/load`; record arities are unchanged.
-Kept in lockstep with `DebugComponent.PROTOCOL_VERSION` and
-`SurfaceHelloComponent.PROTOCOL_VERSION`.
+`DebugComponent.PROTOCOL_VERSION` and
+`SurfaceHelloComponent.PROTOCOL_VERSION` are derived from its head.
 
 **Negotiating down is nominal for anything that reads `state/full`.**
 The web UI therefore advertises `["3.13.0"]` alone: against an older

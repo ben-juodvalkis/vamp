@@ -10,9 +10,9 @@ this class is a strict bookkeeper:
 - It fans LOM events out through plain callables installed by the
   surface (``on_structural_change``, ``on_device_added``,
   ``on_device_removed``, ``on_param_value_changed``).
-- It exposes a single resolve method, ``track_id_for(track)``, used
-  by ``MutationComponent`` to translate a ``Track`` object into the
-  v2 wire id (master sentinel ``-1`` or masked ``_live_ptr``).
+- It keeps a few on-demand walk helpers (``resolve_track``,
+  ``resolve_device``, the counts) for tests and diagnostics; no wire
+  handler resolves through it.
 
 What it does NOT do:
 
@@ -102,6 +102,8 @@ from __future__ import annotations
 import logging
 from typing import Callable, Iterator, Optional, Tuple
 
+from ._common import is_stale_handle_error, safe_remove
+
 # Surface profiler. Hooks are no-ops unless LOOPING_SURFACE_PROFILE=1.
 try:
     from .. import perf_profiler
@@ -187,6 +189,12 @@ class LOMListeners:
         # post-hydration count against this snapshot; only fires
         # structural-change on a genuine increase.
         self._post_add_param_count_snapshot: dict[int, int] = {}
+
+        # Which track scheduled each pending reconcile, ``id(device)`` →
+        # ``id(track)``, so a devices change on one track prunes only the
+        # entries that track lost and leaves another track's pending
+        # reconcile alone.
+        self._post_add_track_of: dict[int, int] = {}
 
         # Structural-change callback. Fires on ``_on_tracks_changed``
         # and on any per-track ``_on_track_devices_changed``.
@@ -315,9 +323,9 @@ class LOMListeners:
     # --- walk helpers -----------------------------------------------------
     #
     # These are NOT a forward-map resolve surface. They are on-demand
-    # LOM walks kept here for the ``DebugComponent`` diagnostic probes
-    # (which introspect the listener state live in Log.txt) and for
-    # unit tests that need to assert walk behaviour. The v2 wire path
+    # LOM walks kept for unit tests that need to assert walk behaviour
+    # (the ``registry/*`` probes that also read them were deleted
+    # 2026-11-25). The v2 wire path
     # does its own inline walks in ``DevicesComponent``; nothing on
     # the hot path goes through these methods.
 
@@ -355,40 +363,11 @@ class LOMListeners:
                     return track, device, chain_idx
         return None
 
-    # --- track-id reverse lookup ------------------------------------------
-
-    def track_id_for(self, track) -> Optional[int]:
-        """Return the wire ``track_id`` for a ``Track`` object.
-
-        ``-1`` for the master track sentinel; masked ``_live_ptr`` for
-        regular tracks. Returns ``None`` if the track isn't reachable
-        from ``song.master_track`` / ``song.tracks`` (either a genuine
-        bug — listener fired on a dropped track — or a racing
-        disconnect).
-
-        Used by ``MutationComponent`` when the LOM hands it a
-        ``Track`` pointer and it needs the wire id for the emit
-        address.
-        """
-        if self._disconnected or track is None:
-            return None
-        master = self._safe_master_track()
-        if master is not None and _same_lom_track(track, master):
-            return MASTER_TRACK_ID
-        tid = _safe_int_id(track)
-        if tid is None:
-            return None
-        for t in self._iter_regular_tracks():
-            if _same_lom_track(t, track):
-                return _safe_int_id(t)
-        return None
-
     # --- diagnostics ------------------------------------------------------
     #
-    # The ``track_count`` / ``device_count`` / ``param_count`` properties
-    # exist so ``DebugComponent``'s ``registry/dump`` and
-    # ``registry/probe_resolve`` reply shapes stay wire-compatible.
-    # They compute via a single fresh walk — there is no stored map.
+    # ``track_count`` / ``device_count`` / ``param_count`` answered the
+    # deleted ``registry/*`` probes; the tests still read them. They compute via a single fresh walk —
+    # there is no stored map.
 
     @property
     def track_count(self) -> int:
@@ -413,28 +392,6 @@ class LOMListeners:
             for device in self._safe_devices(track):
                 count += sum(1 for _ in self._safe_params(device))
         return count
-
-    def dump_state(self) -> dict:
-        """Return the canonical walk counts under the legacy dump keys.
-
-        The reply shape (``tracks``, ``devices``, ``params``,
-        ``fresh_tracks``, ``fresh_devices``, ``fresh_params``) came
-        from an era where stored vs. fresh could legitimately diverge.
-        They never diverge in walk mode — we report the walk counts
-        under both sets of keys so the DebugComponent reply wire shape
-        is unchanged.
-        """
-        fresh_tracks = self.track_count
-        fresh_devices = self.device_count
-        fresh_params = self.param_count
-        return {
-            "tracks": fresh_tracks,
-            "devices": fresh_devices,
-            "params": fresh_params,
-            "fresh_tracks": fresh_tracks,
-            "fresh_devices": fresh_devices,
-            "fresh_params": fresh_params,
-        }
 
     # --- post-construction callback installation -------------------------
 
@@ -506,30 +463,15 @@ class LOMListeners:
         ]
         for tkey in departed:
             track, cb = self._track_device_listeners.pop(tkey)
-            remove = getattr(track, "remove_devices_listener", None)
-            if callable(remove):
-                try:
-                    remove(cb)
-                except Exception as e:
-                    if _is_stale_handle_error(e):
-                        # Live tears the C++ slot down before the Python
-                        # proxy leaves ``song.tracks``; the detach call
-                        # then raises ``Boost.Python.ArgumentError``
-                        # ("did not match C++ signature"). Log noise
-                        # only — the listener slot is already gone, so
-                        # there's nothing to clean up beyond our own
-                        # bookkeeping (already popped above). See
-                        # deferred-issues.md 2026-04-17 entry.
-                        logger.debug(
-                            "LOMListeners: remove_devices_listener "
-                            "skipped for stale track %r (already torn "
-                            "down)", track,
-                        )
-                    else:
-                        logger.warning(
-                            "LOMListeners: devices detach failed for "
-                            "departed track %r: %s", track, e,
-                        )
+            # Live tears the C++ slot down before the Python proxy leaves
+            # ``song.tracks``, so this detach usually meets a stale handle
+            # (``Boost.Python.ArgumentError``): the slot is already gone and
+            # our bookkeeping is popped above. See deferred-issues.md
+            # 2026-04-17.
+            safe_remove(
+                track, "remove_devices_listener", cb,
+                "LOMListeners (departed track)",
+            )
             # Detach any param listeners owned by the departed track's
             # devices. We fall back to the bookkeeping map: any param
             # pid whose owning track is gone needs its listener
@@ -671,11 +613,18 @@ class LOMListeners:
         # protects correctness (a stale callback finds no matching
         # epoch and no-ops); this just keeps the maps from growing
         # unbounded on long-running sessions with frequent swaps.
+        # Only this track's entries: a key another track scheduled is not
+        # in ``devices_now`` by construction, and dropping it cancelled
+        # that track's pending reconcile.
         live_device_keys = {id(d) for d in devices_now}
-        for dkey in list(self._post_add_reconciler_epochs.keys()):
-            if dkey not in live_device_keys:
-                self._post_add_reconciler_epochs.pop(dkey, None)
-                self._post_add_param_count_snapshot.pop(dkey, None)
+        tkey = id(track)
+        for dkey in [
+            k for k, owner in self._post_add_track_of.items()
+            if owner == tkey and k not in live_device_keys
+        ]:
+            self._post_add_track_of.pop(dkey, None)
+            self._post_add_reconciler_epochs.pop(dkey, None)
+            self._post_add_param_count_snapshot.pop(dkey, None)
 
         self._last_device_ids_per_track[id(track)] = after_ids
 
@@ -810,6 +759,7 @@ class LOMListeners:
         self._post_add_epoch_counter += 1
         epoch = self._post_add_epoch_counter
         self._post_add_reconciler_epochs[dkey] = epoch
+        self._post_add_track_of[dkey] = id(track)
 
         def _reconcile(d=device, t=track, captured_epoch=epoch,
                        captured_initial=initial_count):
@@ -953,36 +903,6 @@ class LOMListeners:
             device, _on_device_parameters_changed,
         )
 
-    def _detach_device_parameters_listener(self, device) -> None:
-        """Remove the parameters-listener for ``device``, if any.
-
-        Stale-handle suppression matches ``_detach_param_value_listener``:
-        Live downgrades the underlying ``Device`` to an invalid handle
-        the moment it leaves its chain, so the detach call raises a
-        C++-signature error. The bookkeeping is cleared either way.
-        """
-        dkey = id(device)
-        entry = self._device_parameters_listeners.pop(dkey, None)
-        if entry is None:
-            return
-        dev, cb = entry
-        remove = getattr(dev, "remove_parameters_listener", None)
-        if callable(remove):
-            try:
-                remove(cb)
-            except Exception as e:
-                if _is_stale_handle_error(e):
-                    logger.debug(
-                        "LOMListeners: remove_parameters_listener skipped "
-                        "for stale handle device=%r (already torn down)",
-                        dev,
-                    )
-                else:
-                    logger.warning(
-                        "LOMListeners: remove_parameters_listener failed "
-                        "for device=%r: %s", dev, e,
-                    )
-
     def _bind_device_name_listener(self, device) -> None:
         """Attach ``device.add_name_listener``; record for teardown.
 
@@ -1046,22 +966,7 @@ class LOMListeners:
         if entry is None:
             return
         dev, cb = entry
-        remove = getattr(dev, "remove_name_listener", None)
-        if not callable(remove):
-            return
-        try:
-            remove(cb)
-        except Exception as e:
-            if _is_stale_handle_error(e):
-                logger.debug(
-                    "LOMListeners: remove_name_listener skipped for stale "
-                    "handle device=%r (already torn down)", dev,
-                )
-            else:
-                logger.warning(
-                    "LOMListeners: remove_name_listener failed for "
-                    "device=%r: %s", dev, e,
-                )
+        safe_remove(dev, "remove_name_listener", cb, "LOMListeners")
 
     def _bind_param_value_listener(
         self, param_id: int, parameter, canonical_path: str,
@@ -1191,22 +1096,10 @@ class LOMListeners:
             if entry is None:
                 continue
             dev, cb = entry
-            remove = getattr(dev, "remove_parameters_listener", None)
-            if callable(remove):
-                try:
-                    remove(cb)
-                except Exception as e:
-                    if _is_stale_handle_error(e):
-                        logger.debug(
-                            "LOMListeners: remove_parameters_listener "
-                            "skipped for stale handle device=%r (departed "
-                            "chain)", dev,
-                        )
-                    else:
-                        logger.warning(
-                            "LOMListeners: remove_parameters_listener "
-                            "failed for device=%r: %s", dev, e,
-                        )
+            safe_remove(
+                dev, "remove_parameters_listener", cb,
+                "LOMListeners (departed chain)",
+            )
 
         # Name-listeners are keyed by wire id. Keep every device still in the
         # song — one moved to another track included, whichever track reports
@@ -1239,22 +1132,10 @@ class LOMListeners:
         if entry is None:
             return
         parameter, cb = entry
-        remove = getattr(parameter, "remove_value_listener", None)
-        if callable(remove):
-            try:
-                remove(cb)
-            except Exception as e:
-                if _is_stale_handle_error(e):
-                    logger.debug(
-                        "LOMListeners: remove_value_listener skipped for "
-                        "stale handle param_id=%d (device already torn "
-                        "down)", param_id,
-                    )
-                else:
-                    logger.warning(
-                        "LOMListeners: remove_value_listener failed for "
-                        "param_id=%d: %s", param_id, e,
-                    )
+        safe_remove(
+            parameter, "remove_value_listener", cb,
+            "LOMListeners param_id=%d" % param_id,
+        )
 
     # --- canonical-path helpers -------------------------------------------
 
@@ -1331,24 +1212,12 @@ class LOMListeners:
         if self._disconnected:
             return
         self._disconnected = True
-        remove_tracks_listener = getattr(
-            self._song, "remove_tracks_listener", None,
+        safe_remove(
+            self._song, "remove_tracks_listener", self._on_tracks_changed,
+            "LOMListeners.disconnect",
         )
-        if callable(remove_tracks_listener):
-            try:
-                remove_tracks_listener(self._on_tracks_changed)
-            except Exception as e:
-                logger.warning("LOMListeners: tracks detach failed: %s", e)
         for _tkey, (track, cb) in list(self._track_device_listeners.items()):
-            remove = getattr(track, "remove_devices_listener", None)
-            if callable(remove):
-                try:
-                    remove(cb)
-                except Exception as e:
-                    logger.warning(
-                        "LOMListeners: devices detach failed for %r: %s",
-                        track, e,
-                    )
+            safe_remove(track, "remove_devices_listener", cb, "LOMListeners.disconnect")
         self._track_device_listeners.clear()
         self._last_device_ids_per_track.clear()
         for pid in list(self._param_value_listeners.keys()):
@@ -1356,21 +1225,7 @@ class LOMListeners:
         for _dkey, (dev, cb) in list(
             self._device_parameters_listeners.items()
         ):
-            remove = getattr(dev, "remove_parameters_listener", None)
-            if callable(remove):
-                try:
-                    remove(cb)
-                except Exception as e:
-                    if _is_stale_handle_error(e):
-                        logger.debug(
-                            "LOMListeners: parameters-listener detach "
-                            "skipped for stale handle device=%r", dev,
-                        )
-                    else:
-                        logger.warning(
-                            "LOMListeners: parameters-listener detach "
-                            "failed for device=%r: %s", dev, e,
-                        )
+            safe_remove(dev, "remove_parameters_listener", cb, "LOMListeners.disconnect")
         self._device_parameters_listeners.clear()
         for did in list(self._device_name_listeners):
             self._detach_device_name_listener(did)
@@ -1383,6 +1238,7 @@ class LOMListeners:
         # garbage-collected.
         self._post_add_reconciler_epochs.clear()
         self._post_add_param_count_snapshot.clear()
+        self._post_add_track_of.clear()
 
     # --- safe LOM access --------------------------------------------------
 
@@ -1490,40 +1346,10 @@ class LOMListeners:
             return None
 
 
-def _is_stale_handle_error(exc: BaseException) -> bool:
-    """Return ``True`` when ``exc`` is Live's stale-LOM-handle marker.
-
-    Live's ``add_*_listener`` / ``remove_*_listener`` bindings are
-    boost::python signatures like
-    ``remove_value_listener(TPyHandle<ATimeableValue>, object)``. When
-    the underlying C++ object is gone (device just removed from chain,
-    preset-swap teardown, track deletion), the Python wrapper still
-    exists and the ``self`` slot still *types* as the wrapper class,
-    but boost::python's argument matcher refuses to unwrap it and
-    raises ``Boost.Python.ArgumentError`` (a ``TypeError`` subclass)
-    with "did not match C++ signature" in the message.
-
-    The error is semantically "the listener is already detached on the
-    LOM side, nothing to do here" — not a bug. Anything else from the
-    same remove_* call is a genuine problem (misconfigured listener,
-    crashed plugin) and stays at WARNING.
-
-    Match on the message text rather than the exception class because
-    ``Boost.Python.ArgumentError`` isn't importable from outside the
-    Live host — we'd have to conditionally import it, and a string
-    match is equally specific and simpler to test.
-    """
-    try:
-        msg = str(exc)
-    except Exception:
-        return False
-    # Both the signature-mismatch line and the trailing C++ signature
-    # line can appear; matching either substring is sufficient because
-    # ordinary TypeError messages never contain them.
-    return (
-        "did not match C++ signature" in msg
-        or "TPyHandle" in msg
-    )
+# Moved to ``_common`` (2026-11-25); the name stays importable from here
+# because ClipPropertiesComponent, ClipsComponent and ExclusiveArmComponent
+# import it from this module.
+_is_stale_handle_error = is_stale_handle_error
 
 
 def _safe_int_id(live_object) -> Optional[int]:
@@ -1592,7 +1418,7 @@ def _same_lom_track(a, b) -> bool:
     each read — two walks over ``song.tracks`` yield objects that
     compare unequal under ``is`` even though they represent the same
     underlying LOM track. This breaks identity comparisons like
-    ``track is other`` in ``_track_segment_for`` / ``track_id_for``:
+    ``track is other`` in ``_track_segment_for``:
     the track that ``_iter_all_tracks`` yields is already a different
     wrapper from the one ``_safe_tracks_list`` returns a moment later.
 

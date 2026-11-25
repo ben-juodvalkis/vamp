@@ -58,12 +58,13 @@ import logging
 import time
 from typing import Callable, Dict, Optional, Tuple
 
+from ._common import LOM_ERRORS
 from .drum_vm_functions import GESTURE_UNDO_IDLE_MS
 
 from . import live_library
 logger = logging.getLogger("looping")
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 _WRITE_ERRORS: Tuple[type, ...] = _LOM_ERRORS + (ValueError,)
 
 V3_WHEELS_PITCH_ADDRESS = "/looping/v3/wheels/pitch"
