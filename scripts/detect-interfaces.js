@@ -15,6 +15,11 @@ function configuredUsbc() {
     }
 }
 
+/** The iPad's page server port, `padLink.pagePort`. */
+function pagePort() {
+    return require('../interface/bridge/utils/constants').loadConstants().padLink.pagePort;
+}
+
 /**
  * Detect and report available network interfaces for iPad setup
  * Returns WiFi and USB-C interface addresses with clear access URLs
@@ -56,7 +61,7 @@ function detectInterfaces() {
 /**
  * Display network interface information with clear URLs
  */
-function displayInterfaces(port = 8889) {
+function displayInterfaces(port = pagePort()) {
     const interfaces = detectInterfaces();
     
     console.log('\n🌐 Network Interfaces Detected:');
@@ -144,7 +149,7 @@ function getBestIPadIP() {
 
 // CLI usage
 if (require.main === module) {
-    const port = process.argv[2] || 8889;
+    const port = process.argv[2] || pagePort();
     const interfaces = displayInterfaces(port);
     
     // Exit with status code indicating USB-C availability

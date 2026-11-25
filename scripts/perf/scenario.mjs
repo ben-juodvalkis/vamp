@@ -28,6 +28,7 @@
  */
 
 import { argv, exit } from 'node:process';
+import { authenticate } from '../lib/bridgeClient.mjs';
 
 const args = argv.slice(2);
 if (args.length === 0) {
@@ -62,6 +63,9 @@ function note(map, address) {
 
 async function connect() {
 	const ws = new WebSocket(BRIDGE_URL);
+	// Listening before open: the challenge is the connection's first frame.
+	const authed = authenticate(ws);
+	authed.catch(() => {}); // awaited below; a failed connect throws first
 	await new Promise((resolve, reject) => {
 		ws.addEventListener('open', () => resolve(undefined), { once: true });
 		ws.addEventListener('error', (e) => reject(e), { once: true });
@@ -72,6 +76,8 @@ async function connect() {
 			noteInbound(JSON.parse(event.data.toString()));
 		} catch {}
 	});
+	// Until the challenge is answered the bridge refuses every write.
+	console.log(`[scenario] bridge auth: ${await authed}`);
 	return ws;
 }
 

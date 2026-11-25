@@ -178,6 +178,11 @@ export default defineConfig({
 	optimizeDeps: {
 		include: ['devalue']
 	},
+	// `npm run ipad`'s page server (`preview:ipad`). It inherits `server`'s
+	// host, allowed hosts and proxy; the port is the iPad's own.
+	preview: {
+		port: constants.padLink.pagePort
+	},
 	server: {
 		host: '0.0.0.0',
 		port: constants.http.interfacePort,

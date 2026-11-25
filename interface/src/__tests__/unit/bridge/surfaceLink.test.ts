@@ -31,6 +31,11 @@ const osc: any = nodeRequire('osc');
 const { createSurfaceTcpClient, TCP_READY_ADDRESS } = nodeRequire('../../../../bridge/transport/SurfaceTcpClient.js');
 const { createSurfaceLink } = nodeRequire('../../../../bridge/transport/SurfaceLink.js');
 const { __testing } = nodeRequire('../../../../bridge/transport/WebSocketServer.js');
+// The router reads no config: the bridge hands it its backendScope, and this
+// test the tracked file's.
+nodeRequire('../../../../bridge/routing/messageRouter.js').configureRouting(
+	nodeRequire('../../../../../config/constants.json').osc.backendScope
+);
 
 interface Packet {
 	address: string;

@@ -53,6 +53,7 @@ import { open, readFile, stat } from 'fs/promises';
 import * as path from 'path';
 
 import { configPath, runtimeConstants } from '../runtimeConfig';
+import { logger } from '../../utils/logger';
 import {
 	THUMB_BINS,
 	THUMB_VERSION,
@@ -205,7 +206,7 @@ export function savePeakCache(cacheFile: string, map: CacheMap): void {
 		);
 		fs.renameSync(tmp, cacheFile);
 	} catch (err) {
-		console.warn(`   [thumbnails] could not write cache ${cacheFile}:`, (err as Error).message);
+		logger.warn('[thumbnails] could not write cache', { file: cacheFile, error: (err as Error).message });
 	}
 }
 
@@ -238,7 +239,7 @@ export function saveFailureLog(logFile: string, failures: FailureRecord[]): void
 		);
 		fs.renameSync(tmp, logFile);
 	} catch (err) {
-		console.warn(`   [thumbnails] could not write failure log ${logFile}:`, (err as Error).message);
+		logger.warn('[thumbnails] could not write failure log', { file: logFile, error: (err as Error).message });
 	}
 }
 
@@ -295,10 +296,9 @@ async function loadReducer(): Promise<Reducer | null> {
 			const fn = (decodeMod as unknown as { default?: DecodeFn }).default;
 			if (typeof fn === 'function') decode = fn;
 		} catch (err) {
-			console.warn(
-				'   [thumbnails] audio-decode unavailable — compressed (mp3/flac/ogg) will tombstone:',
-				(err as Error).message
-			);
+			logger.warn('[thumbnails] audio-decode unavailable — compressed (mp3/flac/ogg) will tombstone', {
+				error: (err as Error).message
+			});
 		}
 		return {
 			probeFormat: probeMod.probeFormat as ProbeFormat,
@@ -309,7 +309,7 @@ async function loadReducer(): Promise<Reducer | null> {
 			decode
 		};
 	} catch (err) {
-		console.warn('   [thumbnails] decode modules unavailable, skipping bake:', (err as Error).message);
+		logger.warn('[thumbnails] decode modules unavailable, skipping bake', { error: (err as Error).message });
 		return null;
 	}
 }
