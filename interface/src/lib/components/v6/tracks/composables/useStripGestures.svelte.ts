@@ -68,8 +68,8 @@ import {
  * They live in `$lib/actions/dragMachine` now — the same numbers govern
  * `use:drag` everywhere else on the surface, and two copies of a touch
  * slop is exactly the drift this program set out to remove. Re-exported
- * rather than moved outright because `parameters/actions/dragAction.ts`
- * and the strip's own callers import them from here.
+ * rather than moved outright because the strip's tests import them from
+ * here.
  */
 export { DRAG_THRESHOLD, TOUCH_DRAG_THRESHOLD, LONG_PRESS_MS };
 

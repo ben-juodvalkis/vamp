@@ -15,7 +15,8 @@ import { logger } from '$lib/utils/logger';
 	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
 	import Settings from '@lucide/svelte/icons/settings';
-	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
+	import { drag as dragAction } from '$lib/actions/drag';
+	import { createStepDrag } from '$lib/actions/stepDrag';
 	import SectionDivider from '../SectionDivider.svelte';
 
 	// No ink of its own (ADR-544): this is the master's view, and nothing in
@@ -32,96 +33,48 @@ import { logger } from '$lib/utils/logger';
 	 * Nudging the tempo while the other hand held a track name meant the
 	 * tempo followed the name.
 	 *
-	 * `commit: 'immediate'` and `touch-action: none`: a drag digit is the
-	 * value from touch-down, and there is nothing else these could be.
+	 * All three are `createStepDrag` (`commit: 'immediate'`, `touch-action:
+	 * none`): a drag digit is the value from touch-down.
 	 */
-	let isDraggingTimeSignature = $state(false);
-	let dragStartNumerator = $state(4);
-	let dragStartDenominator = $state(4);
-	let timeSignatureDragMode = $state<'numerator' | 'denominator' | null>(null);
-	let lastTimeSignatureValue = $state<number | null>(null);
+	let signatureActive = $state<'numerator' | 'denominator' | null>(null);
+	let tempoActive = $state(false);
 
-	let isDraggingTempo = $state(false);
-	let tempoDragStartValue = $state(120);
-	let lastTempoValue = $state<number | null>(null);
-
-	// Valid denominators for time signature
-	const validDenominators = [1, 2, 4, 8, 16];
-
-	/** `deltaY` is pixels travelled UP from the press point. */
-	function applyTimeSignatureDrag(deltaY: number) {
-		if (!isDraggingTimeSignature || !timeSignatureDragMode) return;
-		const sensitivity = 0.05; // Lower sensitivity for large display
-
-		if (timeSignatureDragMode === 'numerator') {
-			const rawValue = dragStartNumerator + deltaY * sensitivity;
-			const newNumerator = Math.max(1, Math.min(32, Math.round(rawValue)));
-
-			if (newNumerator !== lastTimeSignatureValue) {
-				lastTimeSignatureValue = newNumerator;
-				logger.debug('Setting numerator', { component: 'SystemCentralView', value: newNumerator });
-				setSignatureNumerator(newNumerator);
-			}
-		} else if (timeSignatureDragMode === 'denominator') {
-			const currentIndex = validDenominators.indexOf(dragStartDenominator);
-			const rawIndexChange = deltaY * sensitivity * 0.3; // Slower for discrete stepping
-			const newIndex = Math.max(0, Math.min(validDenominators.length - 1, Math.round(currentIndex + rawIndexChange)));
-			const newDenominator = validDenominators[newIndex];
-
-			if (newDenominator !== lastTimeSignatureValue) {
-				lastTimeSignatureValue = newDenominator;
-				logger.debug('Setting denominator', { component: 'SystemCentralView', value: newDenominator });
-				setSignatureDenominator(newDenominator);
-			}
-		}
-	}
-
-	function timeSignatureDrag(mode: 'numerator' | 'denominator'): DragOptions {
-		return {
-			commit: 'immediate',
-			touchAction: 'none',
-			onStart: () => {
-				isDraggingTimeSignature = true;
-				timeSignatureDragMode = mode;
-				dragStartNumerator = session.timeSignature.numerator;
-				dragStartDenominator = session.timeSignature.denominator;
-			},
-			onMove: ({ dy }: DragInfo) => applyTimeSignatureDrag(dy),
-			onEnd: () => {
-				isDraggingTimeSignature = false;
-				timeSignatureDragMode = null;
-				lastTimeSignatureValue = null;
-			}
-		};
-	}
-
-	const numeratorDrag: DragOptions = $derived(timeSignatureDrag('numerator'));
-	const denominatorDrag: DragOptions = $derived(timeSignatureDrag('denominator'));
-
-	const tempoDrag: DragOptions = {
-		commit: 'immediate',
-		touchAction: 'none',
-		onStart: () => {
-			isDraggingTempo = true;
-			tempoDragStartValue = Math.round(session.tempo);
+	// Lower sensitivities than the header's: these digits are much larger.
+	const numeratorDrag = createStepDrag({
+		read: () => session.timeSignature.numerator,
+		perPx: 0.05,
+		min: 1,
+		max: 32,
+		send: (value) => {
+			logger.debug('Setting numerator', { component: 'SystemCentralView', value });
+			setSignatureNumerator(value);
 		},
-		onMove: ({ dy }: DragInfo) => {
-			if (!isDraggingTempo) return;
-			const sensitivity = 0.1; // Low sensitivity for fine-tuning
-			const rawValue = tempoDragStartValue + dy * sensitivity;
-			const newTempo = Math.max(20, Math.min(999, Math.round(rawValue)));
+		onActiveChange: (active) => (signatureActive = active ? 'numerator' : null)
+	});
 
-			if (newTempo !== lastTempoValue) {
-				lastTempoValue = newTempo;
-				logger.debug('Setting tempo', { component: 'SystemCentralView', value: newTempo });
-				setTempo(newTempo);
-			}
+	const denominatorDrag = createStepDrag({
+		read: () => session.timeSignature.denominator,
+		// Slower for discrete stepping: one step is a doubling.
+		perPx: 0.015,
+		steps: [1, 2, 4, 8, 16],
+		send: (value) => {
+			logger.debug('Setting denominator', { component: 'SystemCentralView', value });
+			setSignatureDenominator(value);
 		},
-		onEnd: () => {
-			isDraggingTempo = false;
-			lastTempoValue = null;
-		}
-	};
+		onActiveChange: (active) => (signatureActive = active ? 'denominator' : null)
+	});
+
+	const tempoDrag = createStepDrag({
+		read: () => Math.round(session.tempo),
+		perPx: 0.1, // Low sensitivity for fine-tuning
+		min: 20,
+		max: 999,
+		send: (value) => {
+			logger.debug('Setting tempo', { component: 'SystemCentralView', value });
+			setTempo(value);
+		},
+		onActiveChange: (active) => (tempoActive = active)
+	});
 
 	// Launch quantization — Live's global clip-trigger grid. Tap-to-set
 	// rather than a drag-digit: 14 discrete values are miserable to drag
@@ -265,7 +218,7 @@ import { logger } from '$lib/utils/logger';
 					<div class="sys-field select-none">
 						<button
 							class="sys-drag-digit"
-							class:active={isDraggingTempo}
+							class:active={tempoActive}
 							use:dragAction={tempoDrag}
 						>
 							{Math.round(session.tempo)}
@@ -278,7 +231,7 @@ import { logger } from '$lib/utils/logger';
 						<div class="flex items-center justify-center min-w-0">
 							<button
 								class="sys-drag-digit sys-num"
-								class:active={timeSignatureDragMode === 'numerator'}
+								class:active={signatureActive === 'numerator'}
 								use:dragAction={numeratorDrag}
 							>
 								{session.timeSignature.numerator}
@@ -286,7 +239,7 @@ import { logger } from '$lib/utils/logger';
 							<span class="sys-sep">/</span>
 							<button
 								class="sys-drag-digit sys-den"
-								class:active={timeSignatureDragMode === 'denominator'}
+								class:active={signatureActive === 'denominator'}
 								use:dragAction={denominatorDrag}
 							>
 								{session.timeSignature.denominator}

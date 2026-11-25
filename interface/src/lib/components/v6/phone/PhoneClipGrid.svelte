@@ -14,7 +14,6 @@
 	 * tabs divided by the rows drawn plus the stop row. The rail measures
 	 * the same box the same way, so the two land on the same pitch.
 	 */
-	import { tick, untrack } from 'svelte';
 	import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
 	import SceneRail from '$lib/components/v6/tracks/SceneRail.svelte';
 	import {
@@ -28,13 +27,14 @@
 	import { session } from '$lib/stores/session.svelte';
 	import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
-	import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import { rgbToHex } from '$lib/utils/formatters/trackFormatters';
+	import { trackInkFor } from '$lib/utils/trackInkFor';
 	import { padTextCss } from '$lib/services/drumVirtualMacros';
 	import { press } from '$lib/actions/press';
-	import { ribbonWindow } from '$lib/utils/phoneLayout';
+	import { boxSize } from '$lib/actions/boxSize';
+	import { sessionRowPitch } from '$lib/utils/sessionRowPitch';
+	import { usePhoneScroller } from './usePhoneScroller.svelte';
 	import {
-		PHONE_COLUMN_PITCH,
 		PHONE_ROW_INSET,
 		PHONE_RAIL_WIDTH,
 		PHONE_COLUMN_GAP,
@@ -67,7 +67,7 @@
 				name: record?.name ?? `Track ${trackIndex + 1}`,
 				fill: rgbToHex(color),
 				text: padTextCss(color),
-				ink: trackInk(rgbToHex(color), paintModeReactive()),
+				ink: trackInkFor(`tracks/${trackIndex}`),
 				muted: record?.mute ?? false,
 				isGroup: clipStateStore.isGroupTrack(trackIndex)
 			};
@@ -75,75 +75,18 @@
 	);
 
 	let scroller = $state<HTMLDivElement | null>(null);
-	let body = $state<HTMLDivElement | null>(null);
+	// Measured by `use:boxSize` on the pinned rail's body.
 	let bodyHeightPx = $state(0);
-	const rowPitchPx = $derived(
-		sceneWindowStore.renderedRows > 0 ? bodyHeightPx / (sceneWindowStore.renderedRows + 1) : 0
-	);
+	const rowPitchPx = $derived(sessionRowPitch(bodyHeightPx, sceneWindowStore.renderedRows));
 
-	$effect(() => {
-		const el = body;
-		if (!el || typeof ResizeObserver === 'undefined') return;
-		const measure = () => {
-			const h = el.getBoundingClientRect().height;
-			if (h > 0) bodyHeightPx = h;
-		};
-		measure();
-		const ro = new ResizeObserver(measure);
-		ro.observe(el);
-		return () => ro.disconnect();
-	});
-
-	function report() {
-		if (!scroller) return;
-		onWindow(
-			ribbonWindow({
-				scrollLeft: scroller.scrollLeft,
-				clientWidth: scroller.clientWidth,
-				pitch: PHONE_COLUMN_PITCH,
-				count: tracks.length,
-				inset: PHONE_ROW_INSET,
-				pinned: PHONE_RAIL_WIDTH + PHONE_COLUMN_GAP + PHONE_ROW_INSET
-			})
-		);
-	}
-
-	function handleScroll() {
-		if (!scroller) return;
-		onScroll(scroller.scrollLeft);
-		report();
-	}
-
-	$effect(() => {
-		if (!active || !scroller) return;
-		const el = scroller;
-		tick().then(() => {
-			el.scrollLeft = untrack(() => scrollLeft);
-			report();
-		});
-	});
-
-	// The ribbon's frame follows the scroller's size and the column count.
-	$effect(() => {
-		void tracks.length;
-		const el = scroller;
-		if (!active || !el || typeof ResizeObserver === 'undefined') return;
-		tick().then(report);
-		const ro = new ResizeObserver(() => report());
-		ro.observe(el);
-		return () => ro.disconnect();
-	});
-
-	$effect(() => {
-		const idx = session.selectedTrackIndex;
-		void tracks.join(',');
-		if (!active || !scroller || idx < 0) return;
-		const el = scroller;
-		tick().then(() =>
-			el
-				.querySelector(`[data-track-index="${idx}"]`)
-				?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
-		);
+	const phoneScroller = usePhoneScroller({
+		getElement: () => scroller,
+		isActive: () => active,
+		tracks: () => tracks,
+		scrollLeft: () => scrollLeft,
+		onScroll: (left) => onScroll(left),
+		onWindow: (w) => onWindow(w),
+		pinned: PHONE_RAIL_WIDTH + PHONE_COLUMN_GAP + PHONE_ROW_INSET
 	});
 
 	function showClip(trackIndex: number, slotPath: string) {
@@ -156,7 +99,7 @@
 	class="phone-clips"
 	data-debug="phone-clips"
 	bind:this={scroller}
-	onscroll={handleScroll}
+	onscroll={phoneScroller.handleScroll}
 	style={rowPitchPx > 0 ? `--session-row-h: ${rowPitchPx}px;` : ''}
 >
 	{#each columns as c (c.trackIndex)}
@@ -201,7 +144,7 @@
 	{/each}
 	<div class="rail-col" data-debug="phone-scene-rail">
 		<div class="col-name is-blank" aria-hidden="true"></div>
-		<div class="col-body" bind:this={body}>
+		<div class="col-body" use:boxSize={{ keepLastNonZero: true, onSize: (h) => (bodyHeightPx = h) }}>
 			<SceneRail />
 		</div>
 	</div>

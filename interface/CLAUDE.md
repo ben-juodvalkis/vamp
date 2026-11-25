@@ -4,7 +4,7 @@
 
 - **Svelte 5 runes** — `$state()`, `$derived()`, `$effect()`, `let { prop } = $props()`. No legacy `$:` syntax.
 - **Tailwind CSS 4** — CSS-first with `@import "tailwindcss"`, custom properties, `@custom-variant`
-- **shadcn-svelte** — Primary UI library (button, card, input, badge, sheet, dialog). Add with `npx shadcn-svelte@latest add [name]`
+- **shadcn-svelte** — Primary UI library (button and card are what is installed; the unused kits were deleted 2026-11-25). Add with `npx shadcn-svelte@latest add [name]`
 
 ## Development Commands
 

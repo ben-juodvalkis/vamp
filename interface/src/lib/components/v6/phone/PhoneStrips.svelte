@@ -12,13 +12,10 @@
 	 * (`scrollLeft`, held by the layout), so switching tabs keeps the same
 	 * tracks in front of you.
 	 */
-	import { tick, untrack } from 'svelte';
 	import constants from '$config/constants.json';
 	import TrackStrip from '$lib/components/v6/tracks/TrackStrip.svelte';
 	import MasterTrack from '$lib/components/v6/tracks/MasterTrack.svelte';
-	import { session } from '$lib/stores/session.svelte';
-	import { ribbonWindow } from '$lib/utils/phoneLayout';
-	import { PHONE_COLUMN_PITCH, PHONE_ROW_INSET } from './phoneGeometry';
+	import { usePhoneScroller } from './usePhoneScroller.svelte';
 
 	interface Props {
 		tracks: number[];
@@ -33,61 +30,13 @@
 
 	let row = $state<HTMLDivElement | null>(null);
 
-	function report() {
-		if (!row) return;
-		onWindow(
-			ribbonWindow({
-				scrollLeft: row.scrollLeft,
-				clientWidth: row.clientWidth,
-				pitch: PHONE_COLUMN_PITCH,
-				count: tracks.length,
-				inset: PHONE_ROW_INSET
-			})
-		);
-	}
-
-	function handleScroll() {
-		if (!row) return;
-		onScroll(row.scrollLeft);
-		report();
-	}
-
-	// Coming on screen: take up where the other tab left the row. Hidden,
-	// the row has no scroll position to keep (`display: none`).
-	$effect(() => {
-		if (!active || !row) return;
-		const el = row;
-		tick().then(() => {
-			el.scrollLeft = untrack(() => scrollLeft);
-			report();
-		});
-	});
-
-	// The ribbon's frame follows the row's size and its column count too:
-	// the tracks arrive after the first paint, and a rotation re-divides.
-	$effect(() => {
-		void tracks.length;
-		const el = row;
-		if (!active || !el || typeof ResizeObserver === 'undefined') return;
-		tick().then(report);
-		const ro = new ResizeObserver(() => report());
-		ro.observe(el);
-		return () => ro.disconnect();
-	});
-
-	// The selected strip stays on screen: a ribbon tap, a selection from
-	// Live, or a fold reshuffling the columns. `nearest` is a no-op for a
-	// strip already showing.
-	$effect(() => {
-		const idx = session.selectedTrackIndex;
-		void tracks.join(',');
-		if (!active || !row || idx < 0) return;
-		const el = row;
-		tick().then(() =>
-			el
-				.querySelector(`[data-track-index="${idx}"]`)
-				?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
-		);
+	const scroller = usePhoneScroller({
+		getElement: () => row,
+		isActive: () => active,
+		tracks: () => tracks,
+		scrollLeft: () => scrollLeft,
+		onScroll: (left) => onScroll(left),
+		onWindow: (w) => onWindow(w)
 	});
 </script>
 
@@ -95,7 +44,7 @@
 	class="phone-strips"
 	data-debug="phone-strips"
 	bind:this={row}
-	onscroll={handleScroll}
+	onscroll={scroller.handleScroll}
 	style="--meter-wash: {constants.ui.meters.opacity};"
 >
 	{#each tracks as trackIndex, col (trackIndex)}
