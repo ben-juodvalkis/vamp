@@ -6,8 +6,7 @@
 export interface Device {
 	/**
 	 * Stable LOM device id (Python surface's `_live_ptr`-derived id).
-	 * Used by `FXSlotStore` for cross-update device identity comparisons
-	 * and as a `paramIds` map key. Wire writes are path-addressed (v3)
+	 * Kept as an identity for v2-shaped callers. Wire writes are path-addressed (v3)
 	 * and do not consume this field.
 	 */
 	id: number;
