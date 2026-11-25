@@ -17,8 +17,10 @@ import re
 from typing import Dict, Optional, Tuple
 
 from .path_resolver import PAD_NOTE_MAX
+from ._common import LOM_ERRORS
+from .component_util import safe_class_name as _safe_class_name  # noqa: F401  (re-exported)
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 # --- wire ---------------------------------------------------------------
 
@@ -134,6 +136,12 @@ STALE_READ_WINDOW_MS = 400
 #: the LOM notification (the repo rule: a listener marks and schedules,
 #: nothing else).
 EDIT_ABSORB_DELAY_MS = 150
+#: How long a rack state the sequencer alone kept (no subscriber) stays
+#: after its shift returns to 0 before it is released. A step pattern turns
+#: the octave back on within a bar, and a release would cost a re-resolve
+#: and a re-seed per step — reading a DrumCell that may still sit one write
+#: behind — so the state is let go only once the engine has left it idle.
+SHIFT_RELEASE_IDLE_MS = 10000
 #: Ceiling on member value listeners for one rack. A 32-pad DrumCell kit
 #: carries ~700 continuous members (``fx1`` alone is ten a pad), which is
 #: within Live's reach; the cap is what stops an unforeseen kit from
@@ -466,13 +474,6 @@ def function_for_property(property_name: str) -> Optional[VirtualMacro]:
 
 def _clamp(v: float, lo: float, hi: float) -> float:
     return lo if v < lo else hi if v > hi else v
-
-
-def _safe_class_name(device) -> str:
-    try:
-        return getattr(device, "class_name", "") or ""
-    except Exception:
-        return ""
 
 
 def _is_instrument(device) -> bool:

@@ -800,7 +800,7 @@ def test_disconnect_detaches_is_triggered_listeners(component):
 
     component.disconnect()
 
-    assert component._is_triggered_listeners == {}
+    assert len(component._is_triggered_listeners) == 0
     assert slot._is_triggered_listeners == []
 
 
@@ -1371,7 +1371,7 @@ def test_disconnect_detaches_all_slot_listeners(component):
     for track in component._song.tracks:
         for slot in track.clip_slots:
             assert slot._has_clip_listeners == []
-    assert component._has_clip_listeners == {}
+    assert len(component._has_clip_listeners) == 0
 
 
 def test_disconnected_listener_fire_is_silent(
@@ -1406,7 +1406,7 @@ def test_disconnect_survives_remove_raise(component):
     component.disconnect()
 
     # Bookkeeping cleared even though one detach raised.
-    assert component._has_clip_listeners == {}
+    assert len(component._has_clip_listeners) == 0
 
 
 def test_advance_generation_exception_does_not_block_emit(

@@ -245,7 +245,11 @@ import logging
 import time
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from . import drum_vm_values
+from .drum_vm_edits import EditAbsorbMixin
+from .drum_vm_pitch import PitchMixin
 from .DrumPadChainComponent import PadChainWatcher
+from .component_util import first_time, safe_emit
 from .path_resolver import PAD_NOTE_MAX, find_drum_pad, same_lom_handle
 
 logger = logging.getLogger("looping")
@@ -258,11 +262,7 @@ from .drum_vm_functions import (
     BOUND_CLASSES,
     CENSUS_BYTES_SOFT_CAP,
     CENSUS_SILENT_FUNCTIONS,
-    CHAIN_VOLUME_NAME,
-    PAD_CHAIN_CLASS_NAME,
-    PAD_MUTE_NAME,
     DEV_EPSILON,
-    DEV_VOTE_DP,
     EDIT_ABSORB_DELAY_MS,
     FUNCTIONS,
     FX_TYPE_MAX,
@@ -273,8 +273,6 @@ from .drum_vm_functions import (
     KIND_T,
     MACRO_FUNCTION_PREFIX,
     MACRO_PROPERTY_PREFIX,
-    MACRO_SLOTS,
-    MAX_MEMBER_LISTENERS,
     MEMBERS_KEY,
     MEMBERS_PROPERTY,
     PAD_NAME_MAX,
@@ -287,9 +285,9 @@ from .drum_vm_functions import (
     PROPERTY_NAMES,
     PROPERTY_PREFIX,
     PROVIDER_NAME,
-    RACK_NON_MACRO_PARAMS,
     RESEED_DELAY_MS,
     SELECTED_PAD_KEY,
+    SHIFT_RELEASE_IDLE_MS,
     SELECTED_PAD_PROPERTY,
     STALE_READ_WINDOW_MS,
     TOGGLE_ON_ABOVE_T,
@@ -306,17 +304,8 @@ from .drum_vm_functions import (
     parse_pad_function,
 )
 from .drum_vm_resolve import (
-    SAMPLE_PAD_DEFAULT_NAMES,
-    first_instrument,
-    index_params,
+    build_members,
     is_pipeline_family,
-    make_member,
-    pad_chain_volume,
-    PadMuteParam,
-    pad_color,
-    pad_devices,
-    pad_label,
-    pad_name,
 )
 from .drum_vm_state import (
     _Member,
@@ -377,7 +366,16 @@ def _holds_pad_shift(st: _RackState) -> bool:
     return any(p.shift for p in st.pads.values())
 
 
-class DrumVirtualMacroComponent:
+def _idle(st: _RackState) -> bool:
+    """Nothing keeps the state: no subscriber, no rack shift, no pad shift."""
+    return not st.subscribed and not st.shift and not _holds_pad_shift(st)
+
+
+def _is_parked(st: _RackState) -> bool:
+    return "#parked" in st.device_path
+
+
+class DrumVirtualMacroComponent(EditAbsorbMixin, PitchMixin):
     """Computed-property provider for ``DrumGroupDevice`` ``vm.*`` rows.
 
     Args:
@@ -461,7 +459,7 @@ class DrumVirtualMacroComponent:
         if st is None:
             return
         st.subscribed.discard(function)
-        if not st.subscribed and not st.shift and not _holds_pad_shift(st):
+        if _idle(st):
             self.release(device_path)
 
     def release(self, device_path: str) -> None:
@@ -676,6 +674,7 @@ class DrumVirtualMacroComponent:
             return False
         st.shift = target
         logger.debug("DrumVirtualMacroComponent: %s sequencer shift -> %d", st.device_path, target)
+        self._release_when_idle(st)
         return True
 
     def pad_sequencer_shift(self, device_path: str, note) -> int:
@@ -791,7 +790,41 @@ class DrumVirtualMacroComponent:
         logger.debug(
             "DrumVirtualMacroComponent: %s pad %d sequencer shift -> %d", st.device_path, pad_note, target,
         )
+        self._release_when_idle(st)
         return True
+
+    def _release_when_idle(self, st: _RackState) -> None:
+        """A shift just returned to 0. A state the engine alone created
+        (``set_sequencer_shift`` on a rack no UI subscribes to) or parked
+        under ``#parked`` would otherwise keep its member and chain
+        listeners for the rest of the session: :meth:`unsubscribe` and
+        :meth:`_displace` release only a state with no shift, and neither
+        runs again. A parked state goes now — its rack is at no path, and
+        the restore that parked it has landed. A live one goes after
+        :data:`SHIFT_RELEASE_IDLE_MS` with nothing holding it, so a step
+        pattern that turns the octave back on within a bar keeps its state
+        (and its own-write baselines) instead of re-resolving per step.
+        Without a ``schedule_delayed`` a live state is kept."""
+        if not _idle(st):
+            return
+        if _is_parked(st):
+            self._release_state(st)
+            return
+        if self._schedule_delayed is None:
+            return  # no clock to wait on (unit tests): keep it
+        try:
+            self._schedule_delayed(SHIFT_RELEASE_IDLE_MS, lambda: self._release_state(st))
+        except Exception as e:
+            logger.warning("DrumVirtualMacroComponent: schedule_delayed failed: %s", e)
+
+    def _release_state(self, st: _RackState) -> None:
+        """Release ``st`` if it is still held and still idle."""
+        if self._disconnected or not _idle(st):
+            return
+        if self._states.get(st.device_path) is not st:
+            return
+        logger.debug("DrumVirtualMacroComponent: %s released (idle after its shift)", st.device_path)
+        self.release(st.device_path)
 
     def flush(self) -> int:
         """Apply every pending ``(device, function)`` once, latest value.
@@ -1163,216 +1196,42 @@ class DrumVirtualMacroComponent:
         except _LOM_ERRORS:
             st.has_macro_mappings = any(st.macros_mapped)
 
-        members: Dict[str, List[_Member]] = {name: [] for name in FUNCTIONS}
-        macro_functions: Dict[str, VirtualMacro] = {}
-        pitch_macro: Optional[str] = None
-        missing: Dict[str, int] = {}
-        member_pads = 0
-        pad_count = 0
-        pad_classes: Dict[str, int] = {}
-        try:
-            pads = list(device.drum_pads or ())
-        except _LOM_ERRORS as e:
-            self._warn_once(st.device_path, "drum_pads", "drum_pads read raised: %s" % e)
-            pads = []
-        pad_list: List[Dict[str, object]] = []
-        instruments: list[object] = []
-        for pad in pads:
-            devices = pad_devices(pad)
-            if devices is None:
-                continue
-            pad_count += 1
-            try:
-                note = int(pad.note)
-            except _LOM_ERRORS + (ValueError,):
-                note = -1
-            found = first_instrument(devices)
-            if found is not None and found[1] in SAMPLE_PAD_DEFAULT_NAMES:
-                instruments.append(found[0])
-            if note >= 0:
-                pad_list.append({
-                    "note": note,
-                    # A sample pad's instrument name, not its chain's
-                    # (ADR-439): a swap renames the one and not the other.
-                    "name": pad_label(pad, found),
-                    "class": found[1] if found is not None else None,
-                    # The chain's colour as Live paints the pad (RGB int, the
-                    # track-colour convention), or None — measured 2026-09-08:
-                    # ``chains[0].color`` 8754719 = #85961f on the Croydon kit.
-                    "color": pad_color(pad),
-                })
-                # The pad's own mixer strip, whatever its instrument.
-                chain_volume = pad_chain_volume(pad)
-                if chain_volume is not None:
-                    members["chainVolume"].append(make_member(
-                        chain_volume, note, PAD_CHAIN_CLASS_NAME, CHAIN_VOLUME_NAME,
-                    ))
-                members["chainMute"].append(make_member(
-                    PadMuteParam(pad), note, PAD_CHAIN_CLASS_NAME, PAD_MUTE_NAME,
-                ))
-            if found is None:
-                continue
-            inst, cls = found
-            pad_classes[cls] = pad_classes.get(cls, 0) + 1
-            if cls == INSTRUMENT_RACK_CLASS_NAME:
-                # A nested rack's members are its named macros: one
-                # ``macro.<name>`` function per name, discovered in the
-                # rack's own order, the first pad's rack setting the order
-                # for the kit — and its transpose-named macro, if any, is
-                # the pad's ``pitch`` member in semitones.
-                counted, pitch_name = self._resolve_rack_macros(inst, note, members, macro_functions)
-                # ``gain`` is the exception to "a nested rack's members are
-                # its macros": the pad's level is its CHAIN volume, not a
-                # macro the kit may or may not carry (2026-09-08). A kit
-                # whose racks happen to name a macro "Volume" still gets
-                # that macro as its own ``macro.Volume`` control — this is
-                # a different knob and does not collide.
-                chain_volume = pad_chain_volume(pad)
-                if chain_volume is not None:
-                    members["gain"].append(make_member(
-                        chain_volume, note, INSTRUMENT_RACK_CLASS_NAME, CHAIN_VOLUME_NAME,
-                    ))
-                    counted = True
-                if counted:
-                    member_pads += 1
-                if pitch_name is not None and pitch_macro is None:
-                    pitch_macro = pitch_name
-                continue
-            if cls not in BOUND_CLASSES:
-                continue
-            by_name = None
-            counted = False
-            for fn in FUNCTIONS.values():
-                names = fn.bindings.get(cls)
-                if not names:
-                    continue
-                if by_name is None:
-                    by_name = index_params(inst)
-                for pname in names:
-                    param = by_name.get(pname)
-                    if param is None:
-                        missing[fn.name] = missing.get(fn.name, 0) + 1
-                        logger.debug(
-                            "DrumVirtualMacroComponent: %s: %s on pad %d has no parameter "
-                            "named %r (section never enabled?); skipping that member",
-                            st.device_path, cls, note, pname,
-                        )
-                        continue
-                    members[fn.name].append(make_member(param, note, cls, pname))
-                    counted = True
-            if counted:
-                member_pads += 1
-        st.members = members
-        st.member_pads = member_pads
-        st.pad_count = pad_count
-        st.pad_classes = pad_classes
-        st.macro_functions = macro_functions
-        st.pitch_macro = pitch_macro
-        st.missing = missing
-        st.pad_list = pad_list
+        walk = build_members(
+            device, st.device_path,
+            warn=lambda key, message: self._warn_once(st.device_path, key, message),
+        )
+        st.members = walk.members
+        st.member_pads = walk.member_pads
+        st.pad_count = walk.pad_count
+        st.pad_classes = walk.pad_classes
+        st.macro_functions = walk.macro_functions
+        st.pitch_macro = walk.pitch_macro
+        st.missing = walk.missing
+        st.pad_list = walk.pad_list
         # A held value for a rack macro the kit no longer carries (racks
         # swapped on the pads) describes nothing: drop it so a subscriber
         # reads nil rather than the old kit's number.
-        for key in [k for k in st.values if is_macro_function(k) and k not in macro_functions]:
+        for key in [k for k in st.values if is_macro_function(k) and k not in walk.macro_functions]:
             del st.values[key]
         logger.debug(
             "DrumVirtualMacroComponent: resolved %s family=%s pads=%d/%d classes=%s members=%s macros=%s",
-            st.device_path, st.family, member_pads, pad_count, pad_classes,
-            {k: len(v) for k, v in members.items()}, list(macro_functions),
+            st.device_path, st.family, walk.member_pads, walk.pad_count, walk.pad_classes,
+            {k: len(v) for k, v in walk.members.items()}, list(walk.macro_functions),
         )
         self._attach_member_listeners(st)
-        self._attach_name_listeners(st, instruments)
+        self._attach_name_listeners(st, walk.instruments)
 
-    def _resolve_rack_macros(
-        self, rack, note: int, members: Dict[str, List[_Member]],
-        macro_functions: Dict[str, VirtualMacro],
-    ) -> Tuple[bool, Optional[str]]:
-        """Add one pad rack's named macros to ``members`` (and any name not
-        seen yet to ``macro_functions``); its first transpose-named macro
-        (:data:`PITCH_MACRO_NAMES`) also joins ``members["pitch"]`` as a
-        semitone member. Returns ``(contributed a member, pitch macro name
-        or None)``. ``Device On`` and ``Chain Selector`` are skipped by
-        name; at most :data:`MACRO_SLOTS` macros count; a default-named
-        macro is not a control."""
-        try:
-            params = list(rack.parameters or ())
-        except _LOM_ERRORS:
-            return False, None
-        counted = False
-        pitch_name: Optional[str] = None
-        slots = 0
-        for p in params:
-            if slots >= MACRO_SLOTS:
-                break
-            try:
-                name = p.name
-            except _LOM_ERRORS:
-                continue
-            if name in RACK_NON_MACRO_PARAMS:
-                continue
-            slots += 1
-            if is_empty_macro_name(name):
-                continue
-            key = MACRO_FUNCTION_PREFIX + name
-            fn = macro_functions.get(key)
-            if fn is None:
-                fn = macro_functions[key] = macro_function(name)
-            member = make_member(p, note, INSTRUMENT_RACK_CLASS_NAME, name)
-            members.setdefault(key, []).append(member)
-            counted = True
-            if pitch_name is None and is_pitch_macro_name(name):
-                pitch_name = name
-                members["pitch"].append(
-                    make_member(p, note, INSTRUMENT_RACK_CLASS_NAME, name, semitone_macro=True),
-                )
-        return counted, pitch_name
-
-    def _pad_instrument(self, pad):
-        """``(device, class_name)`` of the pad's instrument when it has a
-        binding; ``None`` for empty pads and for pads whose instrument is
-        unbound (a nested rack, Operator, a plugin, …)."""
-        devices = pad_devices(pad)
-        if devices is None:
-            return None
-        found = first_instrument(devices)
-        if found is None or found[1] not in BOUND_CLASSES:
-            return None
-        return found
-
-    # --- member value space -----------------------------------------------
+    # --- member value space (``drum_vm_values``) ---------------------------
     #
     # A member's LOM value is its own, except a semitone macro (a pad
     # rack's transpose macro standing in for a Transpose): read and written
     # in semitones, −48..48 across the macro's 0..127 (the convention).
 
-    @staticmethod
-    def _member_bounds(m: _Member) -> Tuple[float, float]:
-        if m.semitone_macro:
-            return float(PITCH_MIN), float(PITCH_MAX)
-        return m.min, m.max
+    _member_bounds = staticmethod(drum_vm_values.member_bounds)
 
-    def _member_read(self, m: _Member) -> Optional[float]:
-        raw = _float_or_none(self._read_value(m.param))
-        if raw is None or not m.semitone_macro:
-            return raw
-        span = m.max - m.min
-        if span <= 0:
-            return None
-        return PITCH_MIN + (raw - m.min) / span * (PITCH_MAX - PITCH_MIN)
+    _member_read = staticmethod(drum_vm_values.member_read)
 
-    def _member_fn_value(self, m: _Member) -> Optional[float]:
-        """A member's current value as the function's own ``t`` (0..1) —
-        the exact inverse of the fan-out's ``min + t·(max−min)``, so a
-        deviation measured here writes back to the value it was read
-        from. ``None`` when the parameter cannot be read or has no span."""
-        v = self._member_read(m)
-        if v is None:
-            return None
-        lo, hi = self._member_bounds(m)
-        span = hi - lo
-        if span <= 0:
-            return None
-        return _clamp((v - lo) / span, 0.0, 1.0)
+    _member_fn_value = staticmethod(drum_vm_values.member_fn_value)
 
     @staticmethod
     def _tracks_edits(fn: VirtualMacro, m: _Member) -> bool:
@@ -1391,13 +1250,7 @@ class DrumVirtualMacroComponent:
         - a pad with no note (``-1``) cannot be addressed per pad."""
         return fn.kind == KIND_T and not m.quantized and m.note >= 0
 
-    @staticmethod
-    def _member_write(m: _Member, value) -> None:
-        if not m.semitone_macro:
-            m.param.value = value
-            return
-        t = (float(value) - PITCH_MIN) / float(PITCH_MAX - PITCH_MIN)
-        m.param.value = m.min + _clamp(t, 0.0, 1.0) * (m.max - m.min)
+    _member_write = staticmethod(drum_vm_values.member_write)
 
     # --- seeding ----------------------------------------------------------
 
@@ -1611,75 +1464,19 @@ class DrumVirtualMacroComponent:
         # shift into the global (permute ADR-020).
         return int(_clamp(round(v) - st.shift, PITCH_MIN, PITCH_MAX))
 
-    @staticmethod
-    def _read_value(param):
-        try:
-            return param.value
-        except _LOM_ERRORS:
-            return None
+    _read_value = staticmethod(drum_vm_values.read_value)
 
-    @staticmethod
-    def _normalized(param) -> Optional[float]:
-        v = _float_or_none(DrumVirtualMacroComponent._read_value(param))
-        if v is None:
-            return None
-        try:
-            lo = float(param.min)
-            hi = float(param.max)
-        except _LOM_ERRORS + (ValueError,):
-            lo, hi = 0.0, 127.0
-        span = hi - lo
-        return _clamp((v - lo) / span, 0.0, 1.0) if span > 0 else 0.0
+    _normalized = staticmethod(drum_vm_values.normalized)
 
     # --- value conversions ------------------------------------------------
 
-    @staticmethod
-    def _coerce(fn: VirtualMacro, value):
-        v = _float_or_none(value)
-        if v is None:
-            return None
-        if fn.kind == KIND_T:
-            return _clamp(v, 0.0, 1.0)
-        if fn.kind == KIND_ENUM:
-            return int(_clamp(round(v), 0, FX_TYPE_MAX))
-        return int(_clamp(round(v), PITCH_MIN, PITCH_MAX))
+    _coerce = staticmethod(drum_vm_values.coerce)
 
-    @staticmethod
-    def _to_t(fn: VirtualMacro, value) -> float:
-        """Held value → macro travel ``0..1`` (for the legacy macro)."""
-        if fn.kind == KIND_ENUM:
-            return _clamp(float(value) / FX_TYPE_MAX, 0.0, 1.0)
-        if fn.kind == KIND_SEMITONES:
-            return _clamp((float(value) - PITCH_MIN) / (PITCH_MAX - PITCH_MIN), 0.0, 1.0)
-        return _clamp(float(value), 0.0, 1.0)
+    _to_t = staticmethod(drum_vm_values.to_t)
 
-    @staticmethod
-    def _from_t(fn: VirtualMacro, t: float):
-        """Macro travel ``0..1`` → held value (seeding from a mapped macro)."""
-        if fn.kind == KIND_ENUM:
-            return int(_clamp(round(t * FX_TYPE_MAX), 0, FX_TYPE_MAX))
-        if fn.kind == KIND_SEMITONES:
-            return int(_clamp(round(PITCH_MIN + t * (PITCH_MAX - PITCH_MIN)), PITCH_MIN, PITCH_MAX))
-        return _clamp(t, 0.0, 1.0)
+    _from_t = staticmethod(drum_vm_values.from_t)
 
-    @staticmethod
-    def _member_target(fn: VirtualMacro, m: _Member, value):
-        """The LOM value one member receives for the held ``value``."""
-        if fn.kind == KIND_SEMITONES:
-            return int(_clamp(int(value), m.min, m.max))
-        if fn.kind == KIND_ENUM:
-            return int(_clamp(int(value), m.min, m.max))
-        t = float(value)
-        span = m.max - m.min
-        if m.quantized:
-            if span <= 1.0 + 1e-9:
-                # Two-state switch: measured macro threshold, not half
-                # travel — or always on, for a bipolar amount's section.
-                if not fn.switch_off_at_floor:
-                    return m.max
-                return m.max if t > TOGGLE_ON_ABOVE_T else m.min
-            return int(round(m.min + t * span))
-        return m.min + t * span
+    _member_target = staticmethod(drum_vm_values.member_target)
 
     # --- routing + apply --------------------------------------------------
 
@@ -1853,166 +1650,6 @@ class DrumVirtualMacroComponent:
             "on next apply" % (failed, total, fn.name, first_error),
         )
 
-    def _apply_pitch(
-        self, st: _RackState, fn: VirtualMacro, global_value: int, shift: int, adopt_kit_move: bool,
-    ) -> int:
-        """The pitch fan-out: ``clamp(global + shift + offset)`` per member,
-        after :meth:`_reconcile_pitch` has read every member back.
-
-        A kit move found on the read-back is discarded on the write path
-        (the incoming ``global_value`` is the user's absolute intent) and
-        adopted into the held global on the sequencer path — there is no
-        new user value there, and the slider on screen should follow
-        Live's undo — unless the move is exactly the shift change this
-        apply makes (Cmd-Z on a held step: the kit already sits where the
-        step-off lands, so nothing is adopted). Either way the sequencer
-        path re-emits ``vm.pitch`` to its subscribers when a kit move was
-        found. Returns the number of member writes that landed."""
-        macro = self._legacy_macro(st, fn)
-        if macro is not None:
-            return self._write_macro(
-                st, fn, macro, int(_clamp(global_value + shift, PITCH_MIN, PITCH_MAX)),
-            )
-        members = st.members.get(fn.name) or []
-        if not members:
-            self._warn_once(
-                st.device_path, "nomembers:" + fn.name,
-                "%s has no member parameter on any pad; write dropped" % fn.name,
-            )
-            return 0
-        now = self._clock()
-        move, first_seen = self._reconcile_pitch(st, members, now)
-        if move:
-            if not adopt_kit_move:
-                logger.debug(
-                    "DrumVirtualMacroComponent: %s kit moved %+d since the last write; "
-                    "the incoming value %d wins", st.device_path, move, global_value,
-                )
-            elif move == shift - st.shift:
-                logger.debug(
-                    "DrumVirtualMacroComponent: %s kit already carries the shift change %+d "
-                    "(undone in Live); nothing to adopt", st.device_path, move,
-                )
-            else:
-                global_value = int(_clamp(global_value + move, PITCH_MIN, PITCH_MAX))
-                st.values[fn.name] = global_value
-                logger.debug(
-                    "DrumVirtualMacroComponent: %s kit moved %+d under the sequencer; "
-                    "global -> %d", st.device_path, move, global_value,
-                )
-            if adopt_kit_move and fn.name in st.subscribed:
-                self._safe_emit(
-                    V3_PROPERTY_VALUE_ADDRESS,
-                    (st.device_path, PROPERTY_PREFIX + fn.name, st.values.get(fn.name)),
-                )
-        base = global_value + shift
-        for note, cur in first_seen:
-            # A pad first seen at apply time keeps its pitch until the
-            # next move: its offset is whatever makes base + offset read
-            # what it holds.
-            rec = st.pads.get(note)
-            if rec is None:
-                rec = st.pads[note] = _PadPitch()
-            rec.offset = cur - base
-        wrote = 0
-        failed = 0
-        first_error = None
-        for m in members:
-            if not m.enabled:
-                continue
-            rec = st.pads.get(m.note) if m.note >= 0 else None
-            # The pad's own deviation, and the term a Permute in its own
-            # chain holds on it (ADR-435): both ride every kit gesture.
-            offset = (rec.offset + rec.shift) if rec is not None else 0
-            lo, hi = self._member_bounds(m)
-            target = int(_clamp(int(_clamp(base + offset, PITCH_MIN, PITCH_MAX)), lo, hi))
-            try:
-                self._member_write(m, target)
-            except _LOM_ERRORS as e:
-                failed += 1
-                if first_error is None:
-                    first_error = e
-                m.enabled = False
-                st.dirty = True
-                continue
-            wrote += 1
-            if rec is not None:
-                if rec.written is not None and rec.written != target:
-                    rec.prev = rec.written
-                rec.written = target
-                rec.written_at = now
-        if failed:
-            self._warn_refused(st, fn, failed, len(members), first_error)
-        return wrote
-
-    def _reconcile_pitch(
-        self, st: _RackState, members: List[_Member], now: float,
-    ) -> Tuple[int, List[Tuple[int, int]]]:
-        """Pass one of a pitch fan-out: read every enabled member back and
-        sort what changed since our last write.
-
-        Returns ``(move, first_seen)``. ``move`` is the kit's move — the
-        nonzero delta (read − written) at least two pads share when it is
-        the most common delta across the pads read, an unchanged pad
-        voting 0 — or 0 when there is none; the caller discards or adopts
-        it. ``first_seen`` lists members with no record yet and what they
-        read. Per pad, what remains after the kit move is the user's edit
-        of that pad and is folded into its offset here.
-
-        A read equal to the pad's pre-write value inside
-        ``STALE_READ_WINDOW_MS`` of the write is our own write still
-        landing: neither a vote nor an edit. A pad whose last write sat at
-        its rail cannot vote — the clamp hid part of the move — and, under
-        a kit move, keeps its offset. ``prev`` is cleared for every pad
-        whose read matched its write or was judged an edit."""
-        window = STALE_READ_WINDOW_MS / 1000.0
-        votes: Dict[int, int] = {}
-        changed: List[Tuple[_PadPitch, int, bool]] = []
-        first_seen: List[Tuple[int, int]] = []
-        for m in members:
-            if not m.enabled or m.note < 0:
-                continue
-            cur = self._member_read(m)
-            if cur is None:
-                continue
-            cur_i = int(round(cur))
-            rec = st.pads.get(m.note)
-            if rec is None or rec.written is None:
-                first_seen.append((m.note, cur_i))
-                continue
-            lo, hi = self._member_bounds(m)
-            at_rail = rec.written <= lo or rec.written >= hi
-            if cur_i == rec.written:
-                rec.prev = None
-                if not at_rail:
-                    votes[0] = votes.get(0, 0) + 1
-                continue
-            if rec.prev is not None and cur_i == rec.prev and (now - rec.written_at) <= window:
-                # Our write still landing (measured on the rig 2026-09-07:
-                # under a busy control thread a DrumCell reads one write
-                # behind for a pass; folding that in walked every pad away
-                # by the shift on each step).
-                continue
-            rec.prev = None
-            delta = cur_i - rec.written
-            changed.append((rec, delta, at_rail))
-            if not at_rail:
-                votes[delta] = votes.get(delta, 0) + 1
-        move = 0
-        if votes:
-            top = max(votes.values())
-            winners = [d for d, n in votes.items() if n == top]
-            if len(winners) == 1 and winners[0] != 0 and top >= 2:
-                move = winners[0]
-        for rec, delta, at_rail in changed:
-            if move:
-                if at_rail:
-                    continue
-                delta -= move
-            if delta:
-                rec.offset += delta
-        return move, first_seen
-
     # --- per-pad rows (2026-09-08) ------------------------------------------
 
     def _pad_members(self, st: _RackState, fn: VirtualMacro, note: int) -> List[_Member]:
@@ -2080,51 +1717,6 @@ class DrumVirtualMacroComponent:
         wrote, switched_on = self._write_members(st, fn, members, value, absolute=True)
         if switched_on and st.missing.get(fn.name):
             wrote += self._grow_sections(st, fn, members, value, note=note, absolute=True)
-        return wrote
-
-    def _apply_pad_pitch(self, st: _RackState, note: int, members: List[_Member], value: int) -> int:
-        """One pad's Transpose: ``value`` semitones (the UI's number, without
-        the sequencer's shift), recorded as that pad's offset from the kit
-        value so the Trnsp slider and the sequencer's octave carry it."""
-        global_value = st.values.get("pitch")
-        rec = st.pads.get(note)
-        if global_value is not None:
-            if rec is None:
-                rec = st.pads[note] = _PadPitch()
-            rec.offset = int(value) - int(global_value)
-        pad_shift = int(rec.shift) if rec is not None else 0
-        return self._write_pad_pitch(st, rec, members, int(value) + int(st.shift) + pad_shift)
-
-    def _write_pad_pitch(self, st: _RackState, rec: Optional[_PadPitch], members: List[_Member], target_st: int) -> int:
-        """Write ``target_st`` semitones (clamped) to one pad's pitch members,
-        recording the write on its record. Returns the writes that landed."""
-        target_st = int(_clamp(int(target_st), PITCH_MIN, PITCH_MAX))
-        now = self._clock()
-        wrote = 0
-        failed = 0
-        first_error = None
-        for m in members:
-            if not m.enabled:
-                continue
-            lo, hi = self._member_bounds(m)
-            target = int(_clamp(target_st, lo, hi))
-            try:
-                self._member_write(m, target)
-            except _LOM_ERRORS as e:
-                failed += 1
-                if first_error is None:
-                    first_error = e
-                m.enabled = False
-                st.dirty = True
-                continue
-            wrote += 1
-            if rec is not None:
-                if rec.written is not None and rec.written != target:
-                    rec.prev = rec.written
-                rec.written = target
-                rec.written_at = now
-        if failed:
-            self._warn_refused(st, FUNCTIONS["pitch"], failed, len(members), first_error)
         return wrote
 
     def _selected_pad_note(self, st: _RackState) -> Optional[int]:
@@ -2201,19 +1793,13 @@ class DrumVirtualMacroComponent:
         # and not on swaps. Renaming a rack by hand reads as a new kit — the
         # documented cost of the name being the only signal Live gives.
         for name in ("macros_mapped", "name"):
-            adder = getattr(st.device, "add_%s_listener" % name, None)
-            if not callable(adder):
-                continue
-            cb = self._make_change_callback(st, name)
-            try:
-                adder(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(
+            st.listeners.add(
+                st.device, name, self._make_change_callback(st, name), tag=st.device_path,
+                on_error=lambda e, name=name: self._warn_once(
                     st.device_path, "listener:" + name,
                     "add_%s_listener raised: %s" % (name, e),
-                )
-                continue
-            st.listeners.append((name, cb))
+                ),
+            )
 
     def _attach_selected_pad_listener(self, st: _RackState) -> None:
         if st.selected_pad_listener is not None:
@@ -2305,18 +1891,7 @@ class DrumVirtualMacroComponent:
                         "on %s raised: %s", st.device_path, e,
                     )
             st.pad_scroll_listener = None
-        for name, cb in st.listeners:
-            remover = getattr(st.device, "remove_%s_listener" % name, None)
-            if not callable(remover):
-                continue
-            try:
-                remover(cb)
-            except _LOM_ERRORS as e:
-                logger.debug(
-                    "DrumVirtualMacroComponent: remove_%s_listener on %s "
-                    "raised: %s", name, st.device_path, e,
-                )
-        st.listeners = []
+        st.listeners.clear()
         if st.chain_watcher is not None:
             st.chain_watcher.detach()
             st.chain_watcher = None
@@ -2334,88 +1909,6 @@ class DrumVirtualMacroComponent:
 
     # --- member value listeners (per-pad hand edits) ----------------------
 
-    def _attach_member_listeners(self, st: _RackState) -> None:
-        """Watch every member that carries a deviation, so a hand edit in
-        Live is noticed when it happens instead of being flattened by the
-        next fan-out.
-
-        The callback marks the function and schedules the absorb; it reads
-        and writes nothing (repo rule — a listener marks and schedules).
-        Our own fan-out is skipped by ``_fanning_out`` when Live dispatches
-        synchronously and by the ``written`` baseline when it does not.
-        Watched in table order to :data:`MAX_MEMBER_LISTENERS`; a function
-        that would cross the cap is left unwatched and says so once."""
-        if self._disconnected:
-            return
-        budget = MAX_MEMBER_LISTENERS
-        for fn in self._functions(st):
-            watchable = [
-                m for m in (st.members.get(fn.name) or ())
-                if self._tracks_edits(fn, m) and m.enabled
-            ]
-            if not watchable:
-                continue
-            if len(watchable) > budget:
-                self._warn_once(
-                    st.device_path, "listenercap:" + fn.name,
-                    "%d more member listeners would pass the %d cap; %s stays "
-                    "unwatched (a hand edit on it is not tracked)"
-                    % (len(watchable), MAX_MEMBER_LISTENERS, fn.name),
-                )
-                continue
-            cb = self._make_member_callback(st, fn.name)
-            for m in watchable:
-                adder = getattr(m.param, "add_value_listener", None)
-                if not callable(adder):
-                    continue
-                try:
-                    adder(cb)
-                except _LOM_ERRORS as e:
-                    self._warn_once(
-                        st.device_path, "memberlistener:" + fn.name,
-                        "add_value_listener raised: %s" % e,
-                    )
-                    continue
-                st.member_listeners.append((m.param, cb))
-                budget -= 1
-        # A pad's mute made in Live (its M button, the chain list's
-        # activator) re-emits that pad's ``chainMute`` row, so the column
-        # beside the held pads follows. Absolute, no deviation to absorb:
-        # the listener only schedules the emit (2026-09-29).
-        for m in st.members.get("chainMute") or ():
-            if m.note < 0 or budget <= 0:
-                continue
-            cb = self._make_pad_mute_callback(st, m.note)
-            try:
-                m.param.add_value_listener(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(
-                    st.device_path, "memberlistener:chainMute",
-                    "add_mute_listener raised: %s" % e,
-                )
-                continue
-            st.member_listeners.append((m.param, cb))
-            budget -= 1
-        logger.debug(
-            "DrumVirtualMacroComponent: %s watching %d member parameter(s)",
-            st.device_path, len(st.member_listeners),
-        )
-
-    def _detach_member_listeners(self, st: _RackState) -> None:
-        for param, cb in st.member_listeners:
-            remover = getattr(param, "remove_value_listener", None)
-            if not callable(remover):
-                continue
-            try:
-                remover(cb)
-            except _LOM_ERRORS as e:
-                logger.debug(
-                    "DrumVirtualMacroComponent: remove_value_listener on %s "
-                    "raised: %s", st.device_path, e,
-                )
-        st.member_listeners = []
-        st.edited = set()
-
     # --- pad instrument names (ADR-439) --------------------------------------
 
     def _attach_name_listeners(self, st: _RackState, instruments: list[object]) -> None:
@@ -2430,208 +1923,15 @@ class DrumVirtualMacroComponent:
             return
         cb = self._make_change_callback(st, "instrument_name")
         for device in instruments:
-            adder = getattr(device, "add_name_listener", None)
-            if not callable(adder):
-                continue
-            try:
-                adder(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(st.device_path, "namelistener", f"add_name_listener raised: {e}")
-                continue
-            st.name_listeners.append((device, cb))
-
-    def _detach_name_listeners(self, st: _RackState) -> None:
-        for device, cb in st.name_listeners:
-            remover = getattr(device, "remove_name_listener", None)
-            if not callable(remover):
-                continue
-            try:
-                remover(cb)
-            except _LOM_ERRORS as e:
-                logger.debug(
-                    "DrumVirtualMacroComponent: remove_name_listener on %s raised: %s",
-                    st.device_path, e,
-                )
-        st.name_listeners = []
-
-    def _make_member_callback(self, st: _RackState, function: str) -> Callable[[], None]:
-        """One callback per function, shared by its members: the absorb
-        re-reads the whole function anyway, so which member fired is not
-        worth a closure apiece on a kit with hundreds of them."""
-        def _on_member_value():
-            if self._disconnected or self._fanning_out or not self._is_held(st):
-                return
-            st.edited.add(function)
-            self._schedule_absorb(st)
-        return _on_member_value
-
-    def _make_pad_mute_callback(self, st: _RackState, note: int) -> Callable[[], None]:
-        def _on_pad_mute():
-            if self._disconnected or not self._is_held(st):
-                return
-            if self._schedule_delayed is None:
-                self._emit_pad_mute(st, note)
-                return
-            try:
-                self._schedule_delayed(0, lambda: self._emit_pad_mute(st, note))
-            except Exception as e:
-                logger.warning(
-                    "DrumVirtualMacroComponent: schedule_delayed failed: %s", e,
-                )
-        return _on_pad_mute
-
-    def _emit_pad_mute(self, st: _RackState, note: int) -> None:
-        """Re-emit one pad's ``chainMute`` row, if someone is watching it."""
-        if self._disconnected or not self._is_held(st):
-            return
-        function = "pad.%d.chainMute" % note
-        if function not in st.subscribed:
-            return
-        self._safe_emit(
-            V3_PROPERTY_VALUE_ADDRESS,
-            (st.device_path, PROPERTY_PREFIX + function, self._pad_read(st, note, "chainMute")),
-        )
-
-    def _schedule_absorb(self, st: _RackState) -> None:
-        if st.absorb_scheduled:
-            return
-        if self._schedule_delayed is None:
-            self._absorb_edits(st)
-            return
-        st.absorb_scheduled = True
-        try:
-            self._schedule_delayed(EDIT_ABSORB_DELAY_MS, lambda: self._absorb_edits(st))
-        except Exception as e:
-            st.absorb_scheduled = False
-            logger.warning(
-                "DrumVirtualMacroComponent: schedule_delayed failed: %s", e,
+            st.name_listeners.add(
+                device, "name", cb, tag=st.device_path,
+                on_error=lambda e: self._warn_once(
+                    st.device_path, "namelistener", f"add_name_listener raised: {e}",
+                ),
             )
 
-    def _absorb_edits(self, st: _RackState) -> None:
-        """Deferred half of the member value listeners: read back every
-        function that fired and sort what changed. Reads only — nothing
-        here writes the LOM.
-
-        A delta at least two pads share, and the most common one, is a
-        **kit move** — Live's Edit → Undo of our own gesture, a macro, a
-        hand move of the whole kit — and is adopted into the held value
-        and re-emitted, so the control on screen follows Live instead of
-        going stale. What remains per member is the user's own edit and
-        moves that member's deviation, so the next fan-out keeps it."""
-        st.absorb_scheduled = False
-        if self._disconnected or not self._is_held(st):
-            return
-        functions, st.edited = st.edited, set()
-        for name in sorted(functions):
-            fn = self._function(st, name)
-            if fn is None or fn.kind != KIND_T:
-                continue
-            try:
-                moved, touched = self._absorb_function(st, fn)
-            except Exception as e:
-                self._warn_once(
-                    st.device_path, "absorb:" + name,
-                    "absorb raised: %s: %s" % (type(e).__name__, e),
-                )
-                continue
-            if moved and name in st.subscribed:
-                self._safe_emit(
-                    V3_PROPERTY_VALUE_ADDRESS,
-                    (st.device_path, PROPERTY_PREFIX + name, st.values.get(name)),
-                )
-            # A pad row someone is watching follows the pad it describes: on
-            # a kit move every pad moved, otherwise only the edited ones.
-            if moved or touched:
-                for sub in sorted(st.subscribed):
-                    parsed = parse_pad_function(sub)
-                    if parsed is None or parsed[1] != name:
-                        continue
-                    if moved or parsed[0] in touched:
-                        self._safe_emit(
-                            V3_PROPERTY_VALUE_ADDRESS,
-                            (st.device_path, PROPERTY_PREFIX + sub, self._pad_read(st, parsed[0], name)),
-                        )
-
-    def _absorb_function(self, st: _RackState, fn: VirtualMacro) -> Tuple[bool, Set[int]]:
-        """Classify one function's member read-backs. Returns whether the
-        held kit value moved (and so wants a re-emit) and the notes of the
-        pads whose deviation changed.
-
-        The rules are :meth:`_reconcile_pitch`'s, in ``t`` space: a read
-        equal to the pre-write value inside :data:`STALE_READ_WINDOW_MS`
-        of our write is that write still landing (neither a vote nor an
-        edit); a member whose last write sat at a rail cannot vote,
-        because the clamp hid part of any move, and takes no deviation
-        from one — the write that pinned it there already re-anchored its
-        deviation to the rail (:meth:`_write_members`)."""
-        touched: Set[int] = set()
-        recs = st.edits.get(fn.name)
-        if not recs or self._legacy_macro(st, fn) is not None:
-            return False, touched
-        held = st.values.get(fn.name)
-        if held is None:
-            return False, touched
-        now = self._clock()
-        window = STALE_READ_WINDOW_MS / 1000.0
-        votes: Dict[float, int] = {}
-        changed: List[Tuple[_MemberEdit, float, bool, float, int]] = []
-        for m in st.members.get(fn.name) or ():
-            if not m.enabled or not self._tracks_edits(fn, m):
-                continue
-            rec = recs.get((m.note, m.pname))
-            if rec is None:
-                continue
-            cur = self._member_fn_value(m)
-            if cur is None:
-                continue
-            if rec.written is None:
-                rec.written = cur
-                rec.written_at = now
-                continue
-            at_rail = rec.written <= DEV_EPSILON or rec.written >= 1.0 - DEV_EPSILON
-            if abs(cur - rec.written) <= DEV_EPSILON:
-                rec.prev = None
-                if not at_rail:
-                    votes[0.0] = votes.get(0.0, 0) + 1
-                continue
-            if (rec.prev is not None and abs(cur - rec.prev) <= DEV_EPSILON
-                    and (now - rec.written_at) <= window):
-                continue
-            rec.prev = None
-            delta = cur - rec.written
-            changed.append((rec, delta, at_rail, cur, m.note))
-            if not at_rail:
-                key = round(delta, DEV_VOTE_DP)
-                votes[key] = votes.get(key, 0) + 1
-        if not changed:
-            return False, touched
-        move = 0.0
-        if votes:
-            top = max(votes.values())
-            winners = [d for d, n in votes.items() if n == top]
-            if len(winners) == 1 and abs(winners[0]) > DEV_EPSILON and top >= 2:
-                move = winners[0]
-        moved = False
-        if move:
-            new_held = _clamp(float(held) + move, 0.0, 1.0)
-            if abs(new_held - float(held)) > DEV_EPSILON:
-                st.values[fn.name] = new_held
-                moved = True
-                logger.debug(
-                    "DrumVirtualMacroComponent: %s %s kit moved %+.3f in Live; "
-                    "held -> %.3f", st.device_path, fn.name, move, new_held,
-                )
-        for rec, delta, at_rail, cur, note in changed:
-            if move and at_rail:
-                rec.written = cur
-                continue
-            if move:
-                delta -= move
-            if abs(delta) > DEV_EPSILON:
-                rec.dev = _clamp(rec.dev + delta, -1.0, 1.0)
-                touched.add(note)
-            rec.written = cur
-        return moved, touched
+    def _detach_name_listeners(self, st: _RackState) -> None:
+        st.name_listeners.clear()
 
     def _is_held(self, st: _RackState) -> bool:
         return self._states.get(st.device_path) is st
@@ -2680,14 +1980,8 @@ class DrumVirtualMacroComponent:
     def _safe_emit(self, address: str, payload: tuple) -> None:
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning("DrumVirtualMacroComponent: emit %s failed: %s", address, e)
+        safe_emit("DrumVirtualMacroComponent", self._emit, address, payload)
 
     def _warn_once(self, device_path: str, key: str, message: str) -> None:
-        k = (device_path, key)
-        if k in self._warned:
-            return
-        self._warned.add(k)
-        logger.warning("DrumVirtualMacroComponent: %s: %s", device_path, message)
+        if first_time(self._warned, (device_path, key)):
+            logger.warning("DrumVirtualMacroComponent: %s: %s", device_path, message)

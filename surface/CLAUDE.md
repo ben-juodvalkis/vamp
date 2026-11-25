@@ -1110,8 +1110,12 @@ CC map on the Move ch 1: 71/72 above, 75–78 TotalMix
 `components/DrumVirtualMacroComponent.py` owns the whole-kit gesture on
 a `DrumGroupDevice` (split on 2026-09-10 into `drum_vm_functions.py` — the
 vocabulary and the function table — `drum_vm_state.py` — the records —
-and `drum_vm_resolve.py` — the guarded LOM reads — with every name still
-importable from the component module). The Drum Rack central view's seven controls no
+and `drum_vm_resolve.py` — the guarded LOM reads and the kit walk,
+`build_members` — and on 2026-11-25 further into `drum_vm_values.py` (the
+value conversions), `drum_vm_pitch.py` (the pitch fan-out) and
+`drum_vm_edits.py` (absorbing hand edits), the last two mixins the
+component inherits, with every name still importable from the component
+module). The Drum Rack central view's seven controls no
 longer write rack macros by index; they read and write the **computed**
 properties `vm.fx1`, `vm.fx2`, `vm.fxType`, `vm.attack`, `vm.decay`,
 `vm.start`, `vm.pitch` on the ordinary property channel
@@ -1130,7 +1134,7 @@ properties `vm.fx1`, `vm.fx2`, `vm.fxType`, `vm.attack`, `vm.decay`,
   `InstrumentGroupDevice` around two Sampler chains, the parameters the
   seven bind macro-held inside; the Drum Rack's own macros named but
   **unmapped**, so Live cannot drive them either) gets one function per
-  macro **name** its pad racks carry: `_resolve_rack_macros` reads each
+  macro **name** its pad racks carry: `resolve_rack_macros` reads each
   rack's `parameters` minus `Device On` / `Chain Selector` (by name,
   never position; sixteen slots; default `Macro N` / `.` / `-` names
   dropped — `is_empty_macro_name`), builds `macro.<name>` functions in
