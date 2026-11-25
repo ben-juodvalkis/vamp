@@ -192,15 +192,6 @@
 	// panel's `onTrackSelect`.
 	const slotActionOptions = $derived({ onTrackSelect });
 
-	$effect(() => {
-		logger.debug('Showing tracks', {
-			component: 'TracksPanelV6',
-			numTracks: session.numTracks,
-			visible: visibleTracks.length,
-			filterMode: clipStateStore.filterMode
-		});
-	});
-
 	function handleTrackSelect(trackIndex: number) {
 		logger.debug('🎯 TracksPanelV6: Selecting track:', { component: 'TracksPanelV6', trackIndex });
 		onTrackSelect?.(trackIndex);
