@@ -308,18 +308,19 @@ _coerce_str = coerce_str
 
 class _Placement:
     """One pad-targeted browser load waiting to be placed (ADR-437): the
-    snapshots that tell the newcomer apart, whether an undo step was
-    opened for it (never, today — see ``_load_into_pad``), and the
-    deadline past which the load is reported as ``landed-nowhere``."""
+    snapshots that tell the newcomer apart and the deadline past which the
+    load is reported as ``landed-nowhere``. No undo step is opened for a
+    pad load (see ``_load_into_pad``): Live records it as its own
+    ``Insert Device``."""
 
     __slots__ = (
-        "before_chain", "before_track", "began", "chain", "deadline", "looks",
+        "before_chain", "before_track", "chain", "deadline", "looks",
         "pad_path", "preset_path", "started", "track",
     )
 
     def __init__(
         self, track, chain, pad_path: str, preset_path: str,
-        before_chain: set, before_track: set, began: bool,
+        before_chain: set, before_track: set,
         started: float, deadline: float,
     ) -> None:
         self.track = track
@@ -328,7 +329,6 @@ class _Placement:
         self.preset_path = preset_path
         self.before_chain = before_chain
         self.before_track = before_track
-        self.began = began
         self.started = started
         self.deadline = deadline
         self.looks = 0
@@ -407,7 +407,7 @@ class DeviceLoadComponent:
         # load at once. ``clock`` is the deadline's clock, injectable.
         self._schedule_tick = schedule_tick
         self._clock = clock
-        # Pad loads still waiting for Live, each holding an open undo step.
+        # Pad loads still waiting for Live to show the newcomer.
         self._pending: List[_Placement] = []
         # ADR-445: presets a wire-level track load lands at the head of the
         # track's audio effects (the wah), the same placement the pedal's own
@@ -910,7 +910,6 @@ class DeviceLoadComponent:
         chain = pad_ref.chain
         before_chain = _device_ids(chain)
         before_track = _device_ids(track)
-        began = False  # no undo group here — see the docstring
         started = self._clock()
         restore_mode = False
         try:
@@ -943,7 +942,6 @@ class DeviceLoadComponent:
             finally:
                 self._restore_insert_mode(track, restore_mode)
         except _LOM_ERRORS as e:
-            self._end_undo_step(began)
             logger.error(
                 "DeviceLoadComponent: pad load of %r raised %s: %s",
                 preset_path, type(e).__name__, e,
@@ -957,7 +955,7 @@ class DeviceLoadComponent:
 
         placement = _Placement(
             track, chain, pad_path, preset_path, before_chain, before_track,
-            began, started, started + PAD_PLACEMENT_TIMEOUT_S,
+            started, started + PAD_PLACEMENT_TIMEOUT_S,
         )
         self._pending.append(placement)
         if self._settle_placement(placement):
@@ -1003,7 +1001,7 @@ class DeviceLoadComponent:
 
     def _settle_placement(self, p: _Placement) -> bool:
         """One look at where ``p``'s preset is. ``True`` when the load is
-        over — placed, or failed for good — and its undo step closed;
+        over — placed, or failed for good;
         ``False`` when Live has not shown the newcomer yet."""
         p.looks += 1
         after_chain = _device_ids(p.chain)
@@ -1089,12 +1087,9 @@ class DeviceLoadComponent:
         )
 
     def _close_placement(self, p: _Placement) -> None:
-        """Forget ``p`` and close its undo step — once, whichever way the
-        load ended."""
+        """Forget ``p``, whichever way the load ended."""
         if p in self._pending:
             self._pending.remove(p)
-        began, p.began = p.began, False
-        self._end_undo_step(began)
 
     def _elapsed_ms(self, p: _Placement) -> float:
         try:
@@ -1486,8 +1481,7 @@ class DeviceLoadComponent:
 
     def disconnect(self) -> None:
         """Idempotent teardown. No listeners; a pad load still waiting for
-        Live is dropped here (its undo step, were one open, closed), and no
-        error is emitted."""
+        Live is dropped here, and no error is emitted."""
         self._disconnected = True
         for p in list(self._pending):
             self._close_placement(p)
