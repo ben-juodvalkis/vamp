@@ -32,19 +32,27 @@ class FakeCookies {
 	}
 }
 
-function event(path: string, address: string, cookies = new FakeCookies(), body?: unknown) {
+/** The route SvelteKit would match: it routes on the decoded path. */
+function routeIdFor(path: string): string | null {
+	const decoded = decodeURIComponent(path);
+	return decoded.startsWith('/api/') ? decoded : null;
+}
+
+function event(path: string, address: string, cookies = new FakeCookies(), body?: unknown, routeId = routeIdFor(path)) {
 	const url = new URL(`http://looping-studio-3.local:8889${path}`);
 	return {
 		url,
+		route: { id: routeId },
 		cookies,
 		getClientAddress: () => address,
 		request: new Request(url, body === undefined ? undefined : { method: 'POST', body: JSON.stringify(body) })
 	} as never;
 }
 
-async function through(path: string, address: string, cookies?: FakeCookies): Promise<number> {
+async function through(path: string, address: string, cookies?: FakeCookies, routeId?: string | null): Promise<number> {
 	const resolved = vi.fn(async () => new Response('ok'));
-	const res = await handle({ event: event(path, address, cookies), resolve: resolved } as never);
+	const ev = routeId === undefined ? event(path, address, cookies) : event(path, address, cookies, undefined, routeId);
+	const res = await handle({ event: ev, resolve: resolved } as never);
 	return res.status;
 }
 
@@ -67,6 +75,16 @@ describe('the gate', () => {
 		expect(await through('/api/pair/decide', WIFI)).toBe(401);
 		expect(await through('/api/pair/state', WIFI)).toBe(200);
 		expect(await through('/api/pair/request', WIFI)).toBe(200);
+	});
+
+	it('refuses a percent-encoded path to a gated route: SvelteKit routes it decoded', async () => {
+		expect(await through('/%61pi/ws-auth', WIFI)).toBe(401);
+		expect(await through('/api/%77s-auth', WIFI)).toBe(401);
+		expect(await through('/%61pi/places/rebuild', WIFI)).toBe(401);
+		// Matched no route: judged on the decoded path, still refused.
+		expect(await through('/%61pi/ws-auth', WIFI, undefined, null)).toBe(401);
+		// The pairing flow stays open however it is spelled.
+		expect(await through('/api/pair/%73tate', WIFI)).toBe(200);
 	});
 
 	it('leaves the page itself open: it is what shows the pairing screen', async () => {
