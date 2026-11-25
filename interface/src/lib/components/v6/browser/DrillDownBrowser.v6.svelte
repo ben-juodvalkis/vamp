@@ -16,10 +16,10 @@
     - One layer per screen — folders, or a leaf's presets; a level holding both
       shows its folders first and its own presets after them — `screenKind`.
     - Cross-column drag is dropped; hold-a-folder → random preset is kept
-      (now 500ms under the house rising fill — see HOLD_TO_RANDOM_MS), and a
+      (500ms, `HOLD_MS`, under the house rising fill — `useHoldPick`), and a
       grouped screen's section headers take the same hold for a random preset
-      from their own section (`sectionPress`).
-    - Key/scale mode delegates to the existing scale send helpers inline.
+      from their own section.
+    - Key/scale mode is `ScalePicker` + `ScaleKeyControls`.
 -->
 <script lang="ts">
 	import { onMount, onDestroy, untrack } from 'svelte';
@@ -70,7 +70,7 @@
 	import { sectionInks } from './utils/sectionInks';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-	import { press, type PressOptions, type PressReleaseInfo } from '$lib/actions';
+	import { press } from '$lib/actions';
 	import { fitText } from '$lib/utils/fitText';
 	import { clampLines } from '$lib/utils/clampLines';
 	import RecordButton from '$lib/components/v6/controls/RecordButton.svelte';
@@ -104,6 +104,7 @@
 	import ScalePicker from './ScalePicker.svelte';
 	import ScaleKeyControls from './ScaleKeyControls.svelte';
 	import { KeyDetect } from './keyDetect.svelte';
+	import { HoldPick, HOLD_MS } from './useHoldPick.svelte';
 	import { isAudioThumbnailType } from '$lib/utils/waveformThumbnail';
 
 	import constants from '$config/constants.json';
@@ -117,15 +118,10 @@
 	const audioWaveformsEnabled =
 		(constants.ui?.browser as { audioWaveforms?: boolean })?.audioWaveforms !== false;
 
-	// Long-press to random-pick a folder. At 200ms this was a tap/press
-	// discriminator wearing a charge ring, because 200ms of progress bar is a
-	// flicker. At 500ms it is long enough to READ as a gate, so it takes the
-	// same rising `.hold-fill` ClipCentralView's Delete / Replace Inst / Dup Trk
-	// holds wear — one hold idiom across the app instead of two.
-	const HOLD_TO_RANDOM_MS = 500;
-	// How long a hold runs before the speculative pick's name shows. A tap to
-	// drill in lifts well inside this, so it never flashes a preset name.
-	const PICK_SHOW_AFTER_MS = 250;
+	// Long-press a folder or a section header to random-pick from it
+	// (`useHoldPick`), over `HOLD_MS`: long enough to READ as a gate, so it
+	// takes the same rising `.hold-fill` ClipCentralView's Delete / Replace
+	// Inst / Dup Trk holds wear — one hold idiom across the app.
 
 	// How long the picked folder tile wears the preset's name — AND, on the
 	// random path only, how long the browser stays up before closing.
@@ -576,8 +572,8 @@
 	async function loadCurrentLevel() {
 		// Fires on every vendor/path change (see the $effect below), so this is
 		// the one place that catches all navigation away from a revealed tile.
-		clearPickReveal();
-		clearCharge();
+		hold.clearPickReveal();
+		hold.clearCharge();
 		if (!selectedVendor || !vendorState?.adapter) {
 			folders = [];
 			loadedPresets = [];
@@ -1040,10 +1036,10 @@
 		token: number,
 		pick: Promise<Preset | null>
 	) {
-		// Tile state belongs to the NEWEST press (see `pressToken`); the load
+		// Tile state belongs to the NEWEST press (`hold.owns`); the load
 		// itself goes through either way, because this folder was genuinely held
 		// past the fire and a random pick is what that asks for.
-		const owns = () => token === pressToken;
+		const owns = () => hold.owns(token);
 		try {
 			// Already rolled at pointerdown, and usually already resolved and
 			// showing on the tile. Awaiting it here rather than rolling again is
@@ -1051,7 +1047,7 @@
 			// catalog this is where the wait actually happens.
 			const preset = await pick;
 			if (!preset) {
-				if (owns()) clearCharge();
+				if (owns()) hold.clearCharge();
 				logger.warn('No preset found for random pick', { component: 'DrillDownBrowser', folderName });
 				return;
 			}
@@ -1059,7 +1055,7 @@
 			// Name the pick on the tile or header you're still holding. The folder
 			// screen has no preset card to light up; a section header does, and
 			// `loadedPresetPath` above is what lights it.
-			if (owns()) showPickOn(folderName, preset.name);
+			if (owns()) hold.showPickOn(folderName, preset.name);
 			if (groupOfKind(preset.kind) === 'effects') {
 				await addEffect(preset, PRESET_REVEAL_MS);
 				return;
@@ -1069,8 +1065,8 @@
 			await commitPresetLoad(preset, PRESET_REVEAL_MS);
 		} catch (err) {
 			if (owns()) {
-				clearCharge();
-				clearPickReveal();
+				hold.clearCharge();
+				hold.clearPickReveal();
 			}
 			logger.error('Random pick failed', { component: 'DrillDownBrowser', err });
 			presetLandingStore.clear();
@@ -1157,269 +1153,16 @@
 		}
 	}
 
-	// ── Long-press bookkeeping for folder rows ──
-	//
-	// Two pieces of feedback hang off this. At 500ms the hold is long enough to
-	// be read as a gauge, so it wears the same rising fill as ClipCentralView's
-	// 800ms gates rather than the charge ring it needed back when it was 200ms:
-	//
-	//   charge — `chargingFolder` marks the tile under an active press, which
-	//            mounts a `.hold-fill` that climbs it over exactly
-	//            HOLD_TO_RANDOM_MS and lands full at the instant the timer
-	//            fires. The class stays on past the fire (the fill is
-	//            `forwards`) so the tile holds the filled look through the async
-	//            pick rather than dropping back for a frame.
-	//   pick   — `pickedFolder`/`pickedName` turn the held tile into the reveal
-	//            surface for PRESET_REVEAL_MS: it takes the preset grammar and
-	//            its label becomes the preset that actually got loaded. This is
-	//            the payoff of the whole gesture — a random pick is the one
-	//            choice you can't know in advance — so the browser now waits out
-	//            this window before closing on the random path (and only there;
-	//            see `handlePostLoad`).
-	let pressTimer: ReturnType<typeof setTimeout> | null = null;
-	let pressFired = false;
-	let chargingFolder = $state<string | null>(null);
-	/**
-	 * The speculative pick's name, shown on the tile WHILE the bar is still
-	 * climbing. This is what turns the 500ms from a wait into a decision: you
-	 * read what you're about to get and can still back out by lifting off.
-	 * Null until the pick resolves — on a cold catalog that can be after the
-	 * fire, in which case the tile simply goes straight to `.picked`.
-	 */
-	let chargingName = $state<string | null>(null);
-	/**
-	 * The speculative pick's TILE, for a section-header press: the tiles are on
-	 * screen under the header, so the pick lights its own tile while the bar
-	 * climbs. That is the readable half on iPad — the finger holding the header
-	 * covers the header's label. A folder-tile press never sets it (a folder
-	 * screen has no preset tiles).
-	 */
-	let chargingPresetPath = $state<string | null>(null);
-	/** False until the hold passes PICK_SHOW_AFTER_MS; gates both of the above. */
-	let pickShowDue = $state(false);
-	let pickShowTimer: ReturnType<typeof setTimeout> | null = null;
-	const shownChargingName = $derived(pickShowDue ? chargingName : null);
-	const shownChargingPresetPath = $derived(pickShowDue ? chargingPresetPath : null);
-	let pickedFolder = $state<string | null>(null);
-	let pickedName = $state<string | null>(null);
-	let pickRevealTimer: ReturnType<typeof setTimeout> | null = null;
-	/**
-	 * Bumped on every press. `getRandomPreset` awaits a possibly-cold catalog
-	 * fetch (`/data/{type}.json` on first use of a type), so a press can resolve
-	 * long after the finger moved on: hold A past the fire, release, press B,
-	 * and A's late resolution would otherwise wipe B's charge and label B's
-	 * screen with A's pick. Same guard `loadCurrentLevel` uses (`navToken`),
-	 * for the same reason.
-	 */
-	let pressToken = 0;
-	/** Handle for the re-arm frame below, so teardown can drop it like the timers. */
-	let chargeRaf = 0;
-
-	/** Retire the charge — the fill unmounts and the tile takes its own name back. */
-	function clearCharge() {
-		chargingFolder = null;
-		chargingName = null;
-		chargingPresetPath = null;
-		clearPickShow();
-	}
-
-	function clearPickShow() {
-		if (pickShowTimer) { clearTimeout(pickShowTimer); pickShowTimer = null; }
-		pickShowDue = false;
-	}
-
-	/** Retire the pick reveal — the tile goes back to being a folder. */
-	function clearPickReveal() {
-		if (pickRevealTimer) { clearTimeout(pickRevealTimer); pickRevealTimer = null; }
-		pickedFolder = null;
-		pickedName = null;
-	}
-
-	/**
-	 * Show `preset` on `folder`'s tile for the reveal window.
-	 *
-	 * The revert timer runs even though the unlocked browser auto-closes at the
-	 * same moment: locked, nothing closes, and without it the tile would sit
-	 * there labelled with a preset name indefinitely.
-	 */
-	function showPickOn(folder: string, presetName: string) {
-		if (pickRevealTimer) clearTimeout(pickRevealTimer);
-		pickedFolder = folder;
-		pickedName = presetName;
-		pickRevealTimer = setTimeout(() => {
-			// The charge outlives the finger (see `endFolderPress`) and `.picked`
-			// has been covering it; when the reveal goes, take it with us or the
-			// tile is left looking charged forever.
-			clearCharge();
-			clearPickReveal();
-		}, PRESET_REVEAL_MS);
-	}
-
-	/**
-	 * Roll the random pick NOW, at pointerdown, so its name can appear while the
-	 * hold is still filling. The gesture commits this exact preset when the timer
-	 * fires — it does not re-roll — or discards it if the finger lifts early.
-	 *
-	 * Speculative on every folder press, including the taps that just drill in.
-	 * That costs one `/data/{type}.json` read, which a drill needs anyway and
-	 * which is cached from then on.
-	 */
-	function pickRandomFor(folderName: string, token: number): Promise<Preset | null> {
-		if (!selectedVendor || !vendorState?.adapter) return Promise.resolve(null);
-		const folderPath = [...vendorState.currentPath, folderName];
-		const pick = vendorState.adapter.getRandomPreset(selectedVendor, folderPath);
-		// Label-only branch. Attaching a handler here also keeps an aborted press
-		// (nothing ever awaits `pick`) from surfacing as an unhandled rejection;
-		// the REAL error still reaches `loadRandomFromFolder`, which awaits `pick`
-		// itself and owns the banner.
-		pick
-			.then((preset) => {
-				if (preset && token === pressToken && chargingFolder === folderName) {
-					chargingName = preset.name;
-				}
-			})
-			.catch(() => {});
-		return pick;
-	}
-
-	/** Mount the charge on `name`'s tile or header, for the press `token`. */
-	function armCharge(name: string, token: number) {
-		clearPickShow();
-		pickShowTimer = setTimeout(() => {
-			pickShowTimer = null;
-			if (token === pressToken) pickShowDue = true;
-		}, PICK_SHOW_AFTER_MS);
-		if (chargingFolder === name) {
-			// Re-pressing a tile that is STILL charging — its previous press fired
-			// and that pick is either in flight or on screen. Assigning the value
-			// it already holds toggles no class, and a `forwards` fill parked at
-			// its end state never replays, so the bar would not rebuild. Drop it
-			// and re-arm on the next frame. ONLY this path pays that frame; an
-			// ordinary press still charges on the same tick.
-			chargingFolder = null;
-			cancelAnimationFrame(chargeRaf);
-			chargeRaf = requestAnimationFrame(() => {
-				chargeRaf = 0;
-				if (token === pressToken) chargingFolder = name;
-			});
-		} else {
-			chargingFolder = name;
-		}
-	}
-
-	function startFolderPress(name: string) {
-		pressFired = false;
-		clearTimeout(pressTimer!);
-		// A fresh press retires the previous reveal — only ever one tile at a time.
-		clearPickReveal();
-		const token = ++pressToken;
-		chargingName = null;
-		chargingPresetPath = null;
-		armCharge(name, token);
-		// Rolled here, committed at the fire — the name on the tile and the preset
-		// that loads are the same object, never two rolls.
-		const pick = pickRandomFor(name, token);
-		pressTimer = setTimeout(() => {
-			pressFired = true;
-			loadRandomFromFolder(name, token, pick);
-		}, HOLD_TO_RANDOM_MS);
-	}
-	function endFolderPress(name: string) {
-		clearTimeout(pressTimer!);
-		pressTimer = null;
-		// Only drop the charge when the press ended BEFORE the fire. Past it the
-		// charged look has to hold through the async pick — releasing the moment
-		// the ring completes is the NORMAL way to use this gesture (the ring
-		// filling is the cue to let go), and `getRandomPreset` may still be
-		// awaiting a cold catalog fetch. Clearing here would flash the tile back
-		// to its resting outline before the reveal lands. `.picked` outranks
-		// `.charging` in the cascade (same specificity, declared after), so the
-		// reveal shows through the charge rather than fighting it, and the
-		// reveal's own expiry retires both.
-		if (!pressFired) {
-			// Lifted off before the fire — an abort. The speculative pick is
-			// discarded unused, which is the whole point of showing its name
-			// during the climb.
-			clearCharge();
-			enterFolder(name);
-		}
-	}
-	function cancelFolderPress() {
-		clearTimeout(pressTimer!);
-		pressTimer = null;
-		// Same rule as `endFolderPress`: only drop the charge if the press never
-		// fired. Past the fire the pick is committed and WILL land (this doesn't
-		// bump `pressToken`, so it still owns the tile), and clearing here would
-		// empty the tile exactly as the release path used to. A finger drifting
-		// off a tile edge mid-hold — ordinary on iPad — is not an abort of
-		// anything. Checked before `pressFired` is forced true below.
-		if (!pressFired) clearCharge();
-		pressFired = true; // suppress the trailing tap
-	}
-
-	// ── Long-press a section header → random preset from that section ──
-	//
-	// The folder tile's gesture, on the headers of a grouped (depth-flattened)
-	// preset screen: same 500ms fill, same reveal, same close. Two differences,
-	// both forced by where a section lives:
-	//
-	//   - The pick is rolled from the section's own presets, not asked of the
-	//     adapter. Past the depth cap the section's folder is not a node in the
-	//     catalog tree at all, and `getRandomPreset` falls back to the PARENT
-	//     when a path doesn't resolve — so asking it would quietly pick from
-	//     the whole flattened screen rather than the section held. The section
-	//     is already in memory, so the roll is synchronous and never cold.
-	//   - It runs on `use:press` (ADR-427) rather than the folder tile's
-	//     hand-rolled handlers: `onHold` is the fire, a release before it (or a
-	//     pan the browser claims, or 12px of travel) is the abort. A tap on a
-	//     header does nothing, as before.
-	//
-	// Keyed by folder name, sharing `chargingFolder` / `pickedFolder` with the
-	// folder tiles: the two never share a screen (`screenKind`), and a
-	// section's name is unique on its screen (`groupPresetsByOrigin` merges
-	// case-insensitively).
-
-	/** The roll each held header is carrying, from its `onDown` to its `onHold`. */
-	const sectionPicks = new Map<string, { token: number; preset: Preset }>();
-
-	function startSectionPress(folder: string, sectionPresets: Preset[]) {
-		// A Places section can hold greyed tiles (a plug-in not installed, an
-		// effect) that a tap cannot load, so a roll cannot land on one either.
-		// Every type-catalog preset passes, so this is the old roll there.
-		const pool = sectionPresets.filter((p) => canLoad(p.kind, p.installed));
-		if (pool.length === 0) return;
-		clearPickReveal();
-		const token = ++pressToken;
-		const preset = pool[Math.floor(Math.random() * pool.length)];
-		sectionPicks.set(folder, { token, preset });
-		chargingName = preset.name;
-		chargingPresetPath = preset.path;
-		armCharge(folder, token);
-	}
-
-	function fireSectionPress(folder: string) {
-		const pick = sectionPicks.get(folder);
-		if (!pick) return;
-		void loadRandomFromFolder(folder, pick.token, Promise.resolve(pick.preset));
-	}
-
-	function endSectionPress(folder: string, info: PressReleaseInfo) {
-		const pick = sectionPicks.get(folder);
-		sectionPicks.delete(folder);
-		// Past the fire the charge outlives the finger, exactly as on a folder
-		// tile — the reveal's own expiry retires it. Before the fire this is an
-		// abort, and the speculative pick is discarded unused.
-		if (!info.held && pick && pick.token === pressToken) clearCharge();
-	}
-
-	function sectionPress(folder: string, sectionPresets: Preset[]): PressOptions {
-		return {
-			holdMs: HOLD_TO_RANDOM_MS,
-			onDown: () => startSectionPress(folder, sectionPresets),
-			onHold: () => fireSectionPress(folder),
-			onRelease: (info) => endSectionPress(folder, info)
-		};
-	}
+	// ── Hold a folder or a section header → a random preset (`useHoldPick`) ──
+	const hold = new HoldPick({
+		rollFolder: (folderName) =>
+			selectedVendor && vendorState?.adapter
+				? vendorState.adapter.getRandomPreset(selectedVendor, [...vendorState.currentPath, folderName])
+				: null,
+		fire: (folderName, token, pick) => void loadRandomFromFolder(folderName, token, pick),
+		enter: (folderName) => enterFolder(folderName),
+		revealMs: PRESET_REVEAL_MS
+	});
 
 	// ── Lifecycle ──
 	/**
@@ -1518,7 +1261,7 @@
 	// the same landing as any other.
 	let wasReplacingInstrument = false;
 	// Guards a slow catalog read against a newer open, exactly as `navToken`
-	// guards `loadCurrentLevel` and `pressToken` the random pick.
+	// guards `loadCurrentLevel` and `HoldPick`'s token the random pick.
 	let revealToken = 0;
 	$effect(() => {
 		const nowReplacing = browserModeStore.isReplacingInstrument;
@@ -1614,12 +1357,9 @@
 	});
 
 	onDestroy(() => {
-		if (pickRevealTimer) { clearTimeout(pickRevealTimer); pickRevealTimer = null; }
+		hold.destroy();
 		keyDetect.clearPending();
-		if (chargeRaf) cancelAnimationFrame(chargeRaf);
-		if (pickShowTimer) clearTimeout(pickShowTimer);
 		clearPostLoadClose();
-		clearTimeout(pressTimer!);
 		// Guarded: onDestroy also runs during SSR, where cAF doesn't exist (and
 		// windowRaf is always 0 there — nothing schedules frames server-side).
 		if (windowRaf) cancelAnimationFrame(windowRaf);
@@ -1733,7 +1473,7 @@
 	<button
 		class="card preset-tile"
 		class:faced
-		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
+		class:loaded={(hold.shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={inactive}
 		class:has-plugin={!!subLabel || tags.length > 0}
 		style="--k: {inkFor(p)};"
@@ -1810,35 +1550,27 @@
 {/snippet}
 
 <!-- A section's header — the full-width band's and a packed cell's. Hold it and
-     a random preset from the section loads (`sectionPress`), wearing the folder
+     a random preset from the section loads (`HoldPick.sectionPress`), wearing the folder
      tile's charge: the same rising fill, the name swapped for the pick while the
      bar climbs and through the reveal. The count means nothing beside a preset's
      name, so it steps aside while one shows. -->
 {#snippet folderTile(name: string)}
-	{@const label =
-		pickedFolder === name && pickedName
-			? pickedName
-			: chargingFolder === name && shownChargingName
-				? shownChargingName
-				: name}
+	{@const label = hold.labelFor(name) ?? name}
 	<button
 		class="card folder-tile"
-		class:charging={chargingFolder === name}
-		class:picked={pickedFolder === name}
+		class:charging={hold.chargingFolder === name}
+		class:picked={hold.pickedFolder === name}
 		style="--k: {folderColors[name] || activeColor};"
-		onpointerdown={() => startFolderPress(name)}
-		onpointerup={() => endFolderPress(name)}
-		onpointerleave={cancelFolderPress}
-		onpointercancel={cancelFolderPress}
+		use:press={hold.folderPress(name)}
 	>
-		{#if chargingFolder === name}
+		{#if hold.chargingFolder === name}
 			<!-- Same rising fill as ClipCentralView's hold gates,
 			     duration bound inline to the timer that fires so the
 			     bar cannot finish early or late. -->
 			<div
 				class="hold-fill"
 				aria-hidden="true"
-				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
+				style="animation-duration: {HOLD_MS}ms;"
 			></div>
 		{/if}
 		<!-- Three labels, most-committed first: the post-fire
@@ -1852,24 +1584,19 @@
      reads when that is not the key (a mixed level's presets, keyed apart from
      every folder name on the same screen). -->
 {#snippet sectionHead(folder: string, sectionPresets: Preset[], label: string = folder, glyph?: string)}
-	{@const pick =
-		pickedFolder === folder && pickedName
-			? pickedName
-			: chargingFolder === folder && shownChargingName
-				? shownChargingName
-				: null}
+	{@const pick = hold.labelFor(folder)}
 	<h3
 		class="section-head"
-		class:charging={chargingFolder === folder}
-		class:picked={pickedFolder === folder}
+		class:charging={hold.chargingFolder === folder}
+		class:picked={hold.pickedFolder === folder}
 		style="--k: {sectionInkOf?.get(folder.toLowerCase()) || sectionPresets[0]?.vendorColor || activeColor};"
-		use:press={sectionPress(folder, sectionPresets)}
+		use:press={hold.sectionPress(folder, sectionPresets)}
 	>
-		{#if chargingFolder === folder}
+		{#if hold.chargingFolder === folder}
 			<span
 				class="hold-fill"
 				aria-hidden="true"
-				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
+				style="animation-duration: {HOLD_MS}ms;"
 			></span>
 		{/if}
 		{#if pick === null && glyph}
@@ -2882,9 +2609,9 @@
 		opacity: 0.7;
 	}
 
-	/* HOLD → a random preset from the section (`sectionPress`): the folder
-	   tile's rising fill, climbing the header behind its labels over exactly
-	   HOLD_TO_RANDOM_MS. The header is already a positioned box (sticky, or
+	/* HOLD → a random preset from the section (`HoldPick.sectionPress`): the
+	   folder tile's rising fill, climbing the header behind its labels over
+	   exactly HOLD_MS. The header is already a positioned box (sticky, or
 	   relative in a packed cell), so the fill anchors to it. */
 	.section-head .hold-fill {
 		position: absolute;
@@ -2951,7 +2678,7 @@
 	/* CHARGE — a rising fill, exactly ClipCentralView's hold-gate idiom, now that
 	   the window (500ms) is long enough to read as a bar rather than a flicker.
 	   It grows bottom-to-top over the hold window (duration bound inline from
-	   HOLD_TO_RANDOM_MS) and lands full on the fire, so the motion cannot drift
+	   HOLD_MS) and lands full on the fire, so the motion cannot drift
 	   from the timer that ends it. `forwards` holds the
 	   filled look through the async pick until `.picked` takes over.
 
