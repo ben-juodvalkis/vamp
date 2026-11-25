@@ -56,7 +56,8 @@ import {
   resolvePermuteLayout
 } from '$lib/config/permuteLayout';
 import type { PermuteLayout, PermuteRole } from '$lib/config/permuteLayout';
-import { v3Store, UNSET_GENERATION, applyParamValue } from '$lib/stores/v3/normalized.svelte';
+import { v3Store, UNSET_GENERATION } from '$lib/stores/v3/normalized.svelte';
+import { writeParam } from '$lib/services/paramWrite';
 import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import { permuteStepStore } from '$lib/stores/v3/permuteSteps.svelte';
 import { logger } from '$lib/utils/logger';
@@ -92,22 +93,17 @@ function readRole(layout: PermuteLayout | undefined, role: PermuteRole): number 
 }
 
 function writeRole(layout: PermuteLayout, role: PermuteRole, value: number): void {
-  if (v3Store.generation === UNSET_GENERATION) {
+  // Optimistic and armed, as every param write is (`writeParam`): the
+  // surface suppresses the first echo after a UI-driven write, so without
+  // the local write no $derived consumer would update, and the arm keeps a
+  // stale echo from a quick double toggle from flipping the step back.
+  if (!writeParam(layout.paths[role], value)) {
     logger.warn('Sequencer writeRole blocked: generation unset', {
       devicePath: layout.devicePath,
       role,
       value
     });
-    return;
   }
-  const paramPath = layout.paths[role];
-  // Optimistic local write — mirrors the selectedTrackStore.setParamValue
-  // pattern (ADR-001 + ADR-002). The Python surface suppresses the first
-  // echo after a UI-driven write (one-shot in MutationComponent); without
-  // this line the store stays at the pre-write value and no $derived
-  // consumer updates.
-  applyParamValue(paramPath, value);
-  send('/looping/v3/param/set', [paramPath, value, v3Store.generation]);
 }
 
 /**
@@ -116,8 +112,8 @@ function writeRole(layout: PermuteLayout, role: PermuteRole, value: number): voi
  * (likely non-selected) track's device — used by the duplicate-track
  * flow, which resets the copied Permute on the new track. Resolves the
  * layout by name from the device's records in the store; a device the
- * store hasn't seen yet falls back to the positional table. Preserves
- * writeRole's generation guard and optimistic-write posture.
+ * store hasn't seen yet falls back to the positional table. Same guard and
+ * echo policy as writeRole (`writeParam`).
  */
 export function resetParamsToDefaultsForDevice(devicePath: string): void {
   if (v3Store.generation === UNSET_GENERATION) {
@@ -129,10 +125,7 @@ export function resetParamsToDefaultsForDevice(devicePath: string): void {
   const record = v3Store.deviceByPath.get(devicePath);
   const layout = record ? resolvePermuteLayout(record) : positionalPermuteLayout(devicePath);
   for (const role of PERMUTE_ROLES) {
-    const paramPath = layout.paths[role];
-    const value = PERMUTE_PARAM_DEFAULTS[role];
-    applyParamValue(paramPath, value);
-    send('/looping/v3/param/set', [paramPath, value, v3Store.generation]);
+    writeParam(layout.paths[role], PERMUTE_PARAM_DEFAULTS[role]);
   }
 }
 

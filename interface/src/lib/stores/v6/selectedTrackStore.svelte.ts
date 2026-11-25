@@ -10,6 +10,7 @@
  */
 
 import { send } from '$lib/api/simpleClient';
+import { writeParam } from '$lib/services/paramWrite';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 import type { InstrumentType } from '$lib/services/instrumentService';
 import { VM_PAD_FX, padDeviceStubs, parseVmPadFx, vmPadChainProperty } from '$lib/services/drumVirtualMacros';
@@ -24,14 +25,12 @@ import { session, onSelectedTrackChange } from '$lib/stores/session.svelte';
 import {
 	v3Store,
 	UNSET_GENERATION,
-	applyParamValue,
 	applyPropertyValue,
 	padDevicesAt,
 	chainDevicesAt
 } from '$lib/stores/v3/normalized.svelte';
 import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import {
-	armParam,
 	disarmParam,
 	getArmedValue,
 	resetParamArming
@@ -491,20 +490,12 @@ class SelectedTrackStore {
 	 * @see paramValue for the companion read path.
 	 */
 	setParamValue(paramPath: string, value: number): Promise<void> {
-		if (v3Store.generation === UNSET_GENERATION) {
-			logger.debug('setParamValue dropped — v3 generation still UNSET', {
-				paramPath
-			});
-			return Promise.resolve();
-		}
-		// Arm before optimistic apply: incoming echoes/state-fulls during
-		// the round-trip won't overwrite our value until the surface's
-		// confirmation echo matches (or the arm ages out). This is what
-		// makes lossy-quantization controls (Echo, AutoPan) stay where
-		// the finger left them — see paramArming.svelte for details.
-		armParam(paramPath, value);
-		applyParamValue(paramPath, value);
-		send('/looping/v3/param/set', [paramPath, value, v3Store.generation]);
+		// Armed and optimistic (`writeParam`'s defaults): incoming
+		// echoes/state-fulls during the round trip won't overwrite our value
+		// until the surface's confirmation echo matches (or the arm ages
+		// out). This is what makes lossy-quantization controls (Echo,
+		// AutoPan) stay where the finger left them — see paramArming.svelte.
+		writeParam(paramPath, value);
 		return Promise.resolve();
 	}
 

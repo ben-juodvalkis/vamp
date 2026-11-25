@@ -15,17 +15,20 @@
  *   tile stores pending values itself, through its own `storePendingParam`.
  *
  * Either way the wire write is `selectedTrackStore.setParamValue`, which
- * applies optimistically to the v3 store and arms the value for the
- * gesture's round-trip (paramArming). That is why this goes through the
- * store and not `send`: a raw send would leave the control snapping back
- * to the store's stale value until Live echoed.
+ * goes through `writeParam` (`services/paramWrite.ts`, re-exported here):
+ * the one sender of `/looping/v3/param/set`. It applies optimistically to
+ * the v3 store and arms the value for the gesture's round trip
+ * (paramArming); a raw send would leave the control snapping back to the
+ * store's stale value until Live echoed.
  */
 
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import type { DeviceRecord, SlotKey } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
-import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import { send } from '$lib/api/simpleClient';
+import { acceptedGeneration } from './paramWrite';
+
+export { writeParam, type WriteParamOptions } from './paramWrite';
 
 export interface ParamTarget {
 	device: DeviceRecord | null | undefined;
@@ -76,7 +79,7 @@ export function sendParam(target: ParamTarget, paramIndex: number, value: number
  * presets are the first sender (2026-10-15).
  */
 export function sendParamsByName(devicePath: string, values: Record<string, number>): void {
-	const generation = v3Store.generation;
-	if (generation === null || generation === undefined) return;
+	const generation = acceptedGeneration();
+	if (generation === null) return;
 	send('/looping/v3/device/params/set', [devicePath, JSON.stringify(values), generation]);
 }
