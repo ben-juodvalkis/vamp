@@ -111,16 +111,3 @@ export function debounce<T extends (...args: any[]) => any>(
 
     return debounced;
 }
-
-/**
- * Creates a throttled function that only invokes func at most once per
- * every wait milliseconds
- */
-export function throttle<T extends (...args: any[]) => any>(
-    func: T,
-    wait: number,
-    options: { leading?: boolean; trailing?: boolean } = {}
-): DebouncedFunction<T> {
-    const { leading = true, trailing = true } = options;
-    return debounce(func, wait, { leading, trailing });
-}
