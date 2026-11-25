@@ -29,10 +29,10 @@ undefined names today, so this is a real gate rather than a baseline.
 
 It asserts something narrower than "every attribute set in ``__init__`` is
 mentioned in ``disconnect()``". That looser question has three standing
-answers here — ``AlcClipProbe``, ``NoteEditProbe``, ``SelectionProbe`` — and
-all three are noise: those classes define no teardown method, so there is
-nothing to call and nothing to fix. Asserting the loose form would mean
-shipping a three-entry allowlist that hides the one shape that matters.
+answers here — ``AlcClipProbe`` and the since-deleted ``NoteEditProbe`` and
+``SelectionProbe`` — and all were noise: those classes define no teardown
+method, so there is nothing to call and nothing to fix. Asserting the loose
+form would mean shipping an allowlist that hides the one shape that matters.
 
 The narrow form has no allowlist and no exceptions: *if a component defines a
 teardown method, it must be called.* Checked against history, that is exactly

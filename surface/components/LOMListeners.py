@@ -10,9 +10,9 @@ this class is a strict bookkeeper:
 - It fans LOM events out through plain callables installed by the
   surface (``on_structural_change``, ``on_device_added``,
   ``on_device_removed``, ``on_param_value_changed``).
-- It exposes a single resolve method, ``track_id_for(track)``, used
-  by ``MutationComponent`` to translate a ``Track`` object into the
-  v2 wire id (master sentinel ``-1`` or masked ``_live_ptr``).
+- It keeps a few on-demand walk helpers (``resolve_track``,
+  ``resolve_device``, the counts) for tests and diagnostics; no wire
+  handler resolves through it.
 
 What it does NOT do:
 
@@ -321,9 +321,9 @@ class LOMListeners:
     # --- walk helpers -----------------------------------------------------
     #
     # These are NOT a forward-map resolve surface. They are on-demand
-    # LOM walks kept here for the ``DebugComponent`` diagnostic probes
-    # (which introspect the listener state live in Log.txt) and for
-    # unit tests that need to assert walk behaviour. The v2 wire path
+    # LOM walks kept for unit tests that need to assert walk behaviour
+    # (the ``registry/*`` probes that also read them were deleted
+    # 2026-11-25). The v2 wire path
     # does its own inline walks in ``DevicesComponent``; nothing on
     # the hot path goes through these methods.
 
@@ -361,40 +361,11 @@ class LOMListeners:
                     return track, device, chain_idx
         return None
 
-    # --- track-id reverse lookup ------------------------------------------
-
-    def track_id_for(self, track) -> Optional[int]:
-        """Return the wire ``track_id`` for a ``Track`` object.
-
-        ``-1`` for the master track sentinel; masked ``_live_ptr`` for
-        regular tracks. Returns ``None`` if the track isn't reachable
-        from ``song.master_track`` / ``song.tracks`` (either a genuine
-        bug — listener fired on a dropped track — or a racing
-        disconnect).
-
-        Used by ``MutationComponent`` when the LOM hands it a
-        ``Track`` pointer and it needs the wire id for the emit
-        address.
-        """
-        if self._disconnected or track is None:
-            return None
-        master = self._safe_master_track()
-        if master is not None and _same_lom_track(track, master):
-            return MASTER_TRACK_ID
-        tid = _safe_int_id(track)
-        if tid is None:
-            return None
-        for t in self._iter_regular_tracks():
-            if _same_lom_track(t, track):
-                return _safe_int_id(t)
-        return None
-
     # --- diagnostics ------------------------------------------------------
     #
-    # The ``track_count`` / ``device_count`` / ``param_count`` properties
-    # exist so ``DebugComponent``'s ``registry/dump`` and
-    # ``registry/probe_resolve`` reply shapes stay wire-compatible.
-    # They compute via a single fresh walk — there is no stored map.
+    # ``track_count`` / ``device_count`` / ``param_count`` answered the
+    # deleted ``registry/*`` probes; the tests still read them. They compute via a single fresh walk —
+    # there is no stored map.
 
     @property
     def track_count(self) -> int:
@@ -419,28 +390,6 @@ class LOMListeners:
             for device in self._safe_devices(track):
                 count += sum(1 for _ in self._safe_params(device))
         return count
-
-    def dump_state(self) -> dict:
-        """Return the canonical walk counts under the legacy dump keys.
-
-        The reply shape (``tracks``, ``devices``, ``params``,
-        ``fresh_tracks``, ``fresh_devices``, ``fresh_params``) came
-        from an era where stored vs. fresh could legitimately diverge.
-        They never diverge in walk mode — we report the walk counts
-        under both sets of keys so the DebugComponent reply wire shape
-        is unchanged.
-        """
-        fresh_tracks = self.track_count
-        fresh_devices = self.device_count
-        fresh_params = self.param_count
-        return {
-            "tracks": fresh_tracks,
-            "devices": fresh_devices,
-            "params": fresh_params,
-            "fresh_tracks": fresh_tracks,
-            "fresh_devices": fresh_devices,
-            "fresh_params": fresh_params,
-        }
 
     # --- post-construction callback installation -------------------------
 
@@ -966,36 +915,6 @@ class LOMListeners:
         self._device_parameters_listeners[dkey] = (
             device, _on_device_parameters_changed,
         )
-
-    def _detach_device_parameters_listener(self, device) -> None:
-        """Remove the parameters-listener for ``device``, if any.
-
-        Stale-handle suppression matches ``_detach_param_value_listener``:
-        Live downgrades the underlying ``Device`` to an invalid handle
-        the moment it leaves its chain, so the detach call raises a
-        C++-signature error. The bookkeeping is cleared either way.
-        """
-        dkey = id(device)
-        entry = self._device_parameters_listeners.pop(dkey, None)
-        if entry is None:
-            return
-        dev, cb = entry
-        remove = getattr(dev, "remove_parameters_listener", None)
-        if callable(remove):
-            try:
-                remove(cb)
-            except Exception as e:
-                if _is_stale_handle_error(e):
-                    logger.debug(
-                        "LOMListeners: remove_parameters_listener skipped "
-                        "for stale handle device=%r (already torn down)",
-                        dev,
-                    )
-                else:
-                    logger.warning(
-                        "LOMListeners: remove_parameters_listener failed "
-                        "for device=%r: %s", dev, e,
-                    )
 
     def _bind_device_name_listener(self, device) -> None:
         """Attach ``device.add_name_listener``; record for teardown.
@@ -1607,7 +1526,7 @@ def _same_lom_track(a, b) -> bool:
     each read — two walks over ``song.tracks`` yield objects that
     compare unequal under ``is`` even though they represent the same
     underlying LOM track. This breaks identity comparisons like
-    ``track is other`` in ``_track_segment_for`` / ``track_id_for``:
+    ``track is other`` in ``_track_segment_for``:
     the track that ``_iter_all_tracks`` yields is already a different
     wrapper from the one ``_safe_tracks_list`` returns a moment later.
 

@@ -287,15 +287,6 @@ def test_a_failed_emit_is_not_recorded(song):
     assert emits, "the retry must ship rather than short-circuit"
 
 
-def test_song_change_clears_the_memo(song):
-    emits = []
-    comp = _component(song, emits)
-    comp.on_structural_change()
-    assert len(comp._checksum_memo) == 1
-    comp.set_song(StubSong([StubTrack("Bass", 0)]))
-    assert len(comp._checksum_memo) == 0
-
-
 def test_disconnect_releases_the_retained_trees(song):
     """The snapshots are the only real memory this component holds."""
     emits = []

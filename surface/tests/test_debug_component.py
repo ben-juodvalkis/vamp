@@ -8,8 +8,6 @@ from components.DebugComponent import (
     DebugComponent,
     PROTOCOL_VERSION,
     PROTOCOL_VERSION_ADDRESS,
-    REGISTRY_PROBE_RESOLVE_ADDRESS,
-    REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS,
 )
 
 
@@ -73,34 +71,11 @@ def test_protocol_version_address_matches_wire_contract():
     assert PROTOCOL_VERSION_ADDRESS == "/looping/protocol/version"
 
 
-# --- 05a PR-1: /looping/v2/registry/probe_resolve ------------------------
-#
-# These tests pin the wire shape of the F1 verification probe. The probe
-# exists so live F1 behaviour (lazy rebuild on miss, with _rebuilding
-# guard) can be driven in isolation from the UI — see 05a-gate-5b-
-# canonical-tree.md for why UI-driven verification is too coupled.
-
-
 class _FakeRegistry:
-    """Counter-driven stub for HandleRegistry.
+    """The ``LOMListeners`` stand-in the probes reach the song through
+    (``registry._song``); tests set ``_song`` themselves."""
 
-    Starts with configurable stored counts, grows them on
-    ``resolve_device`` to mimic a rebuild, and reports a hit/miss
-    based on ``known_ids``. Enough surface to exercise the probe
-    handler without importing the real registry.
-    """
-
-    def __init__(self, stored=(0, 0, 0), after_rebuild=None, known_ids=()):
-        self.track_count, self.device_count, self.param_count = stored
-        self._after = after_rebuild
-        self._known = set(known_ids)
-        self.resolve_calls = []
-
-    def resolve_device(self, device_id):
-        self.resolve_calls.append(device_id)
-        if self._after is not None:
-            self.track_count, self.device_count, self.param_count = self._after
-        return ("track", "device", 0) if device_id in self._known else None
+    _song = None
 
 
 def _make_component(registry):
@@ -110,86 +85,6 @@ def _make_component(registry):
         emits.append((addr, args))
 
     return DebugComponent(emit=emit, registry=registry), emits
-
-
-def test_probe_resolve_f1_self_healed_path():
-    """Cold registry → F1 fires → id resolves. The happy path."""
-    reg = _FakeRegistry(
-        stored=(1, 0, 0),
-        after_rebuild=(3, 4, 232),
-        known_ids={76890},
-    )
-    comp, emits = _make_component(reg)
-    comp.handle_registry_probe_resolve(args=(76890,), source_addr=None)
-    assert len(emits) == 1
-    addr, args = emits[0]
-    assert addr == REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS
-    # (found, was_rebuild, before_t, before_d, before_p, after_t, after_d, after_p)
-    assert args == (1, 1, 1, 0, 0, 3, 4, 232)
-
-
-def test_probe_resolve_already_warm_path():
-    """Warm cache → resolve hits, counts unchanged, was_rebuild=0."""
-    reg = _FakeRegistry(
-        stored=(3, 4, 232),
-        after_rebuild=None,  # resolve_device doesn't touch counts
-        known_ids={76890},
-    )
-    comp, emits = _make_component(reg)
-    comp.handle_registry_probe_resolve(args=(76890,), source_addr=None)
-    assert emits[0][1] == (1, 0, 3, 4, 232, 3, 4, 232)
-
-
-def test_probe_resolve_unknown_id():
-    """Unknown id → found=0; was_rebuild may still be 1 because F1 tried."""
-    reg = _FakeRegistry(
-        stored=(1, 0, 0),
-        after_rebuild=(3, 4, 232),
-        known_ids=set(),
-    )
-    comp, emits = _make_component(reg)
-    comp.handle_registry_probe_resolve(args=(99999,), source_addr=None)
-    found, was_rebuild, *_ = emits[0][1]
-    assert found == 0
-    assert was_rebuild == 1  # counts changed → F1 ran even though id missed
-
-
-def test_probe_resolve_registry_absent_emits_sentinel():
-    comp, emits = _make_component(registry=None)
-    comp.handle_registry_probe_resolve(args=(76890,), source_addr=None)
-    assert emits == [(REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS,
-                      (-1, -1, -1, -1, -1, -1, -1, -1))]
-
-
-def test_probe_resolve_missing_arg_emits_sentinel():
-    reg = _FakeRegistry()
-    comp, emits = _make_component(reg)
-    comp.handle_registry_probe_resolve(args=(), source_addr=None)
-    assert emits == [(REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS,
-                      (-1, -1, -1, -1, -1, -1, -1, -1))]
-    assert reg.resolve_calls == []  # never touched the registry
-
-
-def test_probe_resolve_non_int_arg_emits_sentinel():
-    reg = _FakeRegistry()
-    comp, emits = _make_component(reg)
-    comp.handle_registry_probe_resolve(args=("not-an-int",), source_addr=None)
-    assert emits == [(REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS,
-                      (-1, -1, -1, -1, -1, -1, -1, -1))]
-    assert reg.resolve_calls == []
-
-
-def test_probe_resolve_returns_none():
-    """Fire-and-forget shape, same as handle_version."""
-    reg = _FakeRegistry(known_ids={1})
-    comp, _ = _make_component(reg)
-    assert comp.handle_registry_probe_resolve(args=(1,), source_addr=None) is None
-
-
-def test_probe_resolve_address_matches_wire_contract():
-    assert REGISTRY_PROBE_RESOLVE_ADDRESS == "/looping/v2/registry/probe_resolve"
-    assert REGISTRY_PROBE_RESOLVE_REPLY_ADDRESS == \
-        "/looping/v2/registry/probe_resolve_reply"
 
 
 # --- /looping/probe/lom_invoke — positional args --------------------------

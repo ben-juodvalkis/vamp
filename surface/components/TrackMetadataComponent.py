@@ -1584,20 +1584,6 @@ class TrackMetadataComponent:
 
     # --- path helpers -----------------------------------------------------
 
-    def _track_path_for(self, track) -> Optional[str]:
-        """Return ``"tracks/<N>"`` for a regular track, or ``None``.
-
-        Master / returns return ``None`` — they're not owned by this
-        component and we never want to attach listeners to them here.
-        """
-        tracks = self._safe_tracks_list()
-        if tracks is None:
-            return None
-        for idx, t in enumerate(tracks):
-            if t is track:
-                return "tracks/%d" % idx
-        return None
-
     def _iter_regular_tracks(self) -> List[object]:
         tracks = self._safe_tracks_list()
         return list(tracks) if tracks is not None else []

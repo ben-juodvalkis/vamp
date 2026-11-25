@@ -35,16 +35,8 @@ handlers and observers for the `/live/*` and `/looping/*` families.
   ``/looping/protocol/version`` with the current protocol version
   (``"3.0.0"`` after PR-4a).
 
-- Gate 4c: ``LifecycleProbe`` +
-  ``LifecycleDecoratorProbe``. Exposes
-  ``/looping/probe/lifecycle_query`` and
-  ``/looping/probe/lifecycle_poke``; emits
-  ``/looping/probe/lifecycle_snapshot
-  [phase, fires, song_id, disconnect_count, decorator_bound]``
-  and — on teardown — ``/looping/probe/lifecycle_teardown [fires]``.
-  Answers [06 §2.1]: does the v3 framework's ``@listens`` +
-  ``Component`` lifecycle work cleanly in a non-MIDI headless
-  surface. See the module docstring for the operator procedure.
+- Gate 4c (shipped, probe deleted 2026-11-25): the v3 framework's
+  ``@listens`` lifecycle in a headless surface; the verdict is recorded.
 
 Per Looping's ``documentation/archive/m4l-to-python/05-migration-plan.md``,
 AbletonOSC and M4L continue to answer every other address in those
@@ -82,8 +74,6 @@ from ableton.v3.control_surface.elements_base import ElementsBase
 from .components.BrowserProbe import (
     BrowserProbe,
     LOAD_ADDRESS as BROWSER_PROBE_LOAD_ADDRESS,
-    PLACES_DUMP_ADDRESS as BROWSER_PROBE_PLACES_DUMP_ADDRESS,
-    PLACES_LOAD_ADDRESS as BROWSER_PROBE_PLACES_LOAD_ADDRESS,
 )
 from .components.AlcClipProbe import (
     AlcClipProbe,
@@ -103,14 +93,6 @@ from .components.ClipNotesComponent import (
     V3_CLIP_NOTES_ADD_ADDRESS,
     V3_CLIP_NOTES_SELECT_ADDRESS,
     V3_CLIP_NOTES_DUPLICATE_ADDRESS,
-)
-from .components.NoteEditProbe import (
-    NoteEditProbe,
-    NOTE_EDIT_ADDRESS,
-)
-from .components.SelectionProbe import (
-    SelectionProbe,
-    SELECTION_ADDRESS,
 )
 from .components.ClipPropertiesComponent import (
     ClipPropertiesComponent,
@@ -175,8 +157,6 @@ from .components.DebugComponent import (
     PY_INTROSPECT_ADDRESS,
     PROTOCOL_VERSION_ADDRESS,
     RELOAD_ON_RESELECT_ADDRESS,
-    REGISTRY_DUMP_ADDRESS,
-    REGISTRY_PROBE_RESOLVE_ADDRESS,
 )
 from .components.DeviceLoadComponent import (
     DeviceLoadComponent,
@@ -270,12 +250,6 @@ from .components.PropertyComponent import (
     V3_PROPERTY_SET_ADDRESS,
     V3_PROPERTY_SUBSCRIBE_ADDRESS,
     V3_PROPERTY_UNSUBSCRIBE_ADDRESS,
-)
-from .components.LifecycleProbe import (
-    LifecycleDecoratorProbe,
-    LifecycleProbe,
-    POKE_ADDRESS as LIFECYCLE_PROBE_POKE_ADDRESS,
-    QUERY_ADDRESS as LIFECYCLE_PROBE_QUERY_ADDRESS,
 )
 from .components.ScenesComponent import (
     ScenesComponent,
@@ -422,7 +396,7 @@ class LoopingSurface(ControlSurface):
     # __init__ used to be a 1252-line wall mixing transport bind, ~30
     # component instantiations, listener wiring, handler registration,
     # the structural-change rebind composite, the handshake-accept emit
-    # chain, the Gate 4a/4b/4c lifecycle probes, and the tick start.
+    # chain, the Gate 4a/4b probes, and the tick start.
     # The blocks below are extracted incrementally; the rest still
     # lives inline. Each phase reads only `self.X` set by an earlier
     # phase, so the call order in __init__ is the source of truth.
@@ -963,18 +937,6 @@ class LoopingSurface(ControlSurface):
             self._debug_component.handle_version,
         )
         self._transport.add_handler(
-            REGISTRY_DUMP_ADDRESS,
-            self._debug_component.handle_registry_dump,
-        )
-        self._transport.add_handler(
-            REGISTRY_PROBE_RESOLVE_ADDRESS,
-            self._debug_component.handle_registry_probe_resolve,
-        )
-        self._transport.add_handler(
-            "/looping/v2/registry/introspect_track",
-            self._debug_component.handle_registry_introspect_track,
-        )
-        self._transport.add_handler(
             LOM_INTROSPECT_ADDRESS,
             self._debug_component.handle_lom_introspect,
         )
@@ -1058,24 +1020,6 @@ class LoopingSurface(ControlSurface):
         # lines that read like the live wiring but never fired. Removed
         # 2026-08-29; the surviving composite is a strict superset.
         v3_state_full_on_structural = self._v3_state_full_component.on_structural_change
-
-        # Phase 3 PR-3c: session-load invalidation — NOT wired here.
-        # Live 12.3.7 tears down and reconstructs the entire Control
-        # Surface on File → Open (observed twice 2026-04-15, see the
-        # 2026-04-15 PR-3c revision entry in implementation-log.md),
-        # so any song-change poll on the surface side would never see
-        # drift: the old detector is GC'd with the old surface, and
-        # the new one arms against the new song as its baseline. The
-        # fresh surface already publishes ``state/full #1
-        # reason=init`` on bring-up — the actual gap is UI-side, not
-        # surface-side: the UI doesn't know the surface restarted and
-        # keeps addressing the prior session's identifiers. PR-3c now
-        # lives on the UI side (detect ``state/full`` with
-        # ``reason=init`` + ``generation=1`` after local generation
-        # already advanced → re-handshake). The ``SongChangeDetector``
-        # component + tests remain in-tree as a documented guard in
-        # case a future Live release stops recycling the surface on
-        # session-load; see the deferred-issues.md session-load entry.
 
         # v3 state/resync now emits a real v3 state/full (with
         # reason="resync"), not a v2-emit placeholder. Phase 2 PR-2b
@@ -1852,39 +1796,6 @@ class LoopingSurface(ControlSurface):
         ):
             self._transport.add_handler(address, handler)
 
-        # NoteEditProbe — throwaway capability probe for the clip-view-
-        # mirror plan's M4 (by-id note editing). Answers whether
-        # apply_note_modifications can change pitch keyed by note_id (the
-        # ClipNotesComponent docstring claims it can't; Permute proves it
-        # can in Max — this checks the Python binding). Non-destructive:
-        # snapshots and restores the focused clip. No UI consumer, not in
-        # backendScope; fired only by owner/probes/note_edit_probe_run.js. Delete
-        # once M4's ADR records the verdict.
-        self._note_edit_probe = NoteEditProbe(
-            song=self.song,
-            emit=self._transport.send,
-        )
-        self._transport.add_handler(
-            NOTE_EDIT_ADDRESS,
-            self._note_edit_probe.handle_note_edit,
-        )
-
-        # SelectionProbe — throwaway read-only probe for the bidirectional
-        # note-selection milestone. Introspects Clip.View's selection
-        # surface (select_notes_by_id / selected_notes / changed listener)
-        # so the wire can be designed from facts. No mutations, no UI
-        # consumer, not in backendScope; fired by
-        # owner/probes/selection_probe_run.js. Delete once the milestone records
-        # its verdict.
-        self._selection_probe = SelectionProbe(
-            song=self.song,
-            emit=self._transport.send,
-        )
-        self._transport.add_handler(
-            SELECTION_ADDRESS,
-            self._selection_probe.handle_selection_probe,
-        )
-
         # Phase 9 PR-9b: FootTriggerComponent — owns the two arg-free
         # gesture wires (``/looping/v3/foot/tap`` and ``…/hold``), reached
         # from the pedal MIDI adapter below and from
@@ -2142,25 +2053,6 @@ class LoopingSurface(ControlSurface):
                 BROWSER_PROBE_LOAD_ADDRESS,
                 self._browser_probe.handle_browser_load,
             )
-            # ROW 3 Places-tree probe DISABLED (2026-04-20):
-            # first live run on Ableton 12.3.7 wedged the transport —
-            # ``handle_places_dump`` traverses ``browser.user_folders``
-            # and apparently hits an exception class we don't catch
-            # (likely a C-level ``Live.Base`` error or a segfault-
-            # adjacent condition). After the first probe every
-            # subsequent ``/looping/probe/*`` request goes unanswered,
-            # including the previously-working Gate 4a/4b addresses.
-            # Registration is re-enabled once the root cause is found
-            # — do not bind these handlers without a fix in place.
-            #
-            # self._transport.add_handler(
-            #     BROWSER_PROBE_PLACES_DUMP_ADDRESS,
-            #     self._browser_probe.handle_places_dump,
-            # )
-            # self._transport.add_handler(
-            #     BROWSER_PROBE_PLACES_LOAD_ADDRESS,
-            #     self._browser_probe.handle_places_load,
-            # )
             # Phase 6 PR-6 (pr6-5): DeviceLoadComponent owns
             # ``/looping/v3/device/load``. Resolves an absolute User
             # Library filesystem path to a ``BrowserItem`` by stripping
@@ -2270,63 +2162,6 @@ class LoopingSurface(ControlSurface):
             self._scheduler_probe.handle_schedule_run,
         )
 
-        # Gate 4c: lifecycle probe. Two components, one OSC surface.
-        #
-        # ``LifecycleProbe`` is a plain class using raw
-        # ``add_tempo_listener`` — same pattern as SessionComponent —
-        # that counts fires and reports snapshots on OSC. Always
-        # constructable; the test matrix covers its unit behaviour
-        # without Live.
-        #
-        # ``LifecycleDecoratorProbe`` is a v3 ``Component`` subclass
-        # using ``@listens("tempo")``. This is the framework-managed
-        # path [03 §5] plans to use throughout; Gate 4c's core
-        # question is whether it works at all in our non-MIDI
-        # surface. Construction can fail several ways (framework
-        # requires MIDI-backed Session, decorator imports missing,
-        # ``@depends(song)`` machinery missing) — a try/except
-        # captures each failure mode without taking the rest of the
-        # surface down, and the ``decorator_bound`` flag in the
-        # snapshot tells the driver what happened.
-        self._lifecycle_probe = LifecycleProbe(
-            song=self.song, emit=self._transport.send,
-        )
-        self._transport.add_handler(
-            LIFECYCLE_PROBE_QUERY_ADDRESS,
-            self._lifecycle_probe.handle_query,
-        )
-        self._transport.add_handler(
-            LIFECYCLE_PROBE_POKE_ADDRESS,
-            self._lifecycle_probe.handle_poke,
-        )
-        self._lifecycle_decorator_probe = None
-        try:
-            # Lazy imports: if the framework moves these symbols in
-            # a future Live update, only the decorator probe breaks;
-            # the raw probe stays green and Gate 4c records "raw path
-            # works, decorator path failed with <error>" — which is
-            # itself the verdict the risk doc wants.
-            from ableton.v3.control_surface.component import Component
-            from ableton.v2.base import inject as inject_factory
-            from ableton.v2.base import listens as listens_factory
-            self._lifecycle_decorator_probe = LifecycleDecoratorProbe(
-                song=self.song,
-                component_base=Component,
-                listens_factory=listens_factory,
-                inject_factory=inject_factory,
-            )
-            self._lifecycle_probe.set_decorator_bound(True)
-            logger.info("Gate 4c: decorator path bound successfully")
-        except Exception as e:
-            # Deliberate broad catch: any import/construction failure
-            # is a valid Gate 4c negative result, not a crash bug.
-            # The surface carries on with the raw path and the
-            # driver reads ``decorator_bound=0`` in the snapshot.
-            logger.error(
-                "Gate 4c: decorator path failed to bind: %s", e,
-                exc_info=True,
-            )
-
         # Kick off the drain tick. ``schedule_message(1, fn)`` fires
         # ``fn`` on the next tick (measured 99.4 ms, 2026-08-31); ``fn``
         # must re-schedule itself each call. This is the same idiom
@@ -2346,8 +2181,8 @@ class LoopingSurface(ControlSurface):
         # be found or won't construct, ``start()`` returns False, the
         # reason is logged, and the tick's own ``poll()`` keeps the
         # surface working at the old latency. Same posture as the
-        # Gate 4c decorator probe — a capability miss is a logged
-        # verdict, not a crash.
+        # Gate 4a/4b probes — a capability miss is a logged verdict,
+        # not a crash.
         drain_interval = constants.get("osc", {}).get(
             "pythonSurface", {}
         ).get("drainIntervalMs", DEFAULT_INTERVAL_MS)
@@ -2369,7 +2204,7 @@ class LoopingSurface(ControlSurface):
         logger.info(
             "Looping surface active: tempo observer + write + "
             "Gate 4a browser probe + Gate 4b scheduler probe + "
-            "Gate 4c lifecycle probe + Gate 5 registry/devices/debug + "
+            "Gate 5 devices/debug + "
             "05a PR-2 state/full publisher + "
             "PR-3.5.7 v3 property channel",
         )
@@ -2893,20 +2728,6 @@ class LoopingSurface(ControlSurface):
         # drop-ref → close transport → super is what we want.
         self._browser_probe = None
         self._scheduler_probe = None
-        # Gate 4c: tear down the lifecycle probes. Both own LOM
-        # listener attachments (raw via ``add_tempo_listener``, or
-        # framework-managed via ``@listens``), so both need
-        # ``disconnect`` before the transport closes — the
-        # LifecycleProbe emits a final ``TEARDOWN_ADDRESS`` message
-        # on its way out. Ordering is raw → decorator so the
-        # LifecycleProbe's teardown emit lands while the transport
-        # is still open.
-        if getattr(self, "_lifecycle_probe", None) is not None:
-            self._lifecycle_probe.disconnect()
-            self._lifecycle_probe = None
-        if getattr(self, "_lifecycle_decorator_probe", None) is not None:
-            self._lifecycle_decorator_probe.disconnect()
-            self._lifecycle_decorator_probe = None
         if self._transport is not None:
             self._transport.close()
             self._transport = None

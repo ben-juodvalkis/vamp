@@ -351,34 +351,6 @@ class HandshakeComponent:
 
     # --- session management ----------------------------------------------
 
-    def active_session_ids(self) -> List[str]:
-        """Return the list of currently-active session ids.
-
-        Used by diagnostics; not on the hot path. ``_evict_stale_sessions``
-        is called first so only live sessions show.
-        """
-        self._evict_stale_sessions()
-        return list(self._sessions.keys())
-
-    def touch(self, session_id: str) -> bool:
-        """Mark a session active; returns ``False`` if the id is unknown.
-
-        Called by the other v3 handlers (``DevicesComponent.handle_set_param_v3``
-        etc.) when they observe an operation that should count as session
-        activity. Keeps a quiet UI from expiring mid-gesture.
-
-        Phase 1 doesn't actually wire this call from DevicesComponent —
-        the 30s timeout is generous enough that gestures won't be
-        affected, and keeping the cross-component call-graph minimal
-        shrinks Phase 1's risk surface. This method exists so Phase 2
-        UI-client work can opt in if needed.
-        """
-        s = self._sessions.get(session_id)
-        if s is None:
-            return False
-        s.last_activity_at = self._now()
-        return True
-
     def _evict_stale_sessions(self) -> None:
         now = self._now()
         stale = [

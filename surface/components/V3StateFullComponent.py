@@ -344,23 +344,6 @@ class V3StateFullComponent:
 
     # --- public surface --------------------------------------------------
 
-    def set_song(self, song) -> None:
-        """Rebind the captured song reference.
-
-        Used by ``LoopingSurface``'s song-change handler (PR-3c): when
-        ``SongChangeDetector`` reports a File → Open drift, the
-        surface rebinds this emitter's song to the new object so the
-        subsequent ``emit_structural`` walk visits the new set's
-        tracks/devices/params rather than the (now garbage-collected)
-        old set. ``LOMListeners``-style listener re-attachment is NOT
-        done here — see the ``SongChangeDetector`` module docstring
-        for the scope rationale.
-        """
-        self._song = song
-        # Old-song trees are meaningless against the new set. Clearing
-        # prevents a stale entry from suppressing the post-rebind emit.
-        self._checksum_memo.clear()
-
     def on_stream_peer_connected(self) -> None:
         """A fresh stream peer appeared — republish unconditionally.
 
@@ -370,8 +353,8 @@ class V3StateFullComponent:
         for "what the far side holds" while the far side stays the same,
         so a new peer invalidates it — without the clear, the next
         publish would find the tree unchanged and skip, leaving the new
-        peer with nothing. Same reasoning as ``set_song``: the thing the
-        cache was about has been replaced.
+        peer with nothing: the thing the cache was about has been
+        replaced.
 
         Then republish. Over UDP a bundle sent with nobody listening was
         simply lost, and that was survivable because the next LOM change
@@ -387,20 +370,6 @@ class V3StateFullComponent:
         logger.info(
             "V3StateFullComponent: stream peer connected — republishing",
         )
-        self._publish(reason="structural")
-
-    def emit_structural(self) -> None:
-        """Explicit entry point: emit ``reason='structural'``.
-
-        Semantically identical to ``on_structural_change`` — both
-        funnel to ``_publish("structural")`` — but named from the
-        caller's perspective rather than the listener's. The PR-3c
-        song-change handler in ``LoopingSurface`` uses this name so
-        the call site reads as "emit a structural invalidation now"
-        without implying a listener fire.
-        """
-        if self._disconnected:
-            return
         self._publish(reason="structural")
 
     def emit_on_accept(
