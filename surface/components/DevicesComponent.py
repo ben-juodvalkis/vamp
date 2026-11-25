@@ -539,9 +539,15 @@ class DevicesComponent:
 
         # Arm the one-shot before the write. If assignment raises (torn
         # down device, plugin reconfig mid-flight) unarm so a later
-        # unrelated fire isn't swallowed.
+        # unrelated fire isn't swallowed. A parameter already at the
+        # value fires nothing, so arming for it would swallow the next
+        # real change instead: write, but don't arm.
+        try:
+            unchanged = float(parameter.value) == clamped
+        except Exception:
+            unchanged = False
         armed = False
-        if self._mutation is not None and param_id is not None:
+        if self._mutation is not None and param_id is not None and not unchanged:
             self._mutation.arm_suppression(param_id)
             armed = True
         try:
