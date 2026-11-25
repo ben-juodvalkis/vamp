@@ -152,6 +152,7 @@ from . import path_resolver
 from ._common import LOM_ERRORS
 from .component_util import parse_int_arg as _parse_int_arg
 from .LOMListeners import _is_stale_handle_error
+from .listener_bag import ListenerBag
 from .path_resolver import ResolveStatus
 
 logger = logging.getLogger("looping")
@@ -291,11 +292,15 @@ class ClipPropertiesComponent:
         self._focused_clip = None
         self._focused_path: Optional[str] = None
 
-        # ``attr_name -> bound callback`` for the per-clip property listeners
-        # on ``_focused_clip``. Empty when nothing is focused.
-        self._prop_listeners: Dict[str, Callable[[], None]] = {}
-        # ``attr_name -> callback`` for ``_WARP_ATTRS`` on a focused audio clip.
-        self._warp_listeners: Dict[str, Callable[[], None]] = {}
+        # The per-clip property listeners on ``_focused_clip``, tagged by
+        # attribute name. Empty when nothing is focused.
+        self._prop_listeners = ListenerBag(
+            "ClipPropertiesComponent", on_remove_error=self._warn_detach,
+        )
+        # The ``_WARP_ATTRS`` listeners on a focused audio clip.
+        self._warp_listeners = ListenerBag(
+            "ClipPropertiesComponent", on_remove_error=self._warn_detach,
+        )
 
         # ``(attr_name, context) -> True`` once warned, for de-dupe.
         self._warned: set = set()
@@ -384,22 +389,13 @@ class ClipPropertiesComponent:
     def _attach_property_listeners(self, clip) -> None:
         """Attach a property listener per _ATTRS entry to ``clip``. Skip-with-warning per attr."""
         for attr_name in _ATTR_NAMES:
-            add = getattr(clip, "add_%s_listener" % attr_name, None)
-            if not callable(add):
-                self._warn_once(
-                    attr_name, "attach-missing",
-                    AttributeError(
-                        "no add_%s_listener on clip" % attr_name,
-                    ),
-                )
-                continue
-            cb = self._make_property_listener(attr_name)
-            try:
-                add(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(attr_name, "attach", e)
-                continue
-            self._prop_listeners[attr_name] = cb
+            self._prop_listeners.add(
+                clip, attr_name, self._make_property_listener(attr_name), tag=attr_name,
+                on_error=lambda e, a=attr_name: self._warn_once(a, "attach", e),
+                on_missing=lambda a=attr_name: self._warn_once(
+                    a, "attach-missing", AttributeError("no add_%s_listener on clip" % a),
+                ),
+            )
 
     def _detach_property_listeners(self) -> None:
         """Detach every currently-attached property listener.
@@ -409,42 +405,22 @@ class ClipPropertiesComponent:
         torn down we swallow the per-attr error; there is nothing
         to clean up anyway.
         """
-        clip = self._focused_clip
-        if clip is None:
-            self._prop_listeners.clear()
-            self._warp_listeners.clear()
-            return
-        for listeners in (self._prop_listeners, self._warp_listeners):
-            self._detach_from(clip, listeners)
+        self._prop_listeners.clear()
+        self._warp_listeners.clear()
 
-    def _detach_from(self, clip, listeners: Dict[str, Callable[[], None]]) -> None:
-        for attr_name in list(listeners.keys()):
-            cb = listeners.pop(attr_name, None)
-            if cb is None:
-                continue
-            remove = getattr(clip, "remove_%s_listener" % attr_name, None)
-            if not callable(remove):
-                continue
-            try:
-                remove(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(attr_name, "detach", e)
+    def _warn_detach(self, attr_name: str, exc: BaseException) -> None:
+        self._warn_once(attr_name, "detach", exc)
+
 
     def _attach_warp_listeners(self, clip) -> None:
         """Observe ``_WARP_ATTRS`` on an audio clip; a MIDI clip gets none."""
         if not self._is_audio_clip(clip):
             return
         for attr_name in _WARP_ATTRS:
-            add = getattr(clip, "add_%s_listener" % attr_name, None)
-            if not callable(add):
-                continue
-            cb = self._on_warp_changed
-            try:
-                add(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(attr_name, "attach", e)
-                continue
-            self._warp_listeners[attr_name] = cb
+            self._warp_listeners.add(
+                clip, attr_name, self._on_warp_changed, tag=attr_name,
+                on_error=lambda e, a=attr_name: self._warn_once(a, "attach", e),
+            )
 
     def _on_warp_changed(self) -> None:
         if self._disconnected:

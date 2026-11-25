@@ -2811,7 +2811,7 @@ def test_census_follows_a_pad_whose_instrument_is_replaced(comp, emits):
     assert census["padClasses"] == {"OriginalSimpler": 1}
     # And the name listener moved with it, so the *next* rename still lands.
     st = comp._states[PATH]
-    assert [d for d, _cb in st.name_listeners] == [chain.devices[0]]
+    assert [rec[0] for rec in st.name_listeners] == [chain.devices[0]]
 
 
 def test_pad_chain_listeners_are_let_go_with_the_rack(comp):

@@ -216,6 +216,7 @@ from .component_util import first_time, safe_class_name
 from .DrumPadChainComponent import PadChainWatcher
 from .drum_vm_resolve import find_track_drum_rack
 from .LOMListeners import _safe_int_id
+from .listener_bag import ListenerBag
 
 logger = logging.getLogger("looping")
 
@@ -356,7 +357,7 @@ class _ClipState:
         "pitch_coarse_home", "pitch_coarse_written",
         "mute_applied", "muted_ids", "gain_home", "gain_rezero",
         "chance_applied", "base_model", "expected",
-        "temp_loop_cb", "temp_notes_cb", "temp_variation_pending", "temp_notes_changed",
+        "temp_listeners", "temp_variation_pending", "temp_notes_changed",
     )
 
     def __init__(self, clip, clip_id: int, slot_idx: int, is_midi: bool, is_audio: bool) -> None:
@@ -386,8 +387,9 @@ class _ClipState:
         # pitch the engine last wrote (the own-write signature).
         self.base_model: Optional[Dict[int, dict]] = None
         self.expected: Optional[Dict[int, int]] = None
-        self.temp_loop_cb = None
-        self.temp_notes_cb = None
+        # The clip's ``loop_jump`` / ``notes`` listeners while Temperature
+        # holds it (``_temp_attach``).
+        self.temp_listeners = ListenerBag("SequencerComponent", remove_level=logging.DEBUG)
         self.temp_variation_pending = False
         self.temp_notes_changed = False
 
@@ -1812,30 +1814,19 @@ class SequencerComponent:
         def _on_notes(cs=cs):
             cs.temp_notes_changed = True
 
-        for attr, cb, slot in (("loop_jump", _on_loop_jump, "temp_loop_cb"), ("notes", _on_notes, "temp_notes_cb")):
-            add = getattr(clip, "add_%s_listener" % attr, None)
-            if not callable(add):
-                self._warn_once(inst.device_path, "temp:" + attr, "clip has no add_%s_listener" % attr)
-                continue
-            try:
-                add(cb)
-                setattr(cs, slot, cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(inst.device_path, "temp:" + attr, "add_%s_listener raised: %s" % (attr, e))
+        for attr, cb in (("loop_jump", _on_loop_jump), ("notes", _on_notes)):
+            cs.temp_listeners.add(
+                clip, attr, cb,
+                on_error=lambda e, attr=attr: self._warn_once(
+                    inst.device_path, "temp:" + attr, "add_%s_listener raised: %s" % (attr, e),
+                ),
+                on_missing=lambda attr=attr: self._warn_once(
+                    inst.device_path, "temp:" + attr, "clip has no add_%s_listener" % attr,
+                ),
+            )
 
     def _temp_detach(self, cs: _ClipState) -> None:
-        for attr, slot in (("loop_jump", "temp_loop_cb"), ("notes", "temp_notes_cb")):
-            cb = getattr(cs, slot)
-            if cb is None:
-                continue
-            setattr(cs, slot, None)
-            remove = getattr(cs.clip, "remove_%s_listener" % attr, None)
-            if not callable(remove):
-                continue
-            try:
-                remove(cb)
-            except _LOM_ERRORS:
-                pass
+        cs.temp_listeners.clear()
 
     # --- note + clip I/O ------------------------------------------------------------
 

@@ -2202,19 +2202,13 @@ class DrumVirtualMacroComponent:
         # and not on swaps. Renaming a rack by hand reads as a new kit — the
         # documented cost of the name being the only signal Live gives.
         for name in ("macros_mapped", "name"):
-            adder = getattr(st.device, "add_%s_listener" % name, None)
-            if not callable(adder):
-                continue
-            cb = self._make_change_callback(st, name)
-            try:
-                adder(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(
+            st.listeners.add(
+                st.device, name, self._make_change_callback(st, name), tag=st.device_path,
+                on_error=lambda e, name=name: self._warn_once(
                     st.device_path, "listener:" + name,
                     "add_%s_listener raised: %s" % (name, e),
-                )
-                continue
-            st.listeners.append((name, cb))
+                ),
+            )
 
     def _attach_selected_pad_listener(self, st: _RackState) -> None:
         if st.selected_pad_listener is not None:
@@ -2306,18 +2300,7 @@ class DrumVirtualMacroComponent:
                         "on %s raised: %s", st.device_path, e,
                     )
             st.pad_scroll_listener = None
-        for name, cb in st.listeners:
-            remover = getattr(st.device, "remove_%s_listener" % name, None)
-            if not callable(remover):
-                continue
-            try:
-                remover(cb)
-            except _LOM_ERRORS as e:
-                logger.debug(
-                    "DrumVirtualMacroComponent: remove_%s_listener on %s "
-                    "raised: %s", name, st.device_path, e,
-                )
-        st.listeners = []
+        st.listeners.clear()
         if st.chain_watcher is not None:
             st.chain_watcher.detach()
             st.chain_watcher = None
@@ -2365,20 +2348,16 @@ class DrumVirtualMacroComponent:
                 )
                 continue
             cb = self._make_member_callback(st, fn.name)
+
+            def _failed(e, fn_name=fn.name):
+                self._warn_once(
+                    st.device_path, "memberlistener:" + fn_name,
+                    "add_value_listener raised: %s" % e,
+                )
+
             for m in watchable:
-                adder = getattr(m.param, "add_value_listener", None)
-                if not callable(adder):
-                    continue
-                try:
-                    adder(cb)
-                except _LOM_ERRORS as e:
-                    self._warn_once(
-                        st.device_path, "memberlistener:" + fn.name,
-                        "add_value_listener raised: %s" % e,
-                    )
-                    continue
-                st.member_listeners.append((m.param, cb))
-                budget -= 1
+                if st.member_listeners.add(m.param, "value", cb, tag=m.note, on_error=_failed):
+                    budget -= 1
         # A pad's mute made in Live (its M button, the chain list's
         # activator) re-emits that pad's ``chainMute`` row, so the column
         # beside the held pads follows. Absolute, no deviation to absorb:
@@ -2387,34 +2366,25 @@ class DrumVirtualMacroComponent:
             if m.note < 0 or budget <= 0:
                 continue
             cb = self._make_pad_mute_callback(st, m.note)
-            try:
-                m.param.add_value_listener(cb)
-            except _LOM_ERRORS as e:
+
+            def _mute_failed(e):
                 self._warn_once(
                     st.device_path, "memberlistener:chainMute",
                     "add_mute_listener raised: %s" % e,
                 )
-                continue
-            st.member_listeners.append((m.param, cb))
-            budget -= 1
+
+            if st.member_listeners.add(
+                m.param, "value", cb, tag=m.note, on_error=_mute_failed,
+                on_missing=lambda: _mute_failed(AttributeError("no add_value_listener")),
+            ):
+                budget -= 1
         logger.debug(
             "DrumVirtualMacroComponent: %s watching %d member parameter(s)",
             st.device_path, len(st.member_listeners),
         )
 
     def _detach_member_listeners(self, st: _RackState) -> None:
-        for param, cb in st.member_listeners:
-            remover = getattr(param, "remove_value_listener", None)
-            if not callable(remover):
-                continue
-            try:
-                remover(cb)
-            except _LOM_ERRORS as e:
-                logger.debug(
-                    "DrumVirtualMacroComponent: remove_value_listener on %s "
-                    "raised: %s", st.device_path, e,
-                )
-        st.member_listeners = []
+        st.member_listeners.clear()
         st.edited = set()
 
     # --- pad instrument names (ADR-439) --------------------------------------
@@ -2431,29 +2401,15 @@ class DrumVirtualMacroComponent:
             return
         cb = self._make_change_callback(st, "instrument_name")
         for device in instruments:
-            adder = getattr(device, "add_name_listener", None)
-            if not callable(adder):
-                continue
-            try:
-                adder(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(st.device_path, "namelistener", f"add_name_listener raised: {e}")
-                continue
-            st.name_listeners.append((device, cb))
+            st.name_listeners.add(
+                device, "name", cb, tag=st.device_path,
+                on_error=lambda e: self._warn_once(
+                    st.device_path, "namelistener", f"add_name_listener raised: {e}",
+                ),
+            )
 
     def _detach_name_listeners(self, st: _RackState) -> None:
-        for device, cb in st.name_listeners:
-            remover = getattr(device, "remove_name_listener", None)
-            if not callable(remover):
-                continue
-            try:
-                remover(cb)
-            except _LOM_ERRORS as e:
-                logger.debug(
-                    "DrumVirtualMacroComponent: remove_name_listener on %s raised: %s",
-                    st.device_path, e,
-                )
-        st.name_listeners = []
+        st.name_listeners.clear()
 
     def _make_member_callback(self, st: _RackState, function: str) -> Callable[[], None]:
         """One callback per function, shared by its members: the absorb

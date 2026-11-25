@@ -88,6 +88,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import path_resolver
 from .LOMListeners import _safe_int_id
+from .listener_bag import ListenerBag
 
 from ._common import LOM_ERRORS
 from .component_util import first_time, safe_emit
@@ -232,12 +233,9 @@ class PlayheadComponent:
         self._last_emit: Dict[str, float] = {}
 
         # Detach records for the per-track ``playing_slot_index``
-        # listener — flat list of ``(track, remove_method, cb, path)``
-        # mirroring ``MetersComponent`` (ADR-350: never key by
-        # ``id(track)``).
-        self._slot_listeners: List[
-            Tuple[Any, str, Callable[[], None], str]
-        ] = []
+        # listener, each tagged with its track path (ADR-350: never key
+        # by ``id(track)``).
+        self._slot_listeners = ListenerBag("PlayheadComponent", remove_level=logging.DEBUG)
 
         # Per-track playing-clip listener bookkeeping. Keyed by
         # track_path; the value records the clip wrapper we attached
@@ -379,8 +377,6 @@ class PlayheadComponent:
         if self._disconnected:
             return
 
-        for track, remove_method, cb, path in self._slot_listeners:
-            self._safe_remove_listener(track, remove_method, cb, path)
         self._slot_listeners.clear()
 
         for path, rec in list(self._clip_listeners.items()):
@@ -399,7 +395,7 @@ class PlayheadComponent:
         # dedup map is intentionally NOT cleared for surviving tracks —
         # if their post-rebind state matches the cached payload, the UI
         # is already correct and we save the emit.
-        live_paths = {path for _t, _rm, _cb, path in self._slot_listeners}
+        live_paths = set(self._slot_listeners.tags())
         for key in list(self._last_emit.keys()):
             if key not in live_paths:
                 del self._last_emit[key]
@@ -480,22 +476,13 @@ class PlayheadComponent:
         method returns, so we don't duplicate that work here.
         """
         cb = self._make_slot_listener(track, track_idx, track_path)
-        add = getattr(track, "add_playing_slot_index_listener", None)
-        if not callable(add):
-            self._warn_once(
+        self._slot_listeners.add(
+            track, "playing_slot_index", cb, tag=track_path,
+            on_error=lambda e: self._warn_once(track_path, "attach", e),
+            on_missing=lambda: self._warn_once(
                 track_path, "attach-missing",
-                AttributeError(
-                    "no add_playing_slot_index_listener on track",
-                ),
-            )
-            return
-        try:
-            add(cb)
-        except _LOM_ERRORS as e:
-            self._warn_once(track_path, "attach", e)
-            return
-        self._slot_listeners.append(
-            (track, "remove_playing_slot_index_listener", cb, track_path),
+                AttributeError("no add_playing_slot_index_listener on track"),
+            ),
         )
 
     def _make_slot_listener(
@@ -550,30 +537,22 @@ class PlayheadComponent:
             # caches still applies to `_clip_listeners` itself.
             "clip_id": _safe_int_id(clip),
             "clip_path": "%s/slots/%d/clip" % (track_path, slot_idx),
-            "position_cb": None,
-            "notes_cb": None,
-            "recording_cb": None,
+            # Every listener attached on ``clip``, detached as one.
+            "listeners": ListenerBag("PlayheadComponent", remove_level=logging.DEBUG),
         }
+        bag = rec["listeners"]
 
         pos_cb = self._make_position_listener(
             track, track_idx, track_path,
         )
-        add_pos = getattr(clip, "add_playing_position_listener", None)
-        if callable(add_pos):
-            try:
-                add_pos(pos_cb)
-                rec["position_cb"] = pos_cb
-            except _LOM_ERRORS as e:
-                self._warn_once(
-                    track_path, "attach-playing-position", e,
-                )
-        else:
-            self._warn_once(
+        bag.add(
+            clip, "playing_position", pos_cb, tag=track_path,
+            on_error=lambda e: self._warn_once(track_path, "attach-playing-position", e),
+            on_missing=lambda: self._warn_once(
                 track_path, "attach-playing-position-missing",
-                AttributeError(
-                    "no add_playing_position_listener on clip",
-                ),
-            )
+                AttributeError("no add_playing_position_listener on clip"),
+            ),
+        )
 
         # Notes listener — only if MIDI. Audio clips don't have notes;
         # attaching would raise. ``is_midi_clip`` is the right gate;
@@ -584,18 +563,14 @@ class PlayheadComponent:
             notes_cb = self._make_notes_listener(
                 track_path, rec["clip_path"],
             )
-            add_notes = getattr(clip, "add_notes_listener", None)
-            if callable(add_notes):
-                try:
-                    add_notes(notes_cb)
-                    rec["notes_cb"] = notes_cb
-                except _LOM_ERRORS as e:
-                    self._warn_once(track_path, "attach-notes", e)
-            else:
-                self._warn_once(
+            bag.add(
+                clip, "notes", notes_cb, tag=track_path,
+                on_error=lambda e: self._warn_once(track_path, "attach-notes", e),
+                on_missing=lambda: self._warn_once(
                     track_path, "attach-notes-missing",
                     AttributeError("no add_notes_listener on clip"),
-                )
+                ),
+            )
 
         # Recording listener — fires on the record→play transition
         # (and any other ``is_recording`` change). Lets us re-emit
@@ -607,60 +582,26 @@ class PlayheadComponent:
         rec_cb = self._make_recording_listener(
             track, track_idx, track_path,
         )
-        add_rec = getattr(clip, "add_is_recording_listener", None)
-        if callable(add_rec):
-            try:
-                add_rec(rec_cb)
-                rec["recording_cb"] = rec_cb
-            except _LOM_ERRORS as e:
-                self._warn_once(track_path, "attach-is-recording", e)
+        bag.add(
+            clip, "is_recording", rec_cb, tag=track_path,
+            on_error=lambda e: self._warn_once(track_path, "attach-is-recording", e),
+        )
 
         # Edit listeners — one shared callback on every property that
         # changes what the strip draws (``_EDIT_PROPERTIES``).
+        # ``warping`` on a MIDI clip raises: not an error worth a log line.
         edit_cb = self._make_edit_listener(track_idx, track_path)
-        rec["edit_cb"] = edit_cb
-        rec["edit_props"] = []
         for prop in _EDIT_PROPERTIES:
-            add = getattr(clip, "add_%s_listener" % prop, None)
-            if not callable(add):
-                continue
-            try:
-                add(edit_cb)
-                rec["edit_props"].append(prop)
-            except _LOM_ERRORS:
-                # ``warping`` on a MIDI clip: not an error worth a log line.
-                pass
+            bag.add(clip, prop, edit_cb, tag=track_path, on_error=lambda e: None)
 
         self._clip_listeners[track_path] = rec
         return True
 
     def _detach_clip_listeners(self, track_path: str, rec: Dict[str, Any]) -> None:
-        """Detach ``playing_position`` + ``notes`` + ``is_recording`` listeners."""
-        clip = rec.get("clip")
-        if clip is None:
-            return
-        pos_cb = rec.get("position_cb")
-        if pos_cb is not None:
-            self._safe_remove_listener(
-                clip, "remove_playing_position_listener", pos_cb,
-                track_path,
-            )
-        notes_cb = rec.get("notes_cb")
-        if notes_cb is not None:
-            self._safe_remove_listener(
-                clip, "remove_notes_listener", notes_cb, track_path,
-            )
-        rec_cb = rec.get("recording_cb")
-        if rec_cb is not None:
-            self._safe_remove_listener(
-                clip, "remove_is_recording_listener", rec_cb, track_path,
-            )
-        edit_cb = rec.get("edit_cb")
-        if edit_cb is not None:
-            for prop in rec.get("edit_props", ()):
-                self._safe_remove_listener(
-                    clip, "remove_%s_listener" % prop, edit_cb, track_path,
-                )
+        """Detach every listener :meth:`_attach_clip_listeners` put on the clip."""
+        bag = rec.get("listeners")
+        if bag is not None:
+            bag.clear()
 
     def _make_position_listener(
         self, track, track_idx: int, track_path: str,
@@ -1331,8 +1272,6 @@ class PlayheadComponent:
         self._disconnected = True
         self._change_callbacks.clear()
 
-        for track, remove_method, cb, path in self._slot_listeners:
-            self._safe_remove_listener(track, remove_method, cb, path)
         self._slot_listeners.clear()
 
         for path, rec in list(self._clip_listeners.items()):
