@@ -6,6 +6,8 @@
    * length slider on left and rate slider on right.
    */
   import { PERMUTE_MAX_STEPS } from '$lib/config/permuteLayout';
+  import { drag } from '$lib/actions/drag';
+  import { createStepDrag } from '$lib/actions/stepDrag';
 
   interface Props {
     steps: boolean[];
@@ -93,16 +95,6 @@
   // Drag interaction state for pattern
   let isDragging = $state(false);
   let lastDraggedStep = $state<number | null>(null);
-
-  // Drag state for length slider
-  let isDraggingLength = $state(false);
-  let startLengthY = $state(0);
-  let startLengthValue = $state(0);
-
-  // Drag state for rate slider
-  let isDraggingRate = $state(false);
-  let startRateY = $state(0);
-  let startRateIndex = $state(0);
 
   // Constants
   const MIN_LENGTH = 2;
@@ -281,98 +273,41 @@
     }
   }
 
-  // Length slider handlers
-  function handleLengthPointerDown(event: PointerEvent) {
-    if (readonly) return;
+  // Length and rate sliders: drag digits on `use:drag` (`createStepDrag`).
+  // They were hand-wired pointer handlers with pointer capture and no
+  // `pointercancel` or `touch-action`, so when iOS claimed the gesture the
+  // drag stayed open and the next touch anywhere on the control moved it.
+  // The action owns the pointer, the cancel and `touch-action: none`.
+  // A press enables the sequencer, as it always did.
+  const lengthDrag = $derived({
+    ...createStepDrag({
+      read: () => length,
+      perPx: 1 / LENGTH_DRAG_SENSITIVITY,
+      min: MIN_LENGTH,
+      max: MAX_LENGTH,
+      send: (value) => onLengthChange?.(value),
+      onActiveChange: (active) => {
+        if (active) onEnable?.();
+      }
+    }),
+    disabled: readonly
+  });
 
-    event.preventDefault();
-    isDraggingLength = true;
-    startLengthY = event.clientY;
-    startLengthValue = length;
-
-    // Auto-enable sequencer
-    if (onEnable) {
-      onEnable();
-    }
-
-    // Capture pointer
-    const target = event.target as Element;
-    target.setPointerCapture(event.pointerId);
-  }
-
-  function handleLengthPointerMove(event: PointerEvent) {
-    if (!isDraggingLength) return;
-
-    event.preventDefault();
-
-    // Calculate length change based on vertical movement
-    const deltaY = startLengthY - event.clientY; // Negative Y = up = increase
-    const stepsChanged = Math.round(deltaY / LENGTH_DRAG_SENSITIVITY);
-
-    // Calculate new length
-    const newLength = Math.max(MIN_LENGTH, Math.min(MAX_LENGTH, startLengthValue + stepsChanged));
-
-    // Only update if length actually changed
-    if (newLength !== length && onLengthChange) {
-      onLengthChange(newLength);
-    }
-  }
-
-  function handleLengthPointerUp(event: PointerEvent) {
-    if (!isDraggingLength) return;
-
-    event.preventDefault();
-    isDraggingLength = false;
-    startLengthY = 0;
-    startLengthValue = 0;
-  }
-
-  // Rate slider handlers
-  function handleRatePointerDown(event: PointerEvent) {
-    if (readonly) return;
-
-    event.preventDefault();
-    isDraggingRate = true;
-    startRateY = event.clientY;
-    startRateIndex = currentRateIndex;
-
-    // Auto-enable sequencer
-    if (onEnable) {
-      onEnable();
-    }
-
-    // Capture pointer
-    const target = event.target as Element;
-    target.setPointerCapture(event.pointerId);
-  }
-
-  function handleRatePointerMove(event: PointerEvent) {
-    if (!isDraggingRate) return;
-
-    event.preventDefault();
-
-    // Calculate rate change based on vertical movement
-    const deltaY = startRateY - event.clientY; // Negative Y = up = faster
-    const stepsChanged = Math.round(deltaY / RATE_DRAG_SENSITIVITY);
-
-    // Calculate new rate index (clamped to valid range)
-    const newRateIndex = Math.max(0, Math.min(rateProgression.length - 1, startRateIndex + stepsChanged));
-
-    // Only update if rate actually changed
-    if (newRateIndex !== currentRateIndex && onRateChange) {
-      const newRate = rateProgression[newRateIndex];
-      onRateChange(newRate.mode, newRate.value);
-    }
-  }
-
-  function handleRatePointerUp(event: PointerEvent) {
-    if (!isDraggingRate) return;
-
-    event.preventDefault();
-    isDraggingRate = false;
-    startRateY = 0;
-    startRateIndex = 0;
-  }
+  const rateDrag = $derived({
+    ...createStepDrag({
+      read: () => currentRateIndex,
+      perPx: 1 / RATE_DRAG_SENSITIVITY,
+      steps: rateProgression.map((_, i) => i),
+      send: (index) => {
+        const rate = rateProgression[index];
+        onRateChange?.(rate.mode, rate.value);
+      },
+      onActiveChange: (active) => {
+        if (active) onEnable?.();
+      }
+    }),
+    disabled: readonly
+  });
 
   // Set up global event listener when dragging starts.
   //
@@ -401,9 +336,7 @@
     <div
       class="seq-ctrl glass-panel h-full border-2 flex items-center justify-center cursor-ns-resize select-none transition-colors duration-150 relative overflow-hidden {readonly ? 'cursor-default opacity-50' : 'hover:bg-accent/20 active:bg-accent/40'}"
       style="aspect-ratio: 1; border-radius: var(--radius-sm);"
-      onpointerdown={handleLengthPointerDown}
-      onpointermove={handleLengthPointerMove}
-      onpointerup={handleLengthPointerUp}
+      use:drag={lengthDrag}
       title="Pattern Length: {length} steps (drag up/down to change)"
       aria-label="Pattern length slider: {length} steps"
       role="slider"
@@ -510,9 +443,7 @@
     <div
       class="seq-ctrl glass-panel h-full border-2 flex items-center justify-center cursor-ns-resize select-none transition-colors duration-150 relative overflow-hidden {readonly ? 'cursor-default opacity-50' : 'hover:bg-accent/20 active:bg-accent/40'}"
       style="aspect-ratio: 1; border-radius: var(--radius-sm);"
-      onpointerdown={handleRatePointerDown}
-      onpointermove={handleRatePointerMove}
-      onpointerup={handleRatePointerUp}
+      use:drag={rateDrag}
       title="Rate: {rateDisplayString} (drag up/down to change)"
       aria-label="Rate slider: {rateDisplayString}"
       role="slider"
