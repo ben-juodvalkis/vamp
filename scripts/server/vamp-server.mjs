@@ -4,7 +4,8 @@
  * handler) on `padLink.pagePort`, the `/bridge-socket` pass-through to the
  * bridge, and the bridge itself as a child it restarts. A checkout keeps
  * `npm run dev` and `npm run ipad`; this is what `scripts/build-server.mjs`
- * lays out, and it runs from that folder only:
+ * bundles (with the bridge's config and origin modules inside), and it runs
+ * from that folder only:
  *
  *   VAMP_DATA=… VAMP_DEVICES=… node vamp-server.mjs
  *
@@ -14,9 +15,8 @@
  * its own origin check still applies.
  */
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { connect, isIP } from 'node:net';
+import { connect } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,18 +25,14 @@ process.env.VAMP_APP_ROOT ||= here;
 // `vite preview` takes any body; adapter-node stops at 512 kB.
 process.env.BODY_SIZE_LIMIT ||= 'Infinity';
 
-// The tracked defaults with this Mac's own file laid over them, as the bridge
-// and the interface server read them (`dataPaths.js`).
-const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
-const merge = (base, local) =>
-	isObject(base) && isObject(local)
-		? Object.fromEntries([...new Set([...Object.keys(base), ...Object.keys(local)])].map((k) => [k, k in local ? merge(base[k], local[k]) : base[k]]))
-		: local;
-const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
-const localFile = join(process.env.VAMP_DATA || here, 'config', 'constants.local.json');
-const constants = existsSync(localFile)
-	? merge(readJson(join(here, 'config', 'constants.json')), readJson(localFile))
-	: readJson(join(here, 'config', 'constants.json'));
+// The bridge's own modules, bundled in by build-server.mjs: the tracked
+// defaults with this Mac's own file laid over them (one merge, which throws
+// on a local file that is not JSON rather than running the rig as a
+// stranger's), and the host rule its origin check applies. Imported after
+// VAMP_APP_ROOT is set, which the config module reads when it loads.
+const { loadConstants } = await import('../../interface/bridge/utils/constants.js');
+const { hostnameAllowed } = await import('../../interface/bridge/utils/originCheck.js');
+const constants = loadConstants();
 const pagePort = Number(process.env.VAMP_PAGE_PORT) || constants.padLink.pagePort;
 const bridgePort = constants.osc.webSocket.port;
 const socketPath = constants.osc.webSocket.path;
@@ -68,8 +64,8 @@ function startBridge() {
 
 function hostAllowed(header) {
 	if (!header) return false;
-	const host = header.startsWith('[') ? header.slice(1, header.indexOf(']')) : header.split(':')[0];
-	return host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || isIP(host) !== 0;
+	const host = header.startsWith('[') ? header.slice(0, header.indexOf(']') + 1) : header.split(':')[0];
+	return hostnameAllowed(host);
 }
 
 const { handler } = await import(join(here, 'build', 'handler.js'));

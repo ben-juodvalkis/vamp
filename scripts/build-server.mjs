@@ -5,7 +5,7 @@
  * `node_modules`' development packages.
  *
  *   dist/vamp/
- *     vamp-server.mjs      the entry (scripts/server/vamp-server.mjs)
+ *     vamp-server.mjs      the entry (scripts/server/vamp-server.mjs), bundled
  *     build/               the interface, built with adapter-node
  *     bridge/bridge.cjs    the bridge, bundled
  *     scripts/             the server's child scripts and open-live, bundled
@@ -126,8 +126,18 @@ function sourceImports(dir) {
 sourceImports(join(root, 'interface', 'src'));
 for (const name of ['@sveltejs/kit', 'svelte', 'devalue', 'workbox-precaching']) if (existsSync(join(root, 'node_modules', name))) bundled.add(name);
 
-// 5. The entry and the tracked defaults.
-cpSync(join(root, 'scripts', 'server', 'vamp-server.mjs'), join(out, 'vamp-server.mjs'));
+// 5. The entry, bundled: it reads the config through the bridge's own
+// constants.js (one overlay of constants.local.json, not a copy of the merge)
+// and checks hosts with its originCheck.js. Those are CommonJS and require
+// Node's built-ins, so the ESM bundle gets a real `require`. The page
+// handler stays a runtime import of `build/handler.js` beside it.
+noteInputs(await build({
+	...node,
+	entryPoints: [join(root, 'scripts', 'server', 'vamp-server.mjs')],
+	outfile: join(out, 'vamp-server.mjs'),
+	format: 'esm',
+	banner: { js: "import { createRequire as __vampCreateRequire } from 'node:module'; const require = __vampCreateRequire(import.meta.url);" }
+}));
 mkdirSync(join(out, 'config'), { recursive: true });
 cpSync(join(root, 'config', 'constants.json'), join(out, 'config', 'constants.json'));
 // The control surface reads the device configs from the app's folder.

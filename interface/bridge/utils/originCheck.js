@@ -17,6 +17,11 @@
 
 const net = require('net');
 
+/**
+ * The host rule itself, for a bare hostname (no port; brackets around an
+ * IPv6 address are dropped). Shared with the installed app's page server
+ * (`scripts/server/vamp-server.mjs`), so the two cannot drift.
+ */
 function hostnameAllowed(hostname) {
     const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
     if (host === 'localhost' || host.endsWith('.localhost')) return true;
@@ -37,4 +42,4 @@ function originAllowed(origin) {
     return hostnameAllowed(url.hostname);
 }
 
-module.exports = { originAllowed };
+module.exports = { originAllowed, hostnameAllowed };
