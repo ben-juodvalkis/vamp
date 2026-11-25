@@ -67,7 +67,7 @@
   import { isPatternRackMacroName, liveMacroSlots } from '$lib/utils/macroLayoutUtils';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
-  import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
+  import { getSlotByDeviceType, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import GuitarControl from './GuitarControl.svelte';
   import BassControl from './BassControl.svelte';
@@ -130,38 +130,39 @@
   import TrackDeviceView from '$lib/components/v6/tracks/TrackStrip/components/TrackDeviceView.svelte';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 
-  /** The tiles that control a device, by preset key, and what each is called on the grid. */
   // The devices' pictures draw here (devicePictures), not on the FX grid.
   setContext(PICTURE_CONTEXT, true);
 
-  const TILE_LABELS: Record<string, string> = {
-    random: 'Rand Oct',
-    octave: 'Pitch',
-    eq: 'EQ',
-    filter: 'Filter',
-    drum: 'Drum',
-    chorus: 'Chorus',
-    glitchLoop: 'Glitch',
-    squash: 'Glue',
-    guitar: 'Gtr',
-    bass: 'Bass',
-    saturator: 'Drive',
-    tremolo: 'Tremolo',
-    echo: 'Echo',
-    reverb: 'Reverb',
-    variation: 'Stutter',
-    utility: 'Gain',
-    sequencer: 'Permute'
-  };
+  /** A slot's tile, as the slot table has it (`fxGridLayout`). */
+  function slotTile(type: DeviceTypeKey): { Tile: Component<any>; position: string } {
+    const slot = getSlotByDeviceType(type)!;
+    return { Tile: slot.component, position: slot.position };
+  }
 
-  /** The grid's tile for a device type, by `DEVICE_PRESETS` key: the layout's slots, then the tiles placed outside it. */
-  const TILE_COMPONENTS: Record<string, { Tile: Component<any>; position?: string }> = {
-    ...Object.fromEntries(FX_GRID_LAYOUT.map((slot) => [slot.deviceType, { Tile: slot.component, position: slot.position }])),
-    guitar: { Tile: GuitarControl },
-    bass: { Tile: BassControl },
-    octave: { Tile: PitchControl },
-    glitchLoop: { Tile: GlitchControl },
-    squash: { Tile: SquashControl }
+  /**
+   * The tiles that control a device, by `DEVICE_PRESETS` key: what each is
+   * called on the grid, and the grid's tile component (the slot table's,
+   * else one placed outside it). Permute has a name and no tile. In order:
+   * where two keys pick the same device, the first names it.
+   */
+  const TILES: Record<string, { label: string; Tile?: Component<any>; position?: string }> = {
+    random: { label: 'Rand Oct', ...slotTile('random') },
+    octave: { label: 'Pitch', Tile: PitchControl },
+    eq: { label: 'EQ', ...slotTile('eq') },
+    filter: { label: 'Filter', ...slotTile('filter') },
+    drum: { label: 'Drum', ...slotTile('drum') },
+    chorus: { label: 'Chorus', ...slotTile('chorus') },
+    glitchLoop: { label: 'Glitch', Tile: GlitchControl },
+    squash: { label: 'Glue', Tile: SquashControl },
+    guitar: { label: 'Gtr', Tile: GuitarControl },
+    bass: { label: 'Bass', Tile: BassControl },
+    saturator: { label: 'Drive', ...slotTile('saturator') },
+    tremolo: { label: 'Tremolo', ...slotTile('tremolo') },
+    echo: { label: 'Echo', ...slotTile('echo') },
+    reverb: { label: 'Reverb', ...slotTile('reverb') },
+    variation: { label: 'Stutter', ...slotTile('variation') },
+    utility: { label: 'Gain', ...slotTile('utility') },
+    sequencer: { label: 'Permute' }
   };
 
   /** MidiWheels, re-found as the surface finds it: class + the name Live gives the loaded `.amxd`. */
@@ -295,7 +296,7 @@
   /** devicePath → the grid tile that controls it, under the type-first rule and the picks. */
   const tileOf = $derived.by(() => {
     const out = new Map<string, string>();
-    for (const [key, label] of Object.entries(TILE_LABELS)) {
+    for (const [key, { label }] of Object.entries(TILES)) {
       const config = DEVICE_PRESETS[key];
       if (!config) continue;
       const chosen = pickSlotDevice(devices, config, fxChainStore.pickFor(pickScope, key));
@@ -1137,7 +1138,7 @@
 
 {#snippet cellBody(cell: Cell, position: number)}
   {@const glyph = glyphOf(cell)}
-  {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
+  {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILES[cell.presetKey] : undefined}
   {@const caption = captionOf(cell)}
       <!-- The header bar (2026-11-08, ADR-518): the panels' bar (ADR-516)
            at the height of a strip's name band, so there is room to grab
@@ -1215,7 +1216,7 @@
         <!-- The pitch and mod wheels, as the instrument views draw them:
              side by side, stacked only in a narrow cell. -->
         <div class="cell-control" role="presentation"><CellSize><MidiWheelsFace /></CellSize></div>
-      {:else if tile}
+      {:else if tile?.Tile}
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
         <div class="cell-control" role="presentation"><CellSize>
