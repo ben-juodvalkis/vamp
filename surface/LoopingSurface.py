@@ -397,10 +397,24 @@ class LoopingSurface(ControlSurface):
     # component instantiations, listener wiring, handler registration,
     # the structural-change rebind composite, the handshake-accept emit
     # chain, the Gate 4a/4b probes, and the tick start.
-    # The blocks below are extracted incrementally; the rest still
-    # lives inline. Each phase reads only `self.X` set by an earlier
-    # phase, so the call order in __init__ is the source of truth.
+    # Since 2026-11-25 every phase is a ``_setup_*`` method. Each reads
+    # only ``self.X`` set by an earlier phase, so the call order in
+    # __init__ is the source of truth — and, through ``_own``, the
+    # teardown order: ``disconnect`` walks ``self._components`` in
+    # reverse.
     # =================================================================
+
+    def _own(self, component):
+        """Record ``component`` for teardown and return it.
+
+        Called at construction, so ``self._components`` is construction
+        order and ``disconnect`` tears down in reverse: a component goes
+        before everything it was built from (the sequencer before the
+        playhead and the drum provider it restores through, the groove
+        before its pool, the mutation fan-out before ``LOMListeners``).
+        """
+        self._components.append(component)
+        return component
 
     def _setup_transport(self, constants) -> bool:
         """Bind the pythonSurface OSC port and stash the transport.
@@ -533,9 +547,9 @@ class LoopingSurface(ControlSurface):
         bare-Live production / cleanup. Also instantiated here so it's
         live before ExclusiveArmComponent's predicate pulls it.
         """
-        self._session_component = SessionComponent(
+        self._session_component = self._own(SessionComponent(
             song=self.song, emit=self._transport.send,
-        )
+        ))
         self._transport.add_handler(
             "/live/song/get/tempo",
             self._session_component.handle_get_tempo,
@@ -594,9 +608,9 @@ class LoopingSurface(ControlSurface):
             SHOW_MESSAGE_ADDRESS, self._status_message_component.handle_show_message,
         )
 
-        self._session_settings_component = SessionSettingsComponent(
+        self._session_settings_component = self._own(SessionSettingsComponent(
             emit=self._transport.send,
-        )
+        ))
         self._transport.add_handler(
             V3_SESSION_AUTO_ARM_ADDRESS,
             self._session_settings_component.handle_set_auto_arm,
@@ -643,13 +657,13 @@ class LoopingSurface(ControlSurface):
         # changes — driven by the playhead's change hook, wired below where
         # the playhead is built — and a key set by any hand turns Follow off.
         # Built after the session settings: it reads and writes the toggle.
-        self._key_detect_component = KeyDetectComponent(
+        self._key_detect_component = self._own(KeyDetectComponent(
             song=self.song, emit=self._transport.send,
             session_component=self._session_component,
             is_following=self._should_follow_key_in_performance,
             follow_handler=self._session_settings_component.handle_set_key_follow,
             schedule_delayed=self._schedule_delayed,
-        )
+        ))
         # ``scale_root`` / ``scale_name`` from the wire are a hand picking a
         # key, so they route through the key-detect component, which turns
         # Follow off and then delegates to SessionComponent unchanged.
@@ -684,7 +698,7 @@ class LoopingSurface(ControlSurface):
             .get("serverPresence", {})
             .get("graceWindowMs")
         )
-        self._server_presence_component = ServerPresenceComponent(
+        self._server_presence_component = self._own(ServerPresenceComponent(
             grace_window_s=(
                 float(grace_ms) / 1000.0
                 if isinstance(grace_ms, (int, float))
@@ -694,7 +708,7 @@ class LoopingSurface(ControlSurface):
                 lambda mode: self._session_settings_component
                 .seed_auto_capture_default(mode == "ipad")
             ),
-        )
+        ))
         self._transport.add_handler(
             V3_SERVER_HEARTBEAT_ADDRESS,
             self._server_presence_component.handle_heartbeat,
@@ -710,7 +724,7 @@ class LoopingSurface(ControlSurface):
             .get("performanceCapture", {})
             .get("minSaveTakeMs")
         )
-        self._performance_capture_component = PerformanceCaptureComponent(
+        self._performance_capture_component = self._own(PerformanceCaptureComponent(
             song=self.song,
             emit=self._transport.send,
             session_settings=self._session_settings_component,
@@ -723,7 +737,7 @@ class LoopingSurface(ControlSurface):
                 if isinstance(min_take_ms, (int, float))
                 else DEFAULT_MIN_SAVE_TAKE_SECONDS
             ),
-        )
+        ))
 
     def _setup_v3_protocol_core(self) -> None:
         """Phase 4: LOMListeners + Devices + v3 protocol primitives.
@@ -757,33 +771,33 @@ class LoopingSurface(ControlSurface):
              order; the actual ``send_hello`` call is deferred to
              late bring-up so the UDP transport is bound when it fires.
         """
-        self._lom_listeners = LOMListeners(
+        self._lom_listeners = self._own(LOMListeners(
             song=self.song,
             schedule_delayed=self._schedule_delayed,
-        )
+        ))
 
-        self._devices_component = DevicesComponent(
+        self._devices_component = self._own(DevicesComponent(
             song=self.song, emit=self._transport.send,
-        )
+        ))
 
 
-        self._generation_component = GenerationComponent()
-        self._invalidation_component = InvalidationComponent(
+        self._generation_component = self._own(GenerationComponent())
+        self._invalidation_component = self._own(InvalidationComponent(
             generation_component=self._generation_component,
             emit=self._transport.send,
-        )
-        self._handshake_component = HandshakeComponent(
+        ))
+        self._handshake_component = self._own(HandshakeComponent(
             emit=self._transport.send,
             generation_component=self._generation_component,
-        )
+        ))
         self._transport.add_handler(
             V3_HANDSHAKE_HELLO_ADDRESS,
             self._handshake_component.handle_hello,
         )
 
-        self._surface_hello_component = SurfaceHelloComponent(
+        self._surface_hello_component = self._own(SurfaceHelloComponent(
             emit=self._transport.send,
-        )
+        ))
 
         # Inject generation into DevicesComponent so its v3 handlers
         # can do the stale-check, then wire the v3 param handlers.
@@ -813,6 +827,10 @@ class LoopingSurface(ControlSurface):
             **k,
         )
         logger.info("Vamp surface init")
+        # Every component with a ``disconnect``, in construction order
+        # (``_own``). Set before the transport so a surface that bails
+        # out below still tears down cleanly.
+        self._components = []
 
         # Phase 1: bind OSC transport. Bail-out if the port is taken.
         constants = load_constants()
@@ -835,13 +853,29 @@ class LoopingSurface(ControlSurface):
         # Phase 4: LOMListeners + Devices + v3 protocol primitives.
         self._setup_v3_protocol_core()
 
+        self._setup_device_commands()
+        self._setup_debug()
+        self._setup_state_full()
+        self._setup_mutation_and_properties()
+        self._setup_track_components(constants)
+        self._setup_clip_components()
+        self._setup_pedal_components(constants)
+        self._setup_simpler_and_scenes()
+        self._setup_structural_composite()
+        self._setup_browser_components(constants)
+        self._setup_scheduler_probe()
+        self._start_pumps(constants)
+
+    def _setup_device_commands(self) -> None:
+        """View focus, the path-addressed device-chain ops, the drum swap verbs
+        and the record-suspend bracket."""
         # ROW 5 (2026-04-21): ViewComponent owns the app-view focus
         # wire lifted off M4L's ``/view/set/focus_view``. One handler,
         # no listeners; scoped to ``application.view``.
-        self._view_component = ViewComponent(
+        self._view_component = self._own(ViewComponent(
             application=self.application,
             emit=self._transport.send,
-        )
+        ))
         self._transport.add_handler(
             V3_VIEW_FOCUS_ADDRESS,
             self._view_component.handle_focus,
@@ -853,10 +887,10 @@ class LoopingSurface(ControlSurface):
         # (blue-hand) dance. UI no longer maintains a devicePath →
         # legacyId side-table; path_resolver.resolve_device feeds the
         # handlers directly.
-        self._device_commands_component = DeviceCommandsComponent(
+        self._device_commands_component = self._own(DeviceCommandsComponent(
             song=self.song,
             emit=self._transport.send,
-        )
+        ))
         for address, handler in (
             (V3_DEVICE_SELECT_ADDRESS,
              self._device_commands_component.handle_select),
@@ -888,12 +922,12 @@ class LoopingSurface(ControlSurface):
         # this answers what it asks and never waits, because Live services
         # the press on this very thread. The finish follows the chain names
         # and closes the undo step the show opened.
-        self._drum_swap_component = DrumSwapComponent(
+        self._drum_swap_component = self._own(DrumSwapComponent(
             song=self.song,
             emit=self._transport.send,
             application=self.application,
             schedule_delayed=self._schedule_delayed,
-        )
+        ))
         self._transport.add_handler(
             V3_DRUM_SHOW_FOR_SWAP_ADDRESS,
             self._drum_swap_component.handle_show_for_swap,
@@ -911,10 +945,10 @@ class LoopingSurface(ControlSurface):
         # for the moment a reposition needs it — see the module docstring.
         # No listener, no LOM-touch on its own; only ever fires in response
         # to the bridge's own bracket around a group/drag.
-        self._record_suspend_component = RecordSuspendComponent(
+        self._record_suspend_component = self._own(RecordSuspendComponent(
             song=self.song,
             emit=self._transport.send,
-        )
+        ))
         self._transport.add_handler(
             V3_GROUP_RECORD_SUSPEND_ADDRESS,
             self._record_suspend_component.handle_suspend,
@@ -924,14 +958,16 @@ class LoopingSurface(ControlSurface):
             self._record_suspend_component.handle_resume,
         )
 
+    def _setup_debug(self) -> None:
+        """``/looping/protocol/version`` and the private ``/looping/probe/*`` family."""
         # DebugComponent — ``/looping/protocol/version`` reply with
         # the current surface protocol version (``"3.0.0"`` after
         # PR-4a). UI checks this on every reconnect.
-        self._debug_component = DebugComponent(
+        self._debug_component = self._own(DebugComponent(
             emit=self._transport.send,
             registry=self._lom_listeners,
             request_reload=request_reload,
-        )
+        ))
         self._transport.add_handler(
             PROTOCOL_VERSION_ADDRESS,
             self._debug_component.handle_version,
@@ -972,6 +1008,10 @@ class LoopingSurface(ControlSurface):
             RELOAD_ON_RESELECT_ADDRESS,
             self._debug_component.handle_reload_on_reselect,
         )
+
+    def _setup_state_full(self) -> None:
+        """The state/full publisher, DeviceInitComponent, and the resync and
+        handshake-accept chains."""
         # Phase 2 PR-2b: v3 state/full emitter. Walks the LOM with
         # path_resolver.compose_* to produce positional paths rather
         # than pointer ids. v2 state/full deleted Phase 4 PR-4a. See
@@ -986,13 +1026,13 @@ class LoopingSurface(ControlSurface):
         # ``stream`` is consulted per publish, not cached, so a bridge
         # that dials in or drops mid-session changes the wire for the
         # *next* bundle rather than half-committing this one.
-        self._v3_state_full_component = V3StateFullComponent(
+        self._v3_state_full_component = self._own(V3StateFullComponent(
             song=self.song,
             emit=self._transport.send,
             generation_component=self._generation_component,
             schedule_delayed=self._schedule_delayed,
             stream=self._tcp_transport,
-        )
+        ))
 
         # Phase 12 pr12-4: DeviceInitComponent — Simpler-type init
         # rules + AU-plugin parameter-population retry. Subscribes to
@@ -1004,22 +1044,14 @@ class LoopingSurface(ControlSurface):
         # until after ``MutationComponent`` is built several blocks
         # down.
         #
-        self._device_init_component = DeviceInitComponent(
+        self._device_init_component = self._own(DeviceInitComponent(
             song=self.song,
             emit_selection_change=(
                 self._v3_state_full_component.emit_selection_change
             ),
             schedule_delayed=self._schedule_delayed,
             compose_track_path=compose_track_path,
-        )
-
-        # Bound here because the surviving structural-change composite
-        # (``_on_structural_change_with_properties``, ~830 lines below)
-        # closes over it. A first composite used to be defined AND
-        # installed here, then unconditionally replaced by that one — 12
-        # lines that read like the live wiring but never fired. Removed
-        # 2026-08-29; the surviving composite is a strict superset.
-        v3_state_full_on_structural = self._v3_state_full_component.on_structural_change
+        ))
 
         # v3 state/resync now emits a real v3 state/full (with
         # reason="resync"), not a v2-emit placeholder. Phase 2 PR-2b
@@ -1171,6 +1203,9 @@ class LoopingSurface(ControlSurface):
             _emit_on_accept_chain,
         )
 
+    def _setup_mutation_and_properties(self) -> None:
+        """Mutation fires and their fan-outs, the drum and rack providers, and
+        the property channel."""
         # MutationComponent — per-event fires for parameter value
         # changes and device add/remove. ``LOMListeners`` owns the LOM
         # listener lifecycle (per-track devices-listener, per-param
@@ -1187,10 +1222,10 @@ class LoopingSurface(ControlSurface):
         # ``DevicesComponent`` arms/unarms per-param echo suppression
         # around its LOM writes via ``arm_suppression`` /
         # ``unarm_suppression``.
-        self._mutation_component = MutationComponent(
+        self._mutation_component = self._own(MutationComponent(
             listeners=self._lom_listeners,
             emit=self._transport.send,
-        )
+        ))
         # Phase 12 pr12-4: DeviceInitComponent subscribes to
         # ``on_device_added`` here. No other subscriber today — if a
         # second one arrives, wrap the two in a fan-out closure rather
@@ -1270,11 +1305,11 @@ class LoopingSurface(ControlSurface):
         # from the UDP transport's drain hook so a burst of queued sets
         # for one control collapses to one apply per drain pass; the
         # hook must be registered before deferred apply is switched on.
-        self._drum_vm_component = DrumVirtualMacroComponent(
+        self._drum_vm_component = self._own(DrumVirtualMacroComponent(
             emit=self._transport.send,
             schedule_delayed=self._schedule_delayed,
             song=self.song,
-        )
+        ))
         self._transport.add_drain_hook(self._drum_vm_component.flush)
         self._drum_vm_component.enable_deferred_apply()
 
@@ -1287,34 +1322,34 @@ class LoopingSurface(ControlSurface):
         # never republish the song, and never feed ``on_device_added``.
         # The property component is constructed just below, so its
         # invalidate hook is bound late.
-        self._drum_pad_chain_component = DrumPadChainComponent(
+        self._drum_pad_chain_component = self._own(DrumPadChainComponent(
             emit=self._transport.send,
             schedule_delayed=self._schedule_delayed,
             advance_generation=self._generation_component.advance,
             on_structural_invalidate=lambda: self._property_component.on_structural_invalidate(),
             emit_pad_chain=self._v3_state_full_component.emit_pad_chain,
             on_param_value_changed=_on_param_value_changed_fanout,
-        )
+        ))
 
         # An Audio Effect Rack's chain names (2026-10-12), for the Wah
         # slider's title: follows chains added, removed and renamed.
-        self._rack_chain_names_component = RackChainNamesComponent(
+        self._rack_chain_names_component = self._own(RackChainNamesComponent(
             emit=self._transport.send,
             schedule_delayed=self._schedule_delayed,
-        )
+        ))
 
         # ADR-529 (3.13.0): the chains and devices inside a rack, for the
         # chain overview's unfold. Same narrow composite as a pad's chain.
-        self._rack_chain_devices_component = RackChainDevicesComponent(
+        self._rack_chain_devices_component = self._own(RackChainDevicesComponent(
             emit=self._transport.send,
             schedule_delayed=self._schedule_delayed,
             advance_generation=self._generation_component.advance,
             on_structural_invalidate=lambda: self._property_component.on_structural_invalidate(),
             emit_rack_chain=self._v3_state_full_component.emit_rack_chain,
             on_param_value_changed=_on_param_value_changed_fanout,
-        )
+        ))
 
-        self._property_component = PropertyComponent(
+        self._property_component = self._own(PropertyComponent(
             song=self.song, emit=self._transport.send,
             schedule_delayed=self._schedule_delayed,
             computed_providers={
@@ -1323,7 +1358,7 @@ class LoopingSurface(ControlSurface):
                 DRUM_PAD_CHAIN_PROVIDER_NAME: self._drum_pad_chain_component,
                 RACK_CHAINS_PROVIDER_NAME: self._rack_chain_names_component,
             },
-        )
+        ))
         self._property_component.set_generation(self._generation_component)
         self._transport.add_handler(
             V3_PROPERTY_SUBSCRIBE_ADDRESS,
@@ -1338,16 +1373,18 @@ class LoopingSurface(ControlSurface):
             self._property_component.handle_set,
         )
 
+    def _setup_track_components(self, constants) -> None:
+        """Track metadata, master, meters, playhead and the sequencer engine."""
         # PR-5a: TrackMetadataComponent — owns the seven track-metadata
         # attributes (name/color/arm/mute/solo/pan/input_routing_*) for
         # regular tracks. Attaches per-track per-attr listeners in
         # __init__, rebinds on structural change via the composite
         # below, detaches in disconnect. Master is not in scope
         # (PR-5b); returns are out-of-phase.
-        self._track_metadata_component = TrackMetadataComponent(
+        self._track_metadata_component = self._own(TrackMetadataComponent(
             song=self.song, emit=self._transport.send,
             advance_generation=self._generation_component.advance,
-        )
+        ))
         self._track_metadata_component.set_generation(
             self._generation_component,
         )
@@ -1392,9 +1429,9 @@ class LoopingSurface(ControlSurface):
         # (master has no mute property — RuntimeError); that's logged
         # and skipped, and writes return write-rejected with detail
         # "attribute-unavailable".
-        self._master_component = MasterComponent(
+        self._master_component = self._own(MasterComponent(
             song=self.song, emit=self._transport.send,
-        )
+        ))
         self._master_component.set_generation(self._generation_component)
         for address, handler in (
             (V3_MASTER_VOLUME_ADDRESS,
@@ -1416,9 +1453,9 @@ class LoopingSurface(ControlSurface):
         # structural composite below (same pattern as TrackMetadata);
         # master listeners attach directly and survive for the life
         # of the component.
-        self._meters_component = MetersComponent(
+        self._meters_component = self._own(MetersComponent(
             song=self.song, emit=self._transport.send,
-        )
+        ))
 
         # ADR-360: PlayheadComponent — owns
         # /looping/v3/track/playing_slot and /looping/v3/track/playhead.
@@ -1435,11 +1472,11 @@ class LoopingSurface(ControlSurface):
         # OS write has settled, so the UI's `/api/sample-peaks` fetch
         # lands first try without client-side retry. See PlayheadComponent
         # docstring + ``_make_recording_listener``.
-        self._playhead_component = PlayheadComponent(
+        self._playhead_component = self._own(PlayheadComponent(
             song=self.song,
             emit=self._transport.send,
             schedule_delayed=self._schedule_delayed,
-        )
+        ))
         # ADR-447: key Follow rides the playhead's view of what each track
         # plays (launches, stops, the fresh-recording race, finished takes,
         # note edits) instead of a second per-track listener set.
@@ -1472,18 +1509,21 @@ class LoopingSurface(ControlSurface):
 
             logger.info("Permute gate wire -> %s:%d", gate_addr[0], gate_addr[1])
 
-        self._sequencer_component = SequencerComponent(
+        self._sequencer_component = self._own(SequencerComponent(
             song=self.song,
             emit=self._transport.send,
             gate_emit=gate_emit,
             playhead=self._playhead_component,
             drum_vm=self._drum_vm_component,
             schedule_delayed=self._schedule_delayed,
-        )
+        ))
         self._transport.add_handler(
             SEQUENCER_STATS_ADDRESS, self._sequencer_component.handle_stats,
         )
 
+    def _setup_clip_components(self) -> None:
+        """Clip properties, selection, arm-follows-selection, grooves, clips,
+        clip notes and the clip view's track transpose."""
         # PR-5e1: ClipPropertiesComponent — owns the clip-property
         # addresses (loop_start/end, start/end_marker, warp_mode,
         # looping) on ``live_set view.detail_clip``. Focus-scoped:
@@ -1495,10 +1535,10 @@ class LoopingSurface(ControlSurface):
         # detail_clip changing, which is its own song-scoped listener.
         # Generation advance on clip create/delete is deferred to
         # Phase 6 (``ClipLifecycleComponent``) per checklist pr5e1-3.
-        self._clip_properties_component = ClipPropertiesComponent(
+        self._clip_properties_component = self._own(ClipPropertiesComponent(
             song=self.song, emit=self._transport.send,
             permute=self._sequencer_component,
-        )
+        ))
         for address, handler in (
             (V3_CLIP_SET_LOOP_START_ADDRESS,
              self._clip_properties_component.handle_set_loop_start),
@@ -1552,7 +1592,7 @@ class LoopingSurface(ControlSurface):
         # - ``schedule_delayed`` binds to the surface's
         #   ``_schedule_delayed`` (100ms tick rounding); the
         #   component's 50ms coalesce window rounds up to one tick.
-        self._selected_track_component = SelectedTrackComponent(
+        self._selected_track_component = self._own(SelectedTrackComponent(
             song=self.song,
             emit=self._transport.send,
             schedule_state_full=(
@@ -1565,7 +1605,7 @@ class LoopingSurface(ControlSurface):
             ),
             # Built later; looked up when a clip is selected.
             on_slot_selected=lambda slot: self._clips_component.reveal_slot(slot),
-        )
+        ))
         # ROW 2-F4 (2026-04-21): /looping/v3/track/select [trackPath]
         # is the sibling write for the selected_track observer.
         # Retires the /live/view/set/selected_track AbletonOSC hop.
@@ -1622,7 +1662,7 @@ class LoopingSurface(ControlSurface):
         # from inside a notification callback, and
         # ``song.view.selected_track`` fires exactly there. The
         # component stashes the intent and commits on the next tick.
-        self._exclusive_arm_component = ExclusiveArmComponent(
+        self._exclusive_arm_component = self._own(ExclusiveArmComponent(
             song=self.song,
             schedule_delayed=self._schedule_delayed,
             # Two-switch gate: arm-follows-selection fires only when the
@@ -1634,7 +1674,7 @@ class LoopingSurface(ControlSurface):
             # move-volume-knob keep the plain auto_arm gate — they're
             # hardware performance gestures, not selection side-effects.
             should_auto_arm=self._should_auto_arm_in_performance,
-        )
+        ))
 
         # PR-5e2: GroovePoolComponent (song-scoped) + GrooveComponent
         # (focus-scoped). Pool first: GrooveComponent takes the pool
@@ -1663,14 +1703,14 @@ class LoopingSurface(ControlSurface):
                 source=live_library.m4l_source(), rel=live_library.GROOVE_REL,
             )
 
-        self._groove_pool_component = GroovePoolComponent(
+        self._groove_pool_component = self._own(GroovePoolComponent(
             song=self.song, emit=self._transport.send, mint=mint_groove,
-        )
-        self._groove_component = GrooveComponent(
+        ))
+        self._groove_component = self._own(GrooveComponent(
             song=self.song,
             emit=self._transport.send,
             pool=self._groove_pool_component,
-        )
+        ))
         for address, handler in (
             (V3_CLIP_GROOVE_SET_BASE_ADDRESS,
              self._groove_component.handle_set_base),
@@ -1692,13 +1732,13 @@ class LoopingSurface(ControlSurface):
         # ``has_clip`` listeners that emit clip/created + clip/removed.
         # Structural rebind below tears down + reattaches the per-slot
         # listeners on track add/remove.
-        self._clips_component = ClipsComponent(
+        self._clips_component = self._own(ClipsComponent(
             song=self.song,
             emit=self._transport.send,
             advance_generation=self._generation_component.advance,
             application=self.application,
             schedule_next_tick=self._schedule_next_tick,
-        )
+        ))
         # Cross-component fanout (ADR-363): PlayheadComponent owns the
         # track strip's render context, but ClipsComponent owns the
         # per-slot ``has_clip`` listener. Wire the in-process callback
@@ -1746,10 +1786,10 @@ class LoopingSurface(ControlSurface):
         # focus-only) so a focus change between gesture and arrival
         # doesn't drop the write. Replaces the M4L
         # ``/cmd/transpose_clip_notes`` handler.
-        self._clip_notes_component = ClipNotesComponent(
+        self._clip_notes_component = self._own(ClipNotesComponent(
             song=self.song,
             emit=self._transport.send,
-        )
+        ))
         self._transport.add_handler(
             V3_CLIP_TRANSPOSE_ADDRESS,
             self._clip_notes_component.handle_transpose,
@@ -1758,11 +1798,11 @@ class LoopingSurface(ControlSurface):
         # wrapped inside it (by class, as Permute's pitch route does) and
         # moves the kit's vm.pitch; replies ``not-drum`` otherwise so the
         # UI keeps its macro / note path.
-        self._track_transpose_component = TrackTransposeComponent(
+        self._track_transpose_component = self._own(TrackTransposeComponent(
             song=self.song,
             emit=self._transport.send,
             drum_vm=self._drum_vm_component,
-        )
+        ))
         self._transport.add_handler(
             V3_TRACK_TRANSPOSE_ADDRESS,
             self._track_transpose_component.handle_transpose,
@@ -1796,16 +1836,18 @@ class LoopingSurface(ControlSurface):
         ):
             self._transport.add_handler(address, handler)
 
+    def _setup_pedal_components(self, constants) -> None:
+        """The foot pedal, the expression pedal and the MIDI wheels."""
         # Phase 9 PR-9b: FootTriggerComponent — owns the two arg-free
         # gesture wires (``/looping/v3/foot/tap`` and ``…/hold``), reached
         # from the pedal MIDI adapter below and from
         # ``owner/Max Patches/foot-trigger.js``. Tap runs the looper cycle
         # on the highlighted slot; hold stops the selected track and
         # highlights the next empty slot below (2026-10-23).
-        self._foot_trigger_component = FootTriggerComponent(
+        self._foot_trigger_component = self._own(FootTriggerComponent(
             song=self.song,
             emit=self._transport.send,
-        )
+        ))
         for address, handler in (
             (V3_FOOT_TAP_ADDRESS, self._foot_trigger_component.handle_tap),
             (V3_FOOT_HOLD_ADDRESS, self._foot_trigger_component.handle_hold),
@@ -1839,11 +1881,11 @@ class LoopingSurface(ControlSurface):
             # load: Live puts a MIDI effect ahead of the instrument itself.
             return dlc.load_into_track(track, preset_path, at_head=at_head, source=source, rel=rel)
 
-        self._wah_pedal_component = WahPedalComponent(
+        self._wah_pedal_component = self._own(WahPedalComponent(
             song=self.song,
             constants=constants,
             load_into_track=load_pedal_rack_into_track,
-        )
+        ))
         for address, handler in (
             (V3_WAH_ENGAGE_ADDRESS, self._wah_pedal_component.handle_engage),
             (V3_WAH_FREQ_ADDRESS, self._wah_pedal_component.handle_freq),
@@ -1856,12 +1898,12 @@ class LoopingSurface(ControlSurface):
         # shares the device on MIDI tracks. Handlers store the newest value
         # per wheel and the drain hook writes it once per pass, one undo
         # step per gesture.
-        self._midi_wheels_component = MidiWheelsComponent(
+        self._midi_wheels_component = self._own(MidiWheelsComponent(
             song=self.song,
             constants=constants,
             load_into_track=load_pedal_rack_into_track,
             schedule_delayed=self._schedule_delayed,
-        )
+        ))
         for address, handler in (
             (V3_WHEELS_PITCH_ADDRESS, self._midi_wheels_component.handle_pitch),
             (V3_WHEELS_MOD_ADDRESS, self._midi_wheels_component.handle_mod),
@@ -1873,6 +1915,8 @@ class LoopingSurface(ControlSurface):
         # which reads every MIDI input (ADR-538); the surface claims no
         # MIDI of its own since then.
 
+    def _setup_simpler_and_scenes(self) -> None:
+        """Audio clip → Simpler, and the scene verbs."""
         # 2026-04-23: SimplerLoadComponent — audio-clip → Simpler
         # sampling (Flow #1 from simpler-revamp.md). Unblocked by Live
         # 12.4's SimplerDevice.replace_sample. Inserts a Simpler by name
@@ -1880,10 +1924,10 @@ class LoopingSurface(ControlSurface):
         # calls replace_sample with the audio clip's file_path.
         # Random Start is not prepended: the Simpler view loads it the first
         # time its Random slider moves (2026-11-01).
-        self._simpler_load_component = SimplerLoadComponent(
+        self._simpler_load_component = self._own(SimplerLoadComponent(
             song=self.song,
             emit=self._transport.send,
-        )
+        ))
         self._transport.add_handler(
             V3_SIMPLER_REPLACE_SAMPLE_ADDRESS,
             self._simpler_load_component.handle_replace_sample,
@@ -1897,17 +1941,19 @@ class LoopingSurface(ControlSurface):
         # addresses (launch/stop) and the song-scope ``scenes`` listener
         # that advances generation on scene add/remove (state/full
         # rebuilds on the next tick; no targeted wire emit — design §2.6).
-        self._scenes_component = ScenesComponent(
+        self._scenes_component = self._own(ScenesComponent(
             song=self.song,
             emit=self._transport.send,
             advance_generation=self._generation_component.advance,
-        )
+        ))
         for address, handler in (
             (V3_SCENE_LAUNCH_ADDRESS, self._scenes_component.handle_launch),
             (V3_SCENE_STOP_ADDRESS, self._scenes_component.handle_stop),
         ):
             self._transport.add_handler(address, handler)
 
+    def _setup_structural_composite(self) -> None:
+        """Install the one structural-change callback on LOMListeners."""
         # Rebind the structural-change composite to also tear down
         # property subscriptions whose devicePath went away AND rebind
         # track-metadata listeners against the current track set. The
@@ -1921,6 +1967,11 @@ class LoopingSurface(ControlSurface):
         # newly-added tracks' attr values on the wire; the UI binds to
         # them there and our listener rebind just ensures subsequent
         # outside edits still fire.
+        # (A first composite used to be defined and installed beside the
+        # publisher, then unconditionally replaced by this one — lines that
+        # read like the live wiring but never fired. Removed 2026-08-29;
+        # this composite is a strict superset.)
+        v3_state_full_on_structural = self._v3_state_full_component.on_structural_change
         property_on_structural_invalidate = (
             self._property_component.on_structural_invalidate
         )
@@ -2026,6 +2077,9 @@ class LoopingSurface(ControlSurface):
             _on_structural_change_with_properties,
         )
 
+    def _setup_browser_components(self, constants) -> None:
+        """Everything that needs ``application.browser``: the Gate 4a probe,
+        device loads, the .alc probe and track preparation."""
         # Gate 4a: Browser-API capability probe. No UI consumer; fired
         # only by the Gate 4a driver at ``owner/probes/gate4a_run.js``. Takes
         # the Live Browser object and a small adapter around
@@ -2084,7 +2138,7 @@ class LoopingSurface(ControlSurface):
             # By file name (ADR-498): any Wah.adg, and the configured one's.
             wah_path = wah_preset_path((constants.get("devices") or {}).get("wah"))
             head_presets = [WAH_FILE] + ([wah_path] if wah_path else [])
-            self._device_load_component = DeviceLoadComponent(
+            self._device_load_component = self._own(DeviceLoadComponent(
                 song=self.song,
                 browser=browser,
                 emit=self._transport.send,
@@ -2095,7 +2149,7 @@ class LoopingSurface(ControlSurface):
                 # shown yet is looked for again on the next fast tick.
                 schedule_tick=self._schedule_next_tick,
                 head_preset_paths=head_presets,
-            )
+            ))
             self._transport.add_handler(
                 V3_DEVICE_LOAD_ADDRESS,
                 self._device_load_component.handle_load,
@@ -2128,7 +2182,7 @@ class LoopingSurface(ControlSurface):
             # Depends on DeviceLoadComponent (for ``load_into_track``)
             # and the same ``_session_settings_component.should_auto_arm``
             # gate as the foot-trigger path.
-            self._track_prepare_component = TrackPrepareComponent(
+            self._track_prepare_component = self._own(TrackPrepareComponent(
                 song=self.song,
                 emit=self._transport.send,
                 device_load_component=self._device_load_component,
@@ -2137,7 +2191,7 @@ class LoopingSurface(ControlSurface):
                 should_auto_arm=(
                     self._session_settings_component.should_auto_arm
                 ),
-            )
+            ))
             self._transport.add_handler(
                 V3_TRACK_PREPARE_ADDRESS,
                 self._track_prepare_component.handle_prepare,
@@ -2147,6 +2201,8 @@ class LoopingSurface(ControlSurface):
                 self._track_prepare_component.handle_duplicate,
             )
 
+    def _setup_scheduler_probe(self) -> None:
+        """The Gate 4b ``schedule_message`` fidelity probe."""
         # Gate 4b: scheduler-fidelity probe. Fired only by
         # ``owner/probes/gate4b_run.js``; no UI consumer. Takes the *raw*
         # ``schedule_message`` bound method — not ``_schedule_delayed``
@@ -2162,6 +2218,8 @@ class LoopingSurface(ControlSurface):
             self._scheduler_probe.handle_schedule_run,
         )
 
+    def _start_pumps(self, constants) -> None:
+        """Start the tick and the fast drain pump, then advertise the surface."""
         # Kick off the drain tick. ``schedule_message(1, fn)`` fires
         # ``fn`` on the next tick (measured 99.4 ms, 2026-08-31); ``fn``
         # must re-schedule itself each call. This is the same idiom
@@ -2471,6 +2529,11 @@ class LoopingSurface(ControlSurface):
         Live calls ``disconnect`` on the main tick thread where no
         fire can race it, but the ordering is still the safe
         default.
+
+        Components go in reverse construction order (``_own``), each in
+        its own guard, so one that raises cannot keep the rest attached
+        across a set reload; each attribute that held one is set to
+        ``None`` (the late-lookup ``getattr`` guards read that as gone).
         """
         logger.info("Looping surface disconnecting")
         # Stop the fast drain pump before anything else. It is the
@@ -2491,243 +2554,34 @@ class LoopingSurface(ControlSurface):
         if getattr(self, "_tcp_transport", None) is not None:
             self._tcp_transport.close()
             self._tcp_transport = None
-        if getattr(self, "_session_component", None) is not None:
-            self._session_component.disconnect()
-            self._session_component = None
-        if getattr(self, "_key_detect_component", None) is not None:
-            self._key_detect_component.disconnect()
-            self._key_detect_component = None
-        if getattr(self, "_drum_swap_component", None) is not None:
-            self._drum_swap_component.disconnect()
-            self._drum_swap_component = None
-        if getattr(self, "_record_suspend_component", None) is not None:
-            self._record_suspend_component.disconnect()
-            self._record_suspend_component = None
-        if getattr(self, "_session_settings_component", None) is not None:
-            self._session_settings_component.disconnect()
-            self._session_settings_component = None
-        # Before ServerPresenceComponent — PerformanceCapture holds a
-        # reference to it for the gate.
-        if getattr(self, "_performance_capture_component", None) is not None:
-            self._performance_capture_component.disconnect()
-            self._performance_capture_component = None
-        if getattr(self, "_server_presence_component", None) is not None:
-            self._server_presence_component.disconnect()
-            self._server_presence_component = None
-        # Teardown: DebugComponent first (no listeners — just drop
-        # the emit closure), DevicesComponent next (same), then
-        # LOMListeners which actually detaches song.tracks +
-        # per-track listeners. Ordering matters only for the
-        # listener bookkeeper: detach listeners before closing the
-        # transport so a late fire doesn't try to emit against a
-        # freed object graph.
-        if getattr(self, "_debug_component", None) is not None:
-            self._debug_component.disconnect()
-            self._debug_component = None
-        if getattr(self, "_view_component", None) is not None:
-            self._view_component.disconnect()
-            self._view_component = None
-        if getattr(self, "_device_commands_component", None) is not None:
-            self._device_commands_component.disconnect()
-            self._device_commands_component = None
-        # v3 components teardown. Order: handshake first (drops
-        # sessions), invalidation next (silences any late advance
-        # fires), generation last (freezes counter). Must precede
-        # DevicesComponent so the latter's v3 handlers see the
-        # disconnected slots when any in-flight message drains.
-        if getattr(self, "_handshake_component", None) is not None:
-            self._handshake_component.disconnect()
-            self._handshake_component = None
-        # PR-3c (v2): surface-hello teardown. One-shot component with
-        # nothing to detach — just flips its disconnected flag so a
-        # late ``send_hello`` (there shouldn't be one, but belt-and-
-        # braces) can't emit on a torn-down transport.
-        if getattr(self, "_surface_hello_component", None) is not None:
-            self._surface_hello_component.disconnect()
-            self._surface_hello_component = None
-        if getattr(self, "_invalidation_component", None) is not None:
-            self._invalidation_component.disconnect()
-            self._invalidation_component = None
-        if getattr(self, "_generation_component", None) is not None:
-            self._generation_component.disconnect()
-            self._generation_component = None
-        if getattr(self, "_devices_component", None) is not None:
-            self._devices_component.disconnect()
-            self._devices_component = None
-        # PR-5a: TrackMetadataComponent teardown. Detaches per-track
-        # per-attr listeners. Order: before PropertyComponent (no
-        # dependency either way, but symmetry with property's "silence
-        # fires-in-flight first" ordering keeps the teardown
-        # predictable).
-        if getattr(self, "_track_metadata_component", None) is not None:
-            self._track_metadata_component.disconnect()
-            self._track_metadata_component = None
-        # PR-5b: MasterComponent teardown. Detaches the master-track
-        # attr listeners + mixer-device value listeners. Same ordering
-        # rationale as TrackMetadata above.
-        if getattr(self, "_master_component", None) is not None:
-            self._master_component.disconnect()
-            self._master_component = None
-        # PR-5c: MetersComponent teardown. Detaches per-track + master
-        # output-meter listeners. Same ordering as Master/Metadata —
-        # silence fires-in-flight before tearing down PropertyComponent
-        # and the mutation component.
-        if getattr(self, "_meters_component", None) is not None:
-            self._meters_component.disconnect()
-            self._meters_component = None
-        # permute ADR-020: SequencerComponent teardown FIRST among the
-        # clip-touching components — it restores every clip it shifted or
-        # muted and emits idle steps, and that restore goes through the
-        # playhead query and the drum fan-out, both still alive here.
-        if getattr(self, "_sequencer_component", None) is not None:
-            self._sequencer_component.disconnect()
-            self._sequencer_component = None
-        # ADR-360: PlayheadComponent teardown. Detaches per-track slot
-        # + per-clip listeners. Same ordering rationale as Meters.
-        if getattr(self, "_playhead_component", None) is not None:
-            self._playhead_component.disconnect()
-            self._playhead_component = None
-        # PR-5e1: ClipPropertiesComponent teardown. Detaches the
-        # song-scoped detail_clip listener + any currently-attached
-        # per-clip property listeners. Same "silence fires-in-flight
-        # before the mutation component" ordering as Meters/Master.
-        if getattr(self, "_clip_properties_component", None) is not None:
-            self._clip_properties_component.disconnect()
-            self._clip_properties_component = None
-        # Phase 7 PR-7d: SelectedTrackComponent teardown. Detaches
-        # the song.view.selected_track listener. Order next to
-        # ClipPropertiesComponent — both observe song.view; silencing
-        # them together keeps a last-second selection change from
-        # firing on an almost-torn-down transport.
-        if getattr(self, "_selected_track_component", None) is not None:
-            self._selected_track_component.disconnect()
-            self._selected_track_component = None
-        # ExclusiveArmComponent teardown. Second subscriber to
-        # song.view.selected_track — detach alongside
-        # SelectedTrackComponent so neither observer fires on a
-        # torn-down song.
-        if getattr(self, "_exclusive_arm_component", None) is not None:
-            self._exclusive_arm_component.disconnect()
-            self._exclusive_arm_component = None
-        # PR-5e2: GrooveComponent teardown before GroovePoolComponent
-        # — GrooveComponent holds a reference to the pool and may
-        # call into it during disconnect-time fires (the focus-scoped
-        # delete-return path). Pool detaches its
-        # `groove_pool.grooves` listener last so in-flight
-        # GrooveComponent fires still see a valid pool.
-        if getattr(self, "_groove_component", None) is not None:
-            self._groove_component.disconnect()
-            self._groove_component = None
-        if getattr(self, "_groove_pool_component", None) is not None:
-            self._groove_pool_component.disconnect()
-            self._groove_pool_component = None
-        # Phase 7 PR-7b: ClipsComponent teardown. Detaches every
-        # per-slot ``has_clip`` listener before ScenesComponent (whose
-        # song-scope ``scenes`` listener is cheaper to tear down and
-        # less likely to race late fires). Silencing the per-slot
-        # listeners first keeps a teardown-time clip delete from
-        # emitting on an almost-closed transport.
-        if getattr(self, "_clips_component", None) is not None:
-            self._clips_component.disconnect()
-            self._clips_component = None
-        # Phase 8 PR-8b: ClipNotesComponent teardown. No LOM listeners;
-        # ``disconnect`` just flips the silencing flag.
-        if getattr(self, "_clip_notes_component", None) is not None:
-            self._clip_notes_component.disconnect()
-            self._clip_notes_component = None
-        if getattr(self, "_track_transpose_component", None) is not None:
-            self._track_transpose_component.disconnect()
-            self._track_transpose_component = None
-        # Phase 9 PR-9b: FootTriggerComponent teardown. No LOM
-        # listeners (writes go through SessionComponent's
-        # session_record listener); ``disconnect`` only flips the
-        # silencing flag.
-        if getattr(self, "_foot_trigger_component", None) is not None:
-            self._foot_trigger_component.disconnect()
-            self._foot_trigger_component = None
-        if getattr(self, "_wah_pedal_component", None) is not None:
-            self._wah_pedal_component.disconnect()
-            self._wah_pedal_component = None
-        if getattr(self, "_midi_wheels_component", None) is not None:
-            self._midi_wheels_component.disconnect()
-            self._midi_wheels_component = None
-        if getattr(self, "_simpler_load_component", None) is not None:
-            self._simpler_load_component.disconnect()
-            self._simpler_load_component = None
-        if getattr(self, "_scenes_component", None) is not None:
-            self._scenes_component.disconnect()
-            self._scenes_component = None
-        # Phase 6 PR-6 (pr6-5): DeviceLoadComponent teardown. No LOM
-        # listeners held, so ``disconnect`` just flips the silencing
-        # flag — ordering is flexible, grouped here with the other v3
-        # components for symmetry.
-        if getattr(self, "_device_load_component", None) is not None:
-            self._device_load_component.disconnect()
-            self._device_load_component = None
-        # TrackPrepareComponent teardown — drops the LRU and silences
-        # any further handler invocations. Tear down before the
-        # transport closes so a deferred audio-create finalize can't
-        # land on a dead emit.
-        if getattr(self, "_track_prepare_component", None) is not None:
-            self._track_prepare_component.disconnect()
-            self._track_prepare_component = None
-        # Detach property subscriptions before the mutation component
-        # so their fires-in-flight are silenced first (PropertyComponent
-        # owns its own LOM listeners on device sub-objects like
-        # ``device.sample`` and direct attrs like ``voice_mode_index``).
-        # ADR-428: DrumVirtualMacroComponent teardown. Detaches the rack
-        # pads/chains/macros listeners and drops pending fan-outs. Before
-        # PropertyComponent, which routes the vm.* rows to it.
-        if getattr(self, "_drum_vm_component", None) is not None:
-            self._drum_vm_component.disconnect()
-            self._drum_pad_chain_component.disconnect()
-            self._drum_vm_component = None
-        if getattr(self, "_rack_chain_names_component", None) is not None:
-            self._rack_chain_names_component.disconnect()
-            self._rack_chain_names_component = None
-        if getattr(self, "_rack_chain_devices_component", None) is not None:
-            self._rack_chain_devices_component.disconnect()
-            self._rack_chain_devices_component = None
-        if getattr(self, "_property_component", None) is not None:
-            self._property_component.disconnect()
-            self._property_component = None
-        # Detach the mutation component *before* the listener
-        # bookkeeper. ``LOMListeners.disconnect`` walks every
-        # ``_param_value_listeners`` entry to ``remove_value_listener``;
-        # any in-flight LOM fire between those detaches and our flag
-        # flip would otherwise emit on a closed transport. Flipping
-        # ``_disconnected`` first turns those fires into no-ops.
-        if getattr(self, "_mutation_component", None) is not None:
-            self._mutation_component.disconnect()
-            self._mutation_component = None
-        # Detach the state/full publishers *before* the listener
-        # bookkeeper. Their structural-change hook would otherwise
-        # fire on a listener teardown race.
-        if getattr(self, "_v3_state_full_component", None) is not None:
-            if getattr(self, "_lom_listeners", None) is not None:
-                self._lom_listeners.set_on_structural_change(None)
-            self._v3_state_full_component.disconnect()
-            self._v3_state_full_component = None
-        # DeviceInitComponent owns an ``on_device_added`` hook wired at
-        # ``:1062``. Its ``disconnect`` has existed since the component was
-        # written and was never called from here — the teardown asymmetry
-        # leaked its hook across every set reload.
-        if getattr(self, "_device_init_component", None) is not None:
-            self._device_init_component.disconnect()
-            self._device_init_component = None
+        # Silence the structural composite first: a listener torn down
+        # below must not republish through components already gone.
         if getattr(self, "_lom_listeners", None) is not None:
-            self._lom_listeners.disconnect()
-            self._lom_listeners = None
-        # BrowserProbe and SchedulerProbe have no LOM listeners to
-        # detach — they're pure request/response — so no teardown
-        # calls; just drop the refs so the emit closures (which
-        # capture ``self._transport.send``) aren't kept alive past
-        # transport close. SchedulerProbe additionally captures the
-        # bound ``schedule_message`` method, which is kept alive by
-        # the framework until super().disconnect(), so ordering of
-        # drop-ref → close transport → super is what we want.
+            self._lom_listeners.set_on_structural_change(None)
+
+        components = getattr(self, "_components", [])
+        for component in reversed(components):
+            try:
+                component.disconnect()
+            except Exception as e:
+                logger.error(
+                    "LoopingSurface: %s.disconnect raised: %s",
+                    type(component).__name__, e, exc_info=True,
+                )
+        gone = {id(c) for c in components}
+        for name, value in list(vars(self).items()):
+            if id(value) in gone:
+                setattr(self, name, None)
+        components.clear()
+
+        # No teardown method — pure request/response — so just drop the
+        # refs: their emit closures capture ``self._transport.send``, and
+        # SchedulerProbe the bound ``schedule_message``, which the
+        # framework keeps alive until super().disconnect().
         self._browser_probe = None
         self._scheduler_probe = None
+        self._alc_clip_probe = None
+        self._status_message_component = None
         if self._transport is not None:
             self._transport.close()
             self._transport = None
