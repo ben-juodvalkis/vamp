@@ -130,6 +130,9 @@ import math
 from typing import Callable, Dict, Optional, Tuple
 
 from . import path_resolver
+from .detail_clip import (
+    SCALAR_FLOAT, SCALAR_INT, DetailClipWatch, encode_scalar, focus_path, parse_clip_arg,
+)
 from ._common import LOM_ERRORS
 from .component_util import first_time, parse_int_arg as _parse_int_arg
 from .GroovePoolComponent import (
@@ -280,16 +283,8 @@ class GrooveComponent:
         # Song-scoped detail_clip listener. Attach on ``song.view``
         # — independent of ClipPropertiesComponent's listener
         # (design §5, option (a) — rule of three).
-        self._view = self._safe_song_view()
-        self._detail_listener_attached = False
-        if self._view is not None:
-            try:
-                self._view.add_detail_clip_listener(
-                    self._on_detail_clip_changed,
-                )
-                self._detail_listener_attached = True
-            except _LOM_ERRORS as e:
-                self._warn_once("detail_clip", "attach", e)
+        self._detail = DetailClipWatch(self._song, self._on_detail_clip_changed, self._warn_once)
+        self._view = self._detail.view
 
         # Seed state if a clip is already focused at construction.
         self._refocus(initial=True)
@@ -302,12 +297,6 @@ class GrooveComponent:
 
     # --- song.view / detail_clip listener ---------------------------------
 
-    def _safe_song_view(self):
-        try:
-            return self._song.view
-        except _LOM_ERRORS as e:
-            self._warn_once("song.view", "read", e)
-            return None
 
     def _on_detail_clip_changed(self) -> None:
         if self._disconnected:
@@ -334,11 +323,7 @@ class GrooveComponent:
         new_track = None
         new_slot_index: Optional[int] = None
         if new_clip is not None:
-            try:
-                new_path = path_resolver.clip_path_for(self._song, new_clip)
-            except _LOM_ERRORS as e:
-                self._warn_once("clip_path_for", "refocus", e)
-                new_path = None
+            new_path = focus_path(self._song, new_clip, self._warn_once)
             if new_path is not None:
                 new_track, new_slot_index = self._lookup_track_slot(new_path)
 
@@ -386,13 +371,8 @@ class GrooveComponent:
         self._emit_file(groove)
 
     def _read_detail_clip(self):
-        if self._view is None:
-            return None
-        try:
-            return self._view.detail_clip
-        except _LOM_ERRORS as e:
-            self._warn_once("detail_clip", "read", e)
-            return None
+        """``song.view.detail_clip``, or ``None`` on any LOM quirk."""
+        return self._detail.read()
 
     def _lookup_track_slot(self, clip_path: str):
         """Resolve ``clip_path`` → (track, slot_index) for delete-check.
@@ -917,26 +897,9 @@ class GrooveComponent:
     def _parse_clip_from_args(
         self, args, attr_name: str,
     ) -> Tuple[Optional[object], Optional[str]]:
-        if not args:
-            logger.warning(
-                "GrooveComponent set %s: empty args, ignoring", attr_name,
-            )
-            return None, None
-        raw = args[0]
-        if not isinstance(raw, str):
-            logger.warning(
-                "GrooveComponent set %s: clipPath not a string: %r",
-                attr_name, raw,
-            )
-            return None, None
-        r = path_resolver.resolve_clip(self._song, raw)
-        if not r.ok:
-            logger.warning(
-                "GrooveComponent set %s: clipPath %r unresolved: %s (%s)",
-                attr_name, raw, r.status.value, r.detail,
-            )
-            return None, None
-        return r.obj, raw
+        """Resolve ``args[0]`` as a clipPath: ``(clip, path)``, or
+        ``(None, None)`` after a warning per rejection."""
+        return parse_clip_arg(self._song, args, "GrooveComponent", attr_name)
 
     def _parse_float_0_100(
         self, args, attr_name: str,
@@ -1006,33 +969,20 @@ class GrooveComponent:
         self._detach_amount_listeners()
 
         # detail_clip listener on song.view.
-        if self._detail_listener_attached and self._view is not None:
-            try:
-                self._view.remove_detail_clip_listener(
-                    self._on_detail_clip_changed,
-                )
-            except _LOM_ERRORS as e:
-                logger.warning(
-                    "GrooveComponent detail_clip detach failed: %s", e,
-                )
-            self._detail_listener_attached = False
+        self._detail.detach()
 
 
 # --- module helpers -------------------------------------------------------
 
 
+_SCALAR_FOR_WIRE: Dict[str, str] = {
+    _WIRE_INT_BASE: SCALAR_INT,
+    _WIRE_FLOAT_0_100: SCALAR_FLOAT,
+}
+
+
 def _encode_wire(wire_type: str, raw):
-    if wire_type == _WIRE_INT_BASE:
-        try:
-            return int(raw)
-        except (TypeError, ValueError):
-            return None
-    if wire_type == _WIRE_FLOAT_0_100:
-        try:
-            return float(raw)
-        except (TypeError, ValueError):
-            return None
-    return None
+    return encode_scalar(_SCALAR_FOR_WIRE.get(wire_type), raw)
 
 
 def _parse_track_and_slot(song, slot_path: str):

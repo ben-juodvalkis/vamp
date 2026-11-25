@@ -85,6 +85,7 @@ from collections import OrderedDict
 from typing import Callable, Iterable, List, Optional, Tuple
 
 from . import path_resolver
+from .detail_clip import DetailClipWatch, focus_path
 from ._common import LOM_ERRORS, coerce_str
 from .component_util import emit_error, first_time, parse_int_arg, safe_emit
 from .path_resolver import ResolveStatus
@@ -707,16 +708,8 @@ class ClipNotesComponent:
         # ``(key, context) -> True`` once warned, for de-dupe.
         self._warned: set = set()
 
-        self._view = self._safe_song_view()
-        self._detail_listener_attached = False
-        if self._view is not None:
-            try:
-                self._view.add_detail_clip_listener(
-                    self._on_detail_clip_changed,
-                )
-                self._detail_listener_attached = True
-            except _LOM_ERRORS as e:
-                self._warn_once("detail_clip", "attach", e)
+        self._detail = DetailClipWatch(self._song, self._on_detail_clip_changed, self._warn_once)
+        self._view = self._detail.view
         self._refocus()
         logger.info(
             "ClipNotesComponent: ready (focused_path=%s)", self._focused_path,
@@ -1506,12 +1499,6 @@ class ClipNotesComponent:
             return None, clip_path
         return clip, clip_path
 
-    def _safe_song_view(self):
-        try:
-            return self._song.view
-        except _LOM_ERRORS as e:
-            self._warn_once("song.view", "read", e)
-            return None
 
     def _on_detail_clip_changed(self) -> None:
         if self._disconnected:
@@ -1523,11 +1510,7 @@ class ClipNotesComponent:
         new_clip = self._read_detail_clip()
         new_path: Optional[str] = None
         if new_clip is not None:
-            try:
-                new_path = path_resolver.clip_path_for(self._song, new_clip)
-            except _LOM_ERRORS as e:
-                self._warn_once("clip_path_for", "refocus", e)
-                new_path = None
+            new_path = focus_path(self._song, new_clip, self._warn_once)
 
         self._detach_notes_listener()
         self._focused_clip = new_clip if new_path is not None else None
@@ -1536,13 +1519,8 @@ class ClipNotesComponent:
             self._attach_notes_listener(self._focused_clip)
 
     def _read_detail_clip(self):
-        if self._view is None:
-            return None
-        try:
-            return self._view.detail_clip
-        except _LOM_ERRORS as e:
-            self._warn_once("detail_clip", "read", e)
-            return None
+        """``song.view.detail_clip``, or ``None`` on any LOM quirk."""
+        return self._detail.read()
 
     def _attach_notes_listener(self, clip) -> None:
         add = getattr(clip, "add_notes_listener", None)
@@ -1857,11 +1835,4 @@ class ClipNotesComponent:
 
         # Focused-clip notes listener + the song.view detail_clip listener.
         self._detach_notes_listener()
-        if self._detail_listener_attached and self._view is not None:
-            try:
-                self._view.remove_detail_clip_listener(
-                    self._on_detail_clip_changed,
-                )
-            except _LOM_ERRORS as e:
-                self._warn_once("detail_clip", "detach", e)
-            self._detail_listener_attached = False
+        self._detail.detach()
