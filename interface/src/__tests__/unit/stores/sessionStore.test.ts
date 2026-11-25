@@ -3,7 +3,6 @@
  *
  * Tests cover:
  * - Time signature updates (ADR-182 bug fix)
- * - Session state batch handling (ADR-183)
  * - Individual session property updates
  */
 
@@ -26,7 +25,17 @@ vi.mock('$lib/stores/v6/centralDisplayStore.svelte', () => ({
 }));
 
 // Import after mocks are set up
-import { session, handleSessionUpdate } from '$lib/stores/session.svelte';
+import {
+	session,
+	handleTempoUpdate,
+	handleTransportUpdate,
+	handleTimeSignatureUpdate,
+	handleLoopUpdate,
+	handleMetronomeUpdate,
+	handleGrooveUpdate,
+	handleSessionRecordUpdate,
+	handleTrackSelectionUpdate
+} from '$lib/stores/session.svelte';
 import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 
 describe('session store', () => {
@@ -34,27 +43,27 @@ describe('session store', () => {
 		vi.clearAllMocks();
 	});
 
-	describe('handleSessionUpdate', () => {
+	describe('the v3 setters', () => {
 		describe('tempo updates', () => {
 			it('should update tempo', () => {
-				handleSessionUpdate({ type: 'tempo', bpm: 140, timestamp: Date.now() });
+				handleTempoUpdate(140);
 				expect(session.tempo).toBe(140);
 			});
 
 			it('should handle decimal tempo values', () => {
-				handleSessionUpdate({ type: 'tempo', bpm: 123.45, timestamp: Date.now() });
+				handleTempoUpdate(123.45);
 				expect(session.tempo).toBe(123.45);
 			});
 		});
 
 		describe('transport updates', () => {
 			it('should update transport to playing', () => {
-				handleSessionUpdate({ type: 'transport', isPlaying: true, timestamp: Date.now() });
+				handleTransportUpdate(true);
 				expect(session.isPlaying).toBe(true);
 			});
 
 			it('should update transport to stopped', () => {
-				handleSessionUpdate({ type: 'transport', isPlaying: false, timestamp: Date.now() });
+				handleTransportUpdate(false);
 				expect(session.isPlaying).toBe(false);
 			});
 		});
@@ -62,57 +71,33 @@ describe('session store', () => {
 		describe('time signature updates (ADR-182)', () => {
 			it('should update to 4/4 time signature', () => {
 				// First set to 3/4
-				handleSessionUpdate({
-					type: 'time-signature',
-					timeSignature: { numerator: 3, denominator: 4 },
-					timestamp: Date.now()
-				});
+				handleTimeSignatureUpdate(3, 4);
 				expect(session.timeSignature.numerator).toBe(3);
 
 				// Then update to 4/4 - this was the bug in ADR-182
-				handleSessionUpdate({
-					type: 'time-signature',
-					timeSignature: { numerator: 4, denominator: 4 },
-					timestamp: Date.now()
-				});
+				handleTimeSignatureUpdate(4, 4);
 				expect(session.timeSignature.numerator).toBe(4);
 				expect(session.timeSignature.denominator).toBe(4);
 			});
 
 			it('should handle partial numerator update (with default denominator)', () => {
 				// Simulate AbletonOSC sending just numerator with parser default denominator
-				handleSessionUpdate({
-					type: 'time-signature',
-					timeSignature: { numerator: 7, denominator: 4 },
-					timestamp: Date.now()
-				});
+				handleTimeSignatureUpdate(7, 4);
 				expect(session.timeSignature.numerator).toBe(7);
 			});
 
 			it('should handle partial denominator update (with default numerator)', () => {
 				// Simulate AbletonOSC sending just denominator with parser default numerator
-				handleSessionUpdate({
-					type: 'time-signature',
-					timeSignature: { numerator: 4, denominator: 8 },
-					timestamp: Date.now()
-				});
+				handleTimeSignatureUpdate(4, 8);
 				expect(session.timeSignature.denominator).toBe(8);
 			});
 
 			it('should handle unusual time signatures', () => {
-				handleSessionUpdate({
-					type: 'time-signature',
-					timeSignature: { numerator: 5, denominator: 4 },
-					timestamp: Date.now()
-				});
+				handleTimeSignatureUpdate(5, 4);
 				expect(session.timeSignature.numerator).toBe(5);
 				expect(session.timeSignature.denominator).toBe(4);
 
-				handleSessionUpdate({
-					type: 'time-signature',
-					timeSignature: { numerator: 7, denominator: 8 },
-					timestamp: Date.now()
-				});
+				handleTimeSignatureUpdate(7, 8);
 				expect(session.timeSignature.numerator).toBe(7);
 				expect(session.timeSignature.denominator).toBe(8);
 			});
@@ -120,70 +105,46 @@ describe('session store', () => {
 
 		describe('loop updates', () => {
 			it('should update loop state', () => {
-				handleSessionUpdate({
-					type: 'loop',
-					isLooping: true,
-					loopStart: 4,
-					loopEnd: 16,
-					timestamp: Date.now()
-				});
+				handleLoopUpdate(true, 4, 16);
 				expect(session.isLooping).toBe(true);
 				expect(session.loopStart).toBe(4);
 				expect(session.loopEnd).toBe(16);
 			});
 
 			it('should disable looping', () => {
-				handleSessionUpdate({
-					type: 'loop',
-					isLooping: false,
-					loopStart: 0,
-					loopEnd: 0,
-					timestamp: Date.now()
-				});
+				handleLoopUpdate(false, 0, 0);
 				expect(session.isLooping).toBe(false);
 			});
 		});
 
 		describe('metronome updates', () => {
 			it('should enable metronome', () => {
-				handleSessionUpdate({ type: 'metronome', enabled: true, timestamp: Date.now() });
+				handleMetronomeUpdate(true);
 				expect(session.metronome).toBe(true);
 			});
 
 			it('should disable metronome', () => {
-				handleSessionUpdate({ type: 'metronome', enabled: false, timestamp: Date.now() });
+				handleMetronomeUpdate(false);
 				expect(session.metronome).toBe(false);
 			});
 		});
 
 		describe('groove updates', () => {
 			it('should update groove amount', () => {
-				handleSessionUpdate({ type: 'groove', amount: 0.5, timestamp: Date.now() });
+				handleGrooveUpdate(0.5);
 				expect(session.groove).toBe(0.5);
 			});
 		});
 
 		describe('session record updates', () => {
 			it('should enable session record', () => {
-				handleSessionUpdate({ type: 'session-record', isRecording: true, timestamp: Date.now() });
+				handleSessionRecordUpdate(true);
 				expect(session.sessionRecord).toBe(true);
 			});
 
 			it('should disable session record', () => {
-				handleSessionUpdate({ type: 'session-record', isRecording: false, timestamp: Date.now() });
+				handleSessionRecordUpdate(false);
 				expect(session.sessionRecord).toBe(false);
-			});
-		});
-
-		describe('return values', () => {
-			it('should return true for handled updates', () => {
-				expect(handleSessionUpdate({ type: 'tempo', bpm: 120, timestamp: Date.now() })).toBe(true);
-				expect(handleSessionUpdate({ type: 'transport', isPlaying: true, timestamp: Date.now() })).toBe(true);
-			});
-
-			it('should return false for unhandled update types', () => {
-				// @ts-expect-error - Testing invalid type
-				expect(handleSessionUpdate({ type: 'unknown', timestamp: Date.now() })).toBe(false);
 			});
 		});
 	});
@@ -191,7 +152,7 @@ describe('session store', () => {
 	describe('selectTrackOptimistically', () => {
 		beforeEach(() => {
 			// Reset to a known track so tests start from a clean state
-			handleSessionUpdate({ type: 'track-selection', trackIndex: 0, timestamp: Date.now() });
+			handleTrackSelectionUpdate(0);
 			vi.clearAllMocks();
 		});
 
@@ -222,26 +183,26 @@ describe('session store', () => {
 			expect(session.selectedTrackIndex).toBe(2);
 
 			// Track 1's echo arrives first — should be dropped
-			handleSessionUpdate({ type: 'track-selection', trackIndex: 1, timestamp: Date.now() });
+			handleTrackSelectionUpdate(1);
 			expect(session.selectedTrackIndex).toBe(2);
 
 			// Track 2's echo arrives — confirms and clears pending
-			handleSessionUpdate({ type: 'track-selection', trackIndex: 2, timestamp: Date.now() });
+			handleTrackSelectionUpdate(2);
 			expect(session.selectedTrackIndex).toBe(2);
 		});
 
 		it('Ableton-initiated selection (no pending) always applies', () => {
 			// No optimistic write — pending is null
-			handleSessionUpdate({ type: 'track-selection', trackIndex: 5, timestamp: Date.now() });
+			handleTrackSelectionUpdate(5);
 			expect(session.selectedTrackIndex).toBe(5);
 		});
 
 		it('confirming echo clears pending so a subsequent Ableton selection applies', () => {
 			session.selectTrackOptimistically(3);
 			// Confirming echo for 3
-			handleSessionUpdate({ type: 'track-selection', trackIndex: 3, timestamp: Date.now() });
+			handleTrackSelectionUpdate(3);
 			// Now Ableton changes selection externally
-			handleSessionUpdate({ type: 'track-selection', trackIndex: 7, timestamp: Date.now() });
+			handleTrackSelectionUpdate(7);
 			expect(session.selectedTrackIndex).toBe(7);
 		});
 	});

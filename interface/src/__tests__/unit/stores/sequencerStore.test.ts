@@ -42,7 +42,12 @@ vi.mock('$lib/api/simpleClient', () => ({
 }));
 
 vi.mock('$lib/stores/session.svelte', () => ({
+	onSelectedTrackChange: () => () => {},
 	session: {
+		selectedTrackIndex: 0,
+		selectTrackOptimistically(i: number) {
+			this.selectedTrackIndex = i;
+		},
 		get isPlaying() {
 			return false;
 		}

@@ -2,9 +2,8 @@
  * vitest coverage for the PR-5d v3 session dispatcher (`handleV3Session`).
  *
  * The handler receives `/looping/v3/session/<attr>` messages from the
- * Python Control Surface and translates them into the existing
- * `handleSessionUpdate` / `handleRootNoteUpdate` / `handleScaleNameUpdate`
- * / `handleScaleModeUpdate` surface on the session store. The Python
+ * Python Control Surface and calls the session store's setters
+ * (`handleTransportUpdate`, `handleLoopUpdate`, `handleRootNoteUpdate` …). The Python
  * side is the source of truth — these tests only cover the wire-to-
  * store translation at the TypeScript boundary.
  *
@@ -35,7 +34,7 @@ const mockSessionState = {
 	timeSignature: { numerator: 4, denominator: 4 }
 };
 
-const mockHandleSessionUpdate = vi.fn();
+const mockSessionSetter = vi.fn();
 const mockHandleRootNoteUpdate = vi.fn();
 const mockHandleScaleNameUpdate = vi.fn();
 const mockHandleScaleModeUpdate = vi.fn();
@@ -46,7 +45,19 @@ const mockHandleScaleDetected = vi.fn();
 const mockHandleKeyFollowUpdate = vi.fn();
 
 vi.mock('$lib/stores/session.svelte', () => ({
-	handleSessionUpdate: (u: unknown) => mockHandleSessionUpdate(u),
+	// Each setter records the value it was handed, tagged by kind, so the
+	// assertions below read as "the handler set the transport to playing".
+	handleTempoUpdate: (bpm: number) => mockSessionSetter({ type: 'tempo', bpm }),
+	handleTransportUpdate: (isPlaying: boolean) => mockSessionSetter({ type: 'transport', isPlaying }),
+	handleMetronomeUpdate: (enabled: boolean) => mockSessionSetter({ type: 'metronome', enabled }),
+	handleSessionRecordUpdate: (isRecording: boolean) =>
+		mockSessionSetter({ type: 'session-record', isRecording }),
+	handleLoopUpdate: (isLooping: boolean, loopStart: number, loopEnd: number) =>
+		mockSessionSetter({ type: 'loop', isLooping, loopStart, loopEnd }),
+	handleTimeSignatureUpdate: (numerator: number, denominator: number) =>
+		mockSessionSetter({ type: 'time-signature', timeSignature: { numerator, denominator } }),
+	handleSongTimeUpdate: (beats: number) => mockSessionSetter({ type: 'current-time', beats }),
+	handleGrooveUpdate: (amount: number) => mockSessionSetter({ type: 'groove', amount }),
 	handleRootNoteUpdate: (n: number) => mockHandleRootNoteUpdate(n),
 	handleScaleNameUpdate: (s: string | number) => mockHandleScaleNameUpdate(s),
 	handleScaleModeUpdate: (m: number | boolean) => mockHandleScaleModeUpdate(m),
@@ -150,34 +161,34 @@ describe('handleV3Session', () => {
 
 	it('drops messages with no args and warns', () => {
 		handleV3Session(V3_SESSION_IS_PLAYING_ADDRESS, []);
-		expect(mockHandleSessionUpdate).not.toHaveBeenCalled();
+		expect(mockSessionSetter).not.toHaveBeenCalled();
 	});
 
 	describe('bool01 attrs', () => {
 		it('is_playing [1] → transport isPlaying=true', () => {
 			handleV3Session(V3_SESSION_IS_PLAYING_ADDRESS, [1]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({ type: 'transport', isPlaying: true })
 			);
 		});
 
 		it('is_playing [0] → transport isPlaying=false', () => {
 			handleV3Session(V3_SESSION_IS_PLAYING_ADDRESS, [0]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({ type: 'transport', isPlaying: false })
 			);
 		});
 
 		it('metronome [1] → metronome enabled=true', () => {
 			handleV3Session(V3_SESSION_METRONOME_ADDRESS, [1]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({ type: 'metronome', enabled: true })
 			);
 		});
 
 		it('session_record [1] → session-record isRecording=true', () => {
 			handleV3Session(V3_SESSION_SESSION_RECORD_ADDRESS, [1]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({
 					type: 'session-record',
 					isRecording: true
@@ -189,7 +200,7 @@ describe('handleV3Session', () => {
 			mockSessionState.loopStart = 4;
 			mockSessionState.loopEnd = 12;
 			handleV3Session(V3_SESSION_LOOP_ADDRESS, [1]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({
 					type: 'loop',
 					isLooping: true,
@@ -207,7 +218,7 @@ describe('handleV3Session', () => {
 			mockSessionState.loopEnd = 16;
 			mockSessionState.isLooping = true;
 			handleV3Session(V3_SESSION_LOOP_START_ADDRESS, [8]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({
 					type: 'loop',
 					isLooping: true,
@@ -222,7 +233,7 @@ describe('handleV3Session', () => {
 			mockSessionState.loopEnd = 12;
 			mockSessionState.isLooping = true;
 			handleV3Session(V3_SESSION_LOOP_LENGTH_ADDRESS, [20]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({
 					type: 'loop',
 					isLooping: true,
@@ -235,7 +246,7 @@ describe('handleV3Session', () => {
 		it('loop_length keeps isLooping from current store state', () => {
 			mockSessionState.isLooping = false;
 			handleV3Session(V3_SESSION_LOOP_LENGTH_ADDRESS, [32]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({ isLooping: false })
 			);
 		});
@@ -245,7 +256,7 @@ describe('handleV3Session', () => {
 		it('signature_num preserves denominator from store', () => {
 			mockSessionState.timeSignature = { numerator: 4, denominator: 8 };
 			handleV3Session(V3_SESSION_SIGNATURE_NUM_ADDRESS, [3]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({
 					type: 'time-signature',
 					timeSignature: { numerator: 3, denominator: 8 }
@@ -256,7 +267,7 @@ describe('handleV3Session', () => {
 		it('signature_den preserves numerator from store', () => {
 			mockSessionState.timeSignature = { numerator: 7, denominator: 4 };
 			handleV3Session(V3_SESSION_SIGNATURE_DEN_ADDRESS, [16]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({
 					type: 'time-signature',
 					timeSignature: { numerator: 7, denominator: 16 }
@@ -269,7 +280,7 @@ describe('handleV3Session', () => {
 		it('scale_root delegates to handleRootNoteUpdate', () => {
 			handleV3Session(V3_SESSION_SCALE_ROOT_ADDRESS, [7]);
 			expect(mockHandleRootNoteUpdate).toHaveBeenCalledWith(7);
-			expect(mockHandleSessionUpdate).not.toHaveBeenCalled();
+			expect(mockSessionSetter).not.toHaveBeenCalled();
 		});
 
 		it('scale_name delegates to handleScaleNameUpdate (string arg)', () => {
@@ -284,16 +295,16 @@ describe('handleV3Session', () => {
 	});
 
 	describe('groove_amount', () => {
-		it('forwards to handleSessionUpdate as a groove update', () => {
+		it('sets the groove amount', () => {
 			handleV3Session(V3_SESSION_GROOVE_AMOUNT_ADDRESS, [0.42]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({ type: 'groove', amount: 0.42 })
 			);
 		});
 
 		it('coerces non-number args via toNumber', () => {
 			handleV3Session(V3_SESSION_GROOVE_AMOUNT_ADDRESS, ['0.5']);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({ type: 'groove', amount: 0.5 })
 			);
 		});
@@ -317,16 +328,16 @@ describe('handleV3Session', () => {
 	});
 
 	describe('/looping/session/tempo (legacy pre-v3 wire)', () => {
-		it('forwards bpm to handleSessionUpdate', () => {
+		it('sets the tempo', () => {
 			handleV3Session(LEGACY_SESSION_TEMPO_ADDRESS, [135.5]);
-			expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+			expect(mockSessionSetter).toHaveBeenCalledWith(
 				expect.objectContaining({ type: 'tempo', bpm: 135.5 })
 			);
 		});
 
 		it('skips empty args', () => {
 			handleV3Session(LEGACY_SESSION_TEMPO_ADDRESS, []);
-			expect(mockHandleSessionUpdate).not.toHaveBeenCalled();
+			expect(mockSessionSetter).not.toHaveBeenCalled();
 		});
 	});
 
@@ -334,7 +345,7 @@ describe('handleV3Session', () => {
 		it('forwards auto_arm=1 to handleAutoArmUpdate', () => {
 			handleV3Session(V3_SESSION_AUTO_ARM_ADDRESS, [1]);
 			expect(mockHandleAutoArmUpdate).toHaveBeenCalledWith(1);
-			expect(mockHandleSessionUpdate).not.toHaveBeenCalled();
+			expect(mockSessionSetter).not.toHaveBeenCalled();
 		});
 
 		it('forwards auto_arm=0 to handleAutoArmUpdate', () => {
@@ -367,14 +378,14 @@ describe('song position', () => {
 	// zero rendered as a frozen `1.1.0` for the whole session.
 	it('translates beats into a current-time update', () => {
 		handleV3Session('/looping/v3/session/song_time', [6.5]);
-		expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+		expect(mockSessionSetter).toHaveBeenCalledWith(
 			expect.objectContaining({ type: 'current-time', beats: 6.5 })
 		);
 	});
 
 	it('accepts bar one, beat one', () => {
 		handleV3Session('/looping/v3/session/song_time', [0]);
-		expect(mockHandleSessionUpdate).toHaveBeenCalledWith(
+		expect(mockSessionSetter).toHaveBeenCalledWith(
 			expect.objectContaining({ type: 'current-time', beats: 0 })
 		);
 	});
@@ -382,7 +393,7 @@ describe('song position', () => {
 	it('drops a negative or non-finite position rather than moving the readout', () => {
 		handleV3Session('/looping/v3/session/song_time', [-1]);
 		handleV3Session('/looping/v3/session/song_time', ['nonsense']);
-		expect(mockHandleSessionUpdate).not.toHaveBeenCalled();
+		expect(mockSessionSetter).not.toHaveBeenCalled();
 	});
 });
 

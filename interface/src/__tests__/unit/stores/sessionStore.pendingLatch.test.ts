@@ -29,18 +29,21 @@ vi.mock('$lib/stores/v6/centralDisplayStore.svelte', () => ({
 	centralDisplayStore: { setView: vi.fn() }
 }));
 
-import { session, handleSessionUpdate } from '$lib/stores/session.svelte';
-
-const at = () => Date.now();
+import {
+	session,
+	handleTrackSelectionUpdate,
+	handleTransportUpdate,
+	handleMetronomeUpdate
+} from '$lib/stores/session.svelte';
 
 describe('optimistic latches self-heal after a mismatched echo', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		// Land each latch on a known value via a matching echo, so no test
 		// inherits a pending write from the one before it.
-		handleSessionUpdate({ type: 'track-selection', trackIndex: 0, timestamp: at() });
-		handleSessionUpdate({ type: 'transport', isPlaying: false, timestamp: at() });
-		handleSessionUpdate({ type: 'metronome', enabled: false, timestamp: at() });
+		handleTrackSelectionUpdate(0);
+		handleTransportUpdate(false);
+		handleMetronomeUpdate(false);
 	});
 
 	it('track selection: a later Live-initiated selection still lands', () => {
@@ -48,11 +51,11 @@ describe('optimistic latches self-heal after a mismatched echo', () => {
 		expect(session.selectedTrackIndex).toBe(5);
 
 		// Stale echo for an earlier tap — dropped, and it must not wedge the latch.
-		handleSessionUpdate({ type: 'track-selection', trackIndex: 2, timestamp: at() });
+		handleTrackSelectionUpdate(2);
 		expect(session.selectedTrackIndex).toBe(5);
 
 		// Live selects track 2 itself. This has to apply.
-		handleSessionUpdate({ type: 'track-selection', trackIndex: 2, timestamp: at() });
+		handleTrackSelectionUpdate(2);
 		expect(session.selectedTrackIndex).toBe(2);
 	});
 
@@ -60,10 +63,10 @@ describe('optimistic latches self-heal after a mismatched echo', () => {
 		session.toggleTransportOptimistically(); // → true, pending true
 		expect(session.isPlaying).toBe(true);
 
-		handleSessionUpdate({ type: 'transport', isPlaying: false, timestamp: at() });
+		handleTransportUpdate(false);
 		expect(session.isPlaying).toBe(true); // stale echo dropped
 
-		handleSessionUpdate({ type: 'transport', isPlaying: false, timestamp: at() });
+		handleTransportUpdate(false);
 		expect(session.isPlaying).toBe(false); // Live stopped; must apply
 	});
 
@@ -71,16 +74,16 @@ describe('optimistic latches self-heal after a mismatched echo', () => {
 		session.toggleMetronomeOptimistically(); // → true, pending true
 		expect(session.metronome).toBe(true);
 
-		handleSessionUpdate({ type: 'metronome', enabled: false, timestamp: at() });
+		handleMetronomeUpdate(false);
 		expect(session.metronome).toBe(true); // stale echo dropped
 
-		handleSessionUpdate({ type: 'metronome', enabled: false, timestamp: at() });
+		handleMetronomeUpdate(false);
 		expect(session.metronome).toBe(false); // Live's own change; must apply
 	});
 
 	it('still swallows the single stale echo a rapid A→B tap produces', () => {
 		session.selectTrackOptimistically(7);
-		handleSessionUpdate({ type: 'track-selection', trackIndex: 3, timestamp: at() });
+		handleTrackSelectionUpdate(3);
 		// The whole point of the latch: B's optimistic value survives A's echo.
 		expect(session.selectedTrackIndex).toBe(7);
 	});
