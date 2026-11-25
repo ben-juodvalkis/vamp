@@ -16,6 +16,7 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
+import { toBool } from './oscTypeHelpers';
 import {
 	applyTrackMetadata,
 	type TrackMetadataAttr
@@ -89,11 +90,4 @@ export function handleV3TrackMetadata(address: string, args: OSCArg[]): void {
 	if (BOOLEAN_ATTRS.has(attr)) value = toBool(raw);
 	else if (STRING_ATTRS.has(attr)) value = typeof raw === 'string' ? raw : String(raw ?? '');
 	applyTrackMetadata(trackPath, attr, value);
-}
-
-function toBool(v: OSCArg): boolean {
-	if (typeof v === 'boolean') return v;
-	if (typeof v === 'number') return v !== 0;
-	if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
-	return Boolean(v);
 }

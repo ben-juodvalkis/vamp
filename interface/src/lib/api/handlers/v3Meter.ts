@@ -17,6 +17,7 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
+import { toFiniteNumber } from './oscTypeHelpers';
 import { applyTrackMeter, applyMasterMeter } from '$lib/stores/v3/meters.svelte';
 
 export const V3_TRACK_METER_ADDRESS = '/looping/v3/track/meter';
@@ -36,8 +37,8 @@ export function handleV3Meter(address: string, args: OSCArg[]): void {
 			return;
 		}
 		const trackPath = typeof args[0] === 'string' ? args[0] : String(args[0]);
-		const left = toNumber(args[1]);
-		const right = toNumber(args[2]);
+		const left = toFiniteNumber(args[1]);
+		const right = toFiniteNumber(args[2]);
 		if (left === null || right === null) {
 			logger.warn('v3 track meter non-numeric L/R', { trackPath, args });
 			return;
@@ -50,21 +51,12 @@ export function handleV3Meter(address: string, args: OSCArg[]): void {
 			logger.warn('v3 master meter missing args', { address, args });
 			return;
 		}
-		const left = toNumber(args[0]);
-		const right = toNumber(args[1]);
+		const left = toFiniteNumber(args[0]);
+		const right = toFiniteNumber(args[1]);
 		if (left === null || right === null) {
 			logger.warn('v3 master meter non-numeric L/R', { args });
 			return;
 		}
 		applyMasterMeter(left, right);
 	}
-}
-
-function toNumber(v: OSCArg): number | null {
-	if (typeof v === 'number') return v;
-	if (typeof v === 'string') {
-		const n = Number(v);
-		return Number.isFinite(n) ? n : null;
-	}
-	return null;
 }

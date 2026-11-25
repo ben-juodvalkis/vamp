@@ -11,4 +11,3 @@ export {
 	handleInitMessage
 } from './miscHandlers';
 export { toNumber, toString } from './oscTypeHelpers';
-export type { ParameterEntry } from './oscTypeHelpers';
