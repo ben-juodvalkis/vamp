@@ -16,10 +16,10 @@
     - One layer per screen — folders, or a leaf's presets; a level holding both
       shows its folders first and its own presets after them — `screenKind`.
     - Cross-column drag is dropped; hold-a-folder → random preset is kept
-      (now 500ms under the house rising fill — see HOLD_TO_RANDOM_MS), and a
+      (500ms, `HOLD_MS`, under the house rising fill — `useHoldPick`), and a
       grouped screen's section headers take the same hold for a random preset
-      from their own section (`sectionPress`).
-    - Key/scale mode delegates to the existing scale send helpers inline.
+      from their own section.
+    - Key/scale mode is `ScalePicker` + `ScaleKeyControls`.
 -->
 <script lang="ts">
 	import { onMount, onDestroy, untrack } from 'svelte';
@@ -30,13 +30,6 @@
 	import { KEYBOARD, SIMPLER } from '../tracks/TrackStrip/components/instrumentGlyphNodes';
 	import X from '@lucide/svelte/icons/x';
 
-	import {
-		pickRootNote,
-		pickScaleName,
-		pickKey,
-		detectKey as sendDetectKey,
-		setKeyFollow
-	} from '$lib/services/sessionCommands';
 	import {
 		getPlacesIndex,
 		isPlaceVendorId,
@@ -62,8 +55,6 @@
 	} from '$lib/stores/v6/browserNavigationStore.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { recentInstrumentsStore } from '$lib/stores/v6/recentInstrumentsStore.svelte';
-	import { session, clearScaleDetected } from '$lib/stores/session.svelte';
-	import { ROOT_NOTES, SCALE_NAMES, getScaleIndex } from '$lib/data/scales';
 	import { logger } from '$lib/utils/logger';
 	import { PLACES_CHANGED_EVENT, warmPlacesCache, placeArgs } from '$lib/services/placesLive';
 	import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
@@ -79,7 +70,7 @@
 	import { sectionInks } from './utils/sectionInks';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-	import { press, type PressOptions, type PressReleaseInfo } from '$lib/actions';
+	import { press } from '$lib/actions';
 	import { fitText } from '$lib/utils/fitText';
 	import { clampLines } from '$lib/utils/clampLines';
 	import RecordButton from '$lib/components/v6/controls/RecordButton.svelte';
@@ -92,10 +83,9 @@
 		screenKind,
 		buildCrumbs,
 		pathForCrumb,
-		computeGridLayout,
-		computeGroupedGridLayout,
-		computeVisibleWindow,
-		computeGroupedVisibleWindow,
+		BROWSER_GRID,
+		browserGridLayout,
+		presetSectionChrome,
 		groupPresetsByOrigin,
 		groupPresetsByInstrument,
 		groupPresetsForLevel,
@@ -104,12 +94,13 @@
 		replaceLanding,
 		railBands,
 		keepRecent,
-		windowsEqual,
-		groupedWindowsEqual,
-		type VirtualWindow,
-		type GroupedVirtualWindow
 	} from './utils/drillDownModel';
 	import BrowserPresetWaveform from './BrowserPresetWaveform.svelte';
+	import ScalePicker from './ScalePicker.svelte';
+	import ScaleKeyControls from './ScaleKeyControls.svelte';
+	import { KeyDetect } from './keyDetect.svelte';
+	import { HoldPick, HOLD_MS } from './useHoldPick.svelte';
+	import { VirtualWindows, type WindowInput } from './useVirtualWindows.svelte';
 	import { isAudioThumbnailType } from '$lib/utils/waveformThumbnail';
 
 	import constants from '$config/constants.json';
@@ -123,15 +114,10 @@
 	const audioWaveformsEnabled =
 		(constants.ui?.browser as { audioWaveforms?: boolean })?.audioWaveforms !== false;
 
-	// Long-press to random-pick a folder. At 200ms this was a tap/press
-	// discriminator wearing a charge ring, because 200ms of progress bar is a
-	// flicker. At 500ms it is long enough to READ as a gate, so it takes the
-	// same rising `.hold-fill` ClipCentralView's Delete / Replace Inst / Dup Trk
-	// holds wear — one hold idiom across the app instead of two.
-	const HOLD_TO_RANDOM_MS = 500;
-	// How long a hold runs before the speculative pick's name shows. A tap to
-	// drill in lifts well inside this, so it never flashes a preset name.
-	const PICK_SHOW_AFTER_MS = 250;
+	// Long-press a folder or a section header to random-pick from it
+	// (`useHoldPick`), over `HOLD_MS`: long enough to READ as a gate, so it
+	// takes the same rising `.hold-fill` ClipCentralView's Delete / Replace
+	// Inst / Dup Trk holds wear — one hold idiom across the app.
 
 	// How long the picked folder tile wears the preset's name — AND, on the
 	// random path only, how long the browser stays up before closing.
@@ -145,9 +131,6 @@
 	//
 	// One constant for both so the tile's reveal and the close can't drift apart.
 	const PRESET_REVEAL_MS = 750;
-	// ADR-446: how long "Listening…" waits for the surface's answer to Detect
-	// before giving up — a silent surface must not leave the button lying.
-	const DETECT_TIMEOUT_MS = 3000;
 
 	// ── The rail's model ──
 	// Recent, then one button per Place (below). Audio is NOT a category — it is
@@ -304,24 +287,14 @@
 	// count (see computeGridLayout). One system for both grids.
 	let stageWidth = $state(0);
 	let stageHeight = $state(0);
-	// Tile gap and stage padding, on the app's interior ladder: 16 frames a
-	// panel, 8 separates tiles inside one, 4 separates rows inside a tile.
-	// BOTH are published as custom properties on the component root
-	// (--grid-gap / --grid-pad) and read back by the CSS, so the solver and
-	// the stylesheet cannot drift — the packed-band row below is only correct
-	// while its gap is EXACTLY the tile gap.
-	const GRID_GAP = 8;
-	const GRID_PADDING = 16;
-	// Grouped preset sections (recovered origin folders): header band height and
-	// the extra air between sections. Mirrored into CSS via --header-h /
-	// --section-gap so the solver and the stylesheet can't drift apart.
-	const SECTION_HEADER_H = 44;
-	const SECTION_GAP = 16;
-	// The effects screen's folders: a slim label in the folder's own ink over
-	// its tiles, not a band (user, 2026-10-26: "all the dead space just for
-	// the folder name").
-	const FILL_HEADER_H = 22;
-	const FILL_SECTION_GAP = 10;
+	// Tile geometry: `BROWSER_GRID` in drillDownModel, published as custom
+	// properties below so the solver and the stylesheet cannot drift.
+	const {
+		gap: GRID_GAP,
+		padding: GRID_PADDING,
+		sectionHeaderH: SECTION_HEADER_H,
+		sectionGap: SECTION_GAP
+	} = BROWSER_GRID;
 	// The hold key of a mixed level's preset header — a path separator no
 	// folder name can contain, so it never lights a folder tile's charge.
 	const HERE_KEY = '/here';
@@ -354,8 +327,9 @@
 	// The effects screen fills every row (`packFillSections`): its sections
 	// are few and small, and a half-empty row is dead space (user, 2026-10-26).
 	const fillRows = $derived(onEffectsScreen);
-	const presetHeaderH = $derived(fillRows ? FILL_HEADER_H : SECTION_HEADER_H);
-	const presetSectionGap = $derived(fillRows ? FILL_SECTION_GAP : SECTION_GAP);
+	const presetChrome = $derived(presetSectionChrome(fillRows));
+	const presetHeaderH = $derived(presetChrome.headerH);
+	const presetSectionGap = $derived(presetChrome.sectionGap);
 	const sectionInkOf = $derived.by(() => {
 		if (!onEffectsScreen) return null;
 		// From every folder, the hidden MIDI effects' included, so a section
@@ -382,84 +356,22 @@
 				: packGroupedSections(presetGroups, gridLayout.columns)
 	);
 
-	// Comfort constraints for the grid solvers: tiles grow to FILL the stage and
-	// only scroll once filling would shrink them below the floors. Wider-than-tall
-	// reads well, so the target aspect stays at 1.5 for both.
-	//
-	// FOLDERS keep the roomy floors — folder counts are bounded by catalog
-	// structure, so those grids almost always fill the stage anyway and the big
-	// slabs are the primary navigation target.
-	const FOLDER_COMFORT = { gap: GRID_GAP, minTile: 150, minTileHeight: 110, targetAspect: 1.5 };
-	// PRESETS use a denser floor: a leaf can hold thousands of patches, and the
-	// scarce resource is how many you can scan at once, not how big each one is.
-	// ~112×78 still clears the 44px touch target with room to spare, and roughly
-	// doubles the tiles onscreen vs the folder floors (more columns AND more rows).
-	// 92 (78 before 2026-10-28): room for two rows of tags under a two-line name.
-	const PRESET_COMFORT = { gap: GRID_GAP, minTile: 112, minTileHeight: 92, targetAspect: 1.5 };
-	// A short stage (a phone on its side, ~320px under the bar) would fit only
-	// two rows of the roomy folder slabs; it takes the folder floors down so
-	// three or four rows show. The iPad's stage is twice that and never does.
-	const SHORT_STAGE_PX = 420;
-	const SHORT_FOLDER_COMFORT = { gap: GRID_GAP, minTile: 120, minTileHeight: 64, targetAspect: 1.5 };
-
-	const gridLayout = $derived.by(() => {
-		const count = isScale
-			? 0
-			: screen === 'folders'
-				? folders.length
-				: screen === 'mixed'
-					? folders.length + presets.length
-					: presets.length;
-		if (!count || stageWidth <= 0 || stageHeight <= 0) {
-			return { columns: 2, rows: 1, scrolls: false, tileWidth: 0, tileHeight: 0 };
-		}
-		const width = stageWidth - GRID_PADDING * 2;
-		const height = stageHeight - GRID_PADDING * 2;
-		if (screen === 'mixed') {
-			// Folders, then the level's own presets under their header(s)
-			// (`mixedGroups`): sections on ONE ruler, at the preset grid's
-			// density, so a folder tile and a preset tile are the same size and
-			// share columns.
-			return computeGroupedGridLayout({
-				width,
-				height,
-				groups: [folders.length, ...mixedGroups.map((g) => g.presets.length)],
-				headerCount: mixedGroups.length,
-				headerHeight: SECTION_HEADER_H,
-				sectionGap: SECTION_GAP,
-				...PRESET_COMFORT
-			});
-		}
-		if (screen === 'presets' && useGroupedPresets) {
-			// Sectioned layout: same solver scoring, but rows round up per section
-			// and headers consume fixed chrome — so grouped tiles keep exactly the
-			// plain grid's comfortable proportions (identical cols + height once
-			// the content scrolls, which a flattened folder always does).
-			return computeGroupedGridLayout({
-				width,
-				height,
-				groups: presetGroups.map((g) => g.presets.length),
-				headerCount: presetGroups.filter((g) => g.folder !== null).length,
-				// Counted as drawn: small sections share rows (ADR-409), so the
-				// tiles grow into the height the packing frees.
-				headers: presetGroups.map((g) => g.folder !== null),
-				fill: fillRows,
-				headerHeight: presetHeaderH,
-				sectionGap: presetSectionGap,
-				...PRESET_COMFORT
-			});
-		}
-		return computeGridLayout({
-			width,
-			height,
-			count,
-			...(screen === 'presets'
-				? PRESET_COMFORT
-				: stageHeight < SHORT_STAGE_PX
-					? SHORT_FOLDER_COMFORT
-					: FOLDER_COMFORT)
-		});
-	});
+	// The stage's grid for the screen on show (`browserGridLayout`).
+	const gridLayout = $derived(
+		browserGridLayout({
+			screen: isScale ? null : screen,
+			stageWidth,
+			stageHeight,
+			folderCount: folders.length,
+			presetCount: presets.length,
+			mixedSections: screen === 'mixed' ? mixedGroups.map((g) => g.presets.length) : [],
+			presetSections:
+				screen === 'presets' && useGroupedPresets
+					? presetGroups.map((g) => ({ count: g.presets.length, named: g.folder !== null }))
+					: [],
+			fill: fillRows
+		})
+	);
 
 	// Measure the stage so the grid layout can adapt to its real size.
 	let stageEl = $state<HTMLDivElement | undefined>(undefined);
@@ -475,45 +387,29 @@
 		return () => ro.disconnect();
 	});
 
-	// ── Row windowing (ADR-404) ──
-	// Only the preset rows intersecting the viewport (± overscan) are in the DOM;
-	// grid padding stands in for the rest, so a multi-thousand-sample flat leaf
-	// scrolls like a short one. Geometry is exact (uniform --tile-h rows from the
-	// solver), so the window is pure arithmetic — computeVisibleWindow /
-	// computeGroupedVisibleWindow in drillDownModel. Folder grids stay unwindowed
-	// (their counts are bounded by catalog structure, not library size).
-	const OVERSCAN_ROWS = 3;
-	let presetGridEl = $state<HTMLDivElement | undefined>(undefined);
-	let groupedScrollEl = $state<HTMLDivElement | undefined>(undefined);
-	let presetWindow = $state<VirtualWindow>({ start: 0, end: 0, topPad: 0, bottomPad: 0 });
-	let groupedWindow = $state<GroupedVirtualWindow>({ sections: [], topPad: 0, bottomPad: 0 });
-
-	function updateWindows() {
+	// ── Row windowing (ADR-404, `useVirtualWindows`) ──
+	const windows = new VirtualWindows((): WindowInput => {
+		const grid = { columns: gridLayout.columns, tileHeight: gridLayout.tileHeight, gap: GRID_GAP };
 		if (screen === 'mixed') {
 			// Windowing sections: the folders (headerless, the grid pad on top,
 			// like the loose bucket), then each of `mixedGroups` under its header.
 			// Windowed like any grouped screen — a level can hold hundreds of
 			// samples beside one subfolder (FX › Nature › Animals › Birds: 218).
-			const next = computeGroupedVisibleWindow({
-				scrollTop: groupedScrollEl?.scrollTop ?? 0,
+			return {
+				kind: 'grouped',
 				viewportHeight: stageHeight,
 				sections: [
 					{ count: folders.length, headerHeight: 0, leadPad: GRID_PADDING },
 					...mixedGroups.map((g) => ({ count: g.presets.length, headerHeight: SECTION_HEADER_H }))
 				],
-				columns: gridLayout.columns,
-				tileHeight: gridLayout.tileHeight,
-				gap: GRID_GAP,
 				sectionGap: SECTION_GAP,
-				overscanRows: OVERSCAN_ROWS
-			});
-			if (!groupedWindowsEqual(next, untrack(() => groupedWindow))) groupedWindow = next;
-			return;
+				...grid
+			};
 		}
-		if (screen !== 'presets') return;
+		if (screen !== 'presets') return { kind: 'none' };
 		if (useGroupedPresets) {
-			const next = computeGroupedVisibleWindow({
-				scrollTop: groupedScrollEl?.scrollTop ?? 0,
+			return {
+				kind: 'grouped',
 				// .grouped-layer has no padding — the scroller spans the full stage.
 				viewportHeight: stageHeight,
 				// One windowing section per row-BAND (a packed band is one tile row,
@@ -530,53 +426,20 @@
 						leadPad: named ? 0 : GRID_PADDING
 					};
 				}),
-				columns: gridLayout.columns,
-				tileHeight: gridLayout.tileHeight,
-				gap: GRID_GAP,
 				sectionGap: presetSectionGap,
-				overscanRows: OVERSCAN_ROWS
-			});
-			// untrack: the compare must not make the recompute-effect depend on the
-			// window it writes (one wasted re-run per commit otherwise).
-			if (!groupedWindowsEqual(next, untrack(() => groupedWindow))) groupedWindow = next;
-		} else {
-			const next = computeVisibleWindow({
-				scrollTop: presetGridEl?.scrollTop ?? 0,
-				// The grid is height:100% inside the .layer's padding.
-				viewportHeight: stageHeight - GRID_PADDING * 2,
-				count: presets.length,
-				columns: gridLayout.columns,
-				tileHeight: gridLayout.tileHeight,
-				gap: GRID_GAP,
-				overscanRows: OVERSCAN_ROWS
-			});
-			if (!windowsEqual(next, untrack(() => presetWindow))) presetWindow = next;
+				...grid
+			};
 		}
-	}
-
-	// Scroll → recompute at most once per frame. State only changes when the
-	// window actually crosses a row boundary, so plain scrolling re-renders nothing.
-	let windowRaf = 0;
-	function scheduleWindowUpdate() {
-		if (windowRaf) return;
-		windowRaf = requestAnimationFrame(() => {
-			windowRaf = 0;
-			updateWindows();
-		});
-	}
-
-	// Recompute whenever the inputs change (level load, resize/layout change,
-	// scroller mount). updateWindows reads all of them, so this effect tracks them.
-	$effect(() => {
-		updateWindows();
+		// The grid is height:100% inside the .layer's padding.
+		return { kind: 'flat', count: presets.length, viewportHeight: stageHeight - GRID_PADDING * 2, ...grid };
 	});
 
-	const windowedPresets = $derived(presets.slice(presetWindow.start, presetWindow.end));
+	const windowedPresets = $derived(presets.slice(windows.presetWindow.start, windows.presetWindow.end));
 	// Window sections joined back to their groups. Guarded lookup: the window is
 	// corrected by the effect one flush AFTER presetGroups changes, so a stale
 	// index must degrade to "skip" (never a crash) for that single frame.
 	const windowedGroups = $derived(
-		groupedWindow.sections
+		windows.groupedWindow.sections
 			.map((sw) => ({ sw, band: presetBands[sw.section] }))
 			.filter((x) => x.band !== undefined)
 	);
@@ -585,8 +448,8 @@
 	async function loadCurrentLevel() {
 		// Fires on every vendor/path change (see the $effect below), so this is
 		// the one place that catches all navigation away from a revealed tile.
-		clearPickReveal();
-		clearCharge();
+		hold.clearPickReveal();
+		hold.clearCharge();
 		if (!selectedVendor || !vendorState?.adapter) {
 			folders = [];
 			loadedPresets = [];
@@ -1049,10 +912,10 @@
 		token: number,
 		pick: Promise<Preset | null>
 	) {
-		// Tile state belongs to the NEWEST press (see `pressToken`); the load
+		// Tile state belongs to the NEWEST press (`hold.owns`); the load
 		// itself goes through either way, because this folder was genuinely held
 		// past the fire and a random pick is what that asks for.
-		const owns = () => token === pressToken;
+		const owns = () => hold.owns(token);
 		try {
 			// Already rolled at pointerdown, and usually already resolved and
 			// showing on the tile. Awaiting it here rather than rolling again is
@@ -1060,7 +923,7 @@
 			// catalog this is where the wait actually happens.
 			const preset = await pick;
 			if (!preset) {
-				if (owns()) clearCharge();
+				if (owns()) hold.clearCharge();
 				logger.warn('No preset found for random pick', { component: 'DrillDownBrowser', folderName });
 				return;
 			}
@@ -1068,7 +931,7 @@
 			// Name the pick on the tile or header you're still holding. The folder
 			// screen has no preset card to light up; a section header does, and
 			// `loadedPresetPath` above is what lights it.
-			if (owns()) showPickOn(folderName, preset.name);
+			if (owns()) hold.showPickOn(folderName, preset.name);
 			if (groupOfKind(preset.kind) === 'effects') {
 				await addEffect(preset, PRESET_REVEAL_MS);
 				return;
@@ -1078,8 +941,8 @@
 			await commitPresetLoad(preset, PRESET_REVEAL_MS);
 		} catch (err) {
 			if (owns()) {
-				clearCharge();
-				clearPickReveal();
+				hold.clearCharge();
+				hold.clearPickReveal();
 			}
 			logger.error('Random pick failed', { component: 'DrillDownBrowser', err });
 			presetLandingStore.clear();
@@ -1091,69 +954,8 @@
 		}
 	}
 
-	// ── Scale mode ──
-	// A key picked by hand is a key to keep (ADR-447). The surface turns
-	// Follow off itself when a `scale_root` / `scale_name` write arrives from
-	// any client, before the write — so a pick locks the key without this
-	// component saying so, and a pick of the key already set locks too.
-	function selectRootNote(index: number) {
-		pickRootNote(index);
-	}
-	function selectScaleName(scaleName: string) {
-		pickScaleName(scaleName);
-	}
-	// Root and scale together — the runner-up chip: one write each, one mode.
-	function applyKey(root: number, scaleName: string) {
-		pickKey(root, scaleName);
-	}
-	// Follow / Locked. Turning Follow back on makes the surface detect at once.
-	function toggleFollow() {
-		setKeyFollow(!session.keyFollowEnabled);
-	}
-
-	// ADR-446: ask the surface for the key of what is launched and set it at
-	// once — the same three writes a pick makes (root, scale, scale mode on).
-	// The answer lands in `session.scaleDetected`; the strip above the roots
-	// shows the key, the band and the runner-up, with the vote ladder as its
-	// tooltip. `detectSentAt` tells a fresh answer from the last one, and a
-	// silent surface stops the "Listening" state after three seconds rather
-	// than leaving the button lying.
-	let detectSentAt = $state(0);
-	// The vote ladder rides the strip's tooltip on the Mac; the iPad has no
-	// tooltips, so a tap on the heading unfolds it under the strip.
-	let showReasons = $state(false);
-	let detectTimer: ReturnType<typeof setTimeout> | null = null;
-	const detected = $derived(session.scaleDetected);
-	const detectPending = $derived(detectSentAt > 0 && (!detected || detected.at < detectSentAt));
-	const detectedTitle = $derived(detected ? detected.reasons.split(' | ').join('\n') : '');
-	// "set" is a claim about NOW: shown only while Live's key is still the one
-	// the detection wrote, not after a hand pick or a new set moved it.
-	const detectedIsCurrent = $derived(
-		!!detected &&
-			detected.applied &&
-			session.rootNote === detected.root &&
-			session.scaleName === getScaleIndex(detected.scale)
-	);
-	function detectKey() {
-		detectSentAt = Date.now();
-		if (detectTimer) clearTimeout(detectTimer);
-		detectTimer = setTimeout(() => {
-			detectTimer = null;
-			detectSentAt = 0;
-		}, DETECT_TIMEOUT_MS);
-		sendDetectKey();
-	}
-	function clearDetectPending() {
-		if (detectTimer) {
-			clearTimeout(detectTimer);
-			detectTimer = null;
-		}
-		detectSentAt = 0;
-	}
-	function applyRunnerUp() {
-		if (!detected || detected.runnerRoot < 0 || !detected.runnerScale) return;
-		applyKey(detected.runnerRoot, detected.runnerScale);
-	}
+	// ── Scale mode ── (`ScalePicker`, `ScaleKeyControls`; ADR-446/447)
+	const keyDetect = new KeyDetect();
 
 	// ── Post-load: close now, unless locked ──
 	// The browser used to sit open for PRESET_REVEAL_MS after a pick so you could
@@ -1211,9 +1013,7 @@
 		clearPostLoadClose();
 		isExpanded = false;
 		// ADR-446: a detection is a moment, not a setting — the next open starts clean.
-		clearScaleDetected();
-		clearDetectPending();
-		showReasons = false;
+		keyDetect.reset();
 		browserModeStore.isPersistent = false;
 		browserModeStore.isScalePersistent = false;
 		browserModeStore.exitReplaceMode();
@@ -1229,269 +1029,16 @@
 		}
 	}
 
-	// ── Long-press bookkeeping for folder rows ──
-	//
-	// Two pieces of feedback hang off this. At 500ms the hold is long enough to
-	// be read as a gauge, so it wears the same rising fill as ClipCentralView's
-	// 800ms gates rather than the charge ring it needed back when it was 200ms:
-	//
-	//   charge — `chargingFolder` marks the tile under an active press, which
-	//            mounts a `.hold-fill` that climbs it over exactly
-	//            HOLD_TO_RANDOM_MS and lands full at the instant the timer
-	//            fires. The class stays on past the fire (the fill is
-	//            `forwards`) so the tile holds the filled look through the async
-	//            pick rather than dropping back for a frame.
-	//   pick   — `pickedFolder`/`pickedName` turn the held tile into the reveal
-	//            surface for PRESET_REVEAL_MS: it takes the preset grammar and
-	//            its label becomes the preset that actually got loaded. This is
-	//            the payoff of the whole gesture — a random pick is the one
-	//            choice you can't know in advance — so the browser now waits out
-	//            this window before closing on the random path (and only there;
-	//            see `handlePostLoad`).
-	let pressTimer: ReturnType<typeof setTimeout> | null = null;
-	let pressFired = false;
-	let chargingFolder = $state<string | null>(null);
-	/**
-	 * The speculative pick's name, shown on the tile WHILE the bar is still
-	 * climbing. This is what turns the 500ms from a wait into a decision: you
-	 * read what you're about to get and can still back out by lifting off.
-	 * Null until the pick resolves — on a cold catalog that can be after the
-	 * fire, in which case the tile simply goes straight to `.picked`.
-	 */
-	let chargingName = $state<string | null>(null);
-	/**
-	 * The speculative pick's TILE, for a section-header press: the tiles are on
-	 * screen under the header, so the pick lights its own tile while the bar
-	 * climbs. That is the readable half on iPad — the finger holding the header
-	 * covers the header's label. A folder-tile press never sets it (a folder
-	 * screen has no preset tiles).
-	 */
-	let chargingPresetPath = $state<string | null>(null);
-	/** False until the hold passes PICK_SHOW_AFTER_MS; gates both of the above. */
-	let pickShowDue = $state(false);
-	let pickShowTimer: ReturnType<typeof setTimeout> | null = null;
-	const shownChargingName = $derived(pickShowDue ? chargingName : null);
-	const shownChargingPresetPath = $derived(pickShowDue ? chargingPresetPath : null);
-	let pickedFolder = $state<string | null>(null);
-	let pickedName = $state<string | null>(null);
-	let pickRevealTimer: ReturnType<typeof setTimeout> | null = null;
-	/**
-	 * Bumped on every press. `getRandomPreset` awaits a possibly-cold catalog
-	 * fetch (`/data/{type}.json` on first use of a type), so a press can resolve
-	 * long after the finger moved on: hold A past the fire, release, press B,
-	 * and A's late resolution would otherwise wipe B's charge and label B's
-	 * screen with A's pick. Same guard `loadCurrentLevel` uses (`navToken`),
-	 * for the same reason.
-	 */
-	let pressToken = 0;
-	/** Handle for the re-arm frame below, so teardown can drop it like the timers. */
-	let chargeRaf = 0;
-
-	/** Retire the charge — the fill unmounts and the tile takes its own name back. */
-	function clearCharge() {
-		chargingFolder = null;
-		chargingName = null;
-		chargingPresetPath = null;
-		clearPickShow();
-	}
-
-	function clearPickShow() {
-		if (pickShowTimer) { clearTimeout(pickShowTimer); pickShowTimer = null; }
-		pickShowDue = false;
-	}
-
-	/** Retire the pick reveal — the tile goes back to being a folder. */
-	function clearPickReveal() {
-		if (pickRevealTimer) { clearTimeout(pickRevealTimer); pickRevealTimer = null; }
-		pickedFolder = null;
-		pickedName = null;
-	}
-
-	/**
-	 * Show `preset` on `folder`'s tile for the reveal window.
-	 *
-	 * The revert timer runs even though the unlocked browser auto-closes at the
-	 * same moment: locked, nothing closes, and without it the tile would sit
-	 * there labelled with a preset name indefinitely.
-	 */
-	function showPickOn(folder: string, presetName: string) {
-		if (pickRevealTimer) clearTimeout(pickRevealTimer);
-		pickedFolder = folder;
-		pickedName = presetName;
-		pickRevealTimer = setTimeout(() => {
-			// The charge outlives the finger (see `endFolderPress`) and `.picked`
-			// has been covering it; when the reveal goes, take it with us or the
-			// tile is left looking charged forever.
-			clearCharge();
-			clearPickReveal();
-		}, PRESET_REVEAL_MS);
-	}
-
-	/**
-	 * Roll the random pick NOW, at pointerdown, so its name can appear while the
-	 * hold is still filling. The gesture commits this exact preset when the timer
-	 * fires — it does not re-roll — or discards it if the finger lifts early.
-	 *
-	 * Speculative on every folder press, including the taps that just drill in.
-	 * That costs one `/data/{type}.json` read, which a drill needs anyway and
-	 * which is cached from then on.
-	 */
-	function pickRandomFor(folderName: string, token: number): Promise<Preset | null> {
-		if (!selectedVendor || !vendorState?.adapter) return Promise.resolve(null);
-		const folderPath = [...vendorState.currentPath, folderName];
-		const pick = vendorState.adapter.getRandomPreset(selectedVendor, folderPath);
-		// Label-only branch. Attaching a handler here also keeps an aborted press
-		// (nothing ever awaits `pick`) from surfacing as an unhandled rejection;
-		// the REAL error still reaches `loadRandomFromFolder`, which awaits `pick`
-		// itself and owns the banner.
-		pick
-			.then((preset) => {
-				if (preset && token === pressToken && chargingFolder === folderName) {
-					chargingName = preset.name;
-				}
-			})
-			.catch(() => {});
-		return pick;
-	}
-
-	/** Mount the charge on `name`'s tile or header, for the press `token`. */
-	function armCharge(name: string, token: number) {
-		clearPickShow();
-		pickShowTimer = setTimeout(() => {
-			pickShowTimer = null;
-			if (token === pressToken) pickShowDue = true;
-		}, PICK_SHOW_AFTER_MS);
-		if (chargingFolder === name) {
-			// Re-pressing a tile that is STILL charging — its previous press fired
-			// and that pick is either in flight or on screen. Assigning the value
-			// it already holds toggles no class, and a `forwards` fill parked at
-			// its end state never replays, so the bar would not rebuild. Drop it
-			// and re-arm on the next frame. ONLY this path pays that frame; an
-			// ordinary press still charges on the same tick.
-			chargingFolder = null;
-			cancelAnimationFrame(chargeRaf);
-			chargeRaf = requestAnimationFrame(() => {
-				chargeRaf = 0;
-				if (token === pressToken) chargingFolder = name;
-			});
-		} else {
-			chargingFolder = name;
-		}
-	}
-
-	function startFolderPress(name: string) {
-		pressFired = false;
-		clearTimeout(pressTimer!);
-		// A fresh press retires the previous reveal — only ever one tile at a time.
-		clearPickReveal();
-		const token = ++pressToken;
-		chargingName = null;
-		chargingPresetPath = null;
-		armCharge(name, token);
-		// Rolled here, committed at the fire — the name on the tile and the preset
-		// that loads are the same object, never two rolls.
-		const pick = pickRandomFor(name, token);
-		pressTimer = setTimeout(() => {
-			pressFired = true;
-			loadRandomFromFolder(name, token, pick);
-		}, HOLD_TO_RANDOM_MS);
-	}
-	function endFolderPress(name: string) {
-		clearTimeout(pressTimer!);
-		pressTimer = null;
-		// Only drop the charge when the press ended BEFORE the fire. Past it the
-		// charged look has to hold through the async pick — releasing the moment
-		// the ring completes is the NORMAL way to use this gesture (the ring
-		// filling is the cue to let go), and `getRandomPreset` may still be
-		// awaiting a cold catalog fetch. Clearing here would flash the tile back
-		// to its resting outline before the reveal lands. `.picked` outranks
-		// `.charging` in the cascade (same specificity, declared after), so the
-		// reveal shows through the charge rather than fighting it, and the
-		// reveal's own expiry retires both.
-		if (!pressFired) {
-			// Lifted off before the fire — an abort. The speculative pick is
-			// discarded unused, which is the whole point of showing its name
-			// during the climb.
-			clearCharge();
-			enterFolder(name);
-		}
-	}
-	function cancelFolderPress() {
-		clearTimeout(pressTimer!);
-		pressTimer = null;
-		// Same rule as `endFolderPress`: only drop the charge if the press never
-		// fired. Past the fire the pick is committed and WILL land (this doesn't
-		// bump `pressToken`, so it still owns the tile), and clearing here would
-		// empty the tile exactly as the release path used to. A finger drifting
-		// off a tile edge mid-hold — ordinary on iPad — is not an abort of
-		// anything. Checked before `pressFired` is forced true below.
-		if (!pressFired) clearCharge();
-		pressFired = true; // suppress the trailing tap
-	}
-
-	// ── Long-press a section header → random preset from that section ──
-	//
-	// The folder tile's gesture, on the headers of a grouped (depth-flattened)
-	// preset screen: same 500ms fill, same reveal, same close. Two differences,
-	// both forced by where a section lives:
-	//
-	//   - The pick is rolled from the section's own presets, not asked of the
-	//     adapter. Past the depth cap the section's folder is not a node in the
-	//     catalog tree at all, and `getRandomPreset` falls back to the PARENT
-	//     when a path doesn't resolve — so asking it would quietly pick from
-	//     the whole flattened screen rather than the section held. The section
-	//     is already in memory, so the roll is synchronous and never cold.
-	//   - It runs on `use:press` (ADR-427) rather than the folder tile's
-	//     hand-rolled handlers: `onHold` is the fire, a release before it (or a
-	//     pan the browser claims, or 12px of travel) is the abort. A tap on a
-	//     header does nothing, as before.
-	//
-	// Keyed by folder name, sharing `chargingFolder` / `pickedFolder` with the
-	// folder tiles: the two never share a screen (`screenKind`), and a
-	// section's name is unique on its screen (`groupPresetsByOrigin` merges
-	// case-insensitively).
-
-	/** The roll each held header is carrying, from its `onDown` to its `onHold`. */
-	const sectionPicks = new Map<string, { token: number; preset: Preset }>();
-
-	function startSectionPress(folder: string, sectionPresets: Preset[]) {
-		// A Places section can hold greyed tiles (a plug-in not installed, an
-		// effect) that a tap cannot load, so a roll cannot land on one either.
-		// Every type-catalog preset passes, so this is the old roll there.
-		const pool = sectionPresets.filter((p) => canLoad(p.kind, p.installed));
-		if (pool.length === 0) return;
-		clearPickReveal();
-		const token = ++pressToken;
-		const preset = pool[Math.floor(Math.random() * pool.length)];
-		sectionPicks.set(folder, { token, preset });
-		chargingName = preset.name;
-		chargingPresetPath = preset.path;
-		armCharge(folder, token);
-	}
-
-	function fireSectionPress(folder: string) {
-		const pick = sectionPicks.get(folder);
-		if (!pick) return;
-		void loadRandomFromFolder(folder, pick.token, Promise.resolve(pick.preset));
-	}
-
-	function endSectionPress(folder: string, info: PressReleaseInfo) {
-		const pick = sectionPicks.get(folder);
-		sectionPicks.delete(folder);
-		// Past the fire the charge outlives the finger, exactly as on a folder
-		// tile — the reveal's own expiry retires it. Before the fire this is an
-		// abort, and the speculative pick is discarded unused.
-		if (!info.held && pick && pick.token === pressToken) clearCharge();
-	}
-
-	function sectionPress(folder: string, sectionPresets: Preset[]): PressOptions {
-		return {
-			holdMs: HOLD_TO_RANDOM_MS,
-			onDown: () => startSectionPress(folder, sectionPresets),
-			onHold: () => fireSectionPress(folder),
-			onRelease: (info) => endSectionPress(folder, info)
-		};
-	}
+	// ── Hold a folder or a section header → a random preset (`useHoldPick`) ──
+	const hold = new HoldPick({
+		rollFolder: (folderName) =>
+			selectedVendor && vendorState?.adapter
+				? vendorState.adapter.getRandomPreset(selectedVendor, [...vendorState.currentPath, folderName])
+				: null,
+		fire: (folderName, token, pick) => void loadRandomFromFolder(folderName, token, pick),
+		enter: (folderName) => enterFolder(folderName),
+		revealMs: PRESET_REVEAL_MS
+	});
 
 	// ── Lifecycle ──
 	/**
@@ -1590,7 +1137,7 @@
 	// the same landing as any other.
 	let wasReplacingInstrument = false;
 	// Guards a slow catalog read against a newer open, exactly as `navToken`
-	// guards `loadCurrentLevel` and `pressToken` the random pick.
+	// guards `loadCurrentLevel` and `HoldPick`'s token the random pick.
 	let revealToken = 0;
 	$effect(() => {
 		const nowReplacing = browserModeStore.isReplacingInstrument;
@@ -1686,15 +1233,10 @@
 	});
 
 	onDestroy(() => {
-		if (pickRevealTimer) { clearTimeout(pickRevealTimer); pickRevealTimer = null; }
-		clearDetectPending();
-		if (chargeRaf) cancelAnimationFrame(chargeRaf);
-		if (pickShowTimer) clearTimeout(pickShowTimer);
+		hold.destroy();
+		keyDetect.clearPending();
 		clearPostLoadClose();
-		clearTimeout(pressTimer!);
-		// Guarded: onDestroy also runs during SSR, where cAF doesn't exist (and
-		// windowRaf is always 0 there — nothing schedules frames server-side).
-		if (windowRaf) cancelAnimationFrame(windowRaf);
+		windows.destroy();
 		browserNavigationStore.clearAllCaches();
 	});
 
@@ -1805,7 +1347,7 @@
 	<button
 		class="card preset-tile"
 		class:faced
-		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
+		class:loaded={(hold.shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={inactive}
 		class:has-plugin={!!subLabel || tags.length > 0}
 		style="--k: {inkFor(p)};"
@@ -1882,35 +1424,27 @@
 {/snippet}
 
 <!-- A section's header — the full-width band's and a packed cell's. Hold it and
-     a random preset from the section loads (`sectionPress`), wearing the folder
+     a random preset from the section loads (`HoldPick.sectionPress`), wearing the folder
      tile's charge: the same rising fill, the name swapped for the pick while the
      bar climbs and through the reveal. The count means nothing beside a preset's
      name, so it steps aside while one shows. -->
 {#snippet folderTile(name: string)}
-	{@const label =
-		pickedFolder === name && pickedName
-			? pickedName
-			: chargingFolder === name && shownChargingName
-				? shownChargingName
-				: name}
+	{@const label = hold.labelFor(name) ?? name}
 	<button
 		class="card folder-tile"
-		class:charging={chargingFolder === name}
-		class:picked={pickedFolder === name}
+		class:charging={hold.chargingFolder === name}
+		class:picked={hold.pickedFolder === name}
 		style="--k: {folderColors[name] || activeColor};"
-		onpointerdown={() => startFolderPress(name)}
-		onpointerup={() => endFolderPress(name)}
-		onpointerleave={cancelFolderPress}
-		onpointercancel={cancelFolderPress}
+		use:press={hold.folderPress(name)}
 	>
-		{#if chargingFolder === name}
+		{#if hold.chargingFolder === name}
 			<!-- Same rising fill as ClipCentralView's hold gates,
 			     duration bound inline to the timer that fires so the
 			     bar cannot finish early or late. -->
 			<div
 				class="hold-fill"
 				aria-hidden="true"
-				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
+				style="animation-duration: {HOLD_MS}ms;"
 			></div>
 		{/if}
 		<!-- Three labels, most-committed first: the post-fire
@@ -1924,24 +1458,19 @@
      reads when that is not the key (a mixed level's presets, keyed apart from
      every folder name on the same screen). -->
 {#snippet sectionHead(folder: string, sectionPresets: Preset[], label: string = folder, glyph?: string)}
-	{@const pick =
-		pickedFolder === folder && pickedName
-			? pickedName
-			: chargingFolder === folder && shownChargingName
-				? shownChargingName
-				: null}
+	{@const pick = hold.labelFor(folder)}
 	<h3
 		class="section-head"
-		class:charging={chargingFolder === folder}
-		class:picked={pickedFolder === folder}
+		class:charging={hold.chargingFolder === folder}
+		class:picked={hold.pickedFolder === folder}
 		style="--k: {sectionInkOf?.get(folder.toLowerCase()) || sectionPresets[0]?.vendorColor || activeColor};"
-		use:press={sectionPress(folder, sectionPresets)}
+		use:press={hold.sectionPress(folder, sectionPresets)}
 	>
-		{#if chargingFolder === folder}
+		{#if hold.chargingFolder === folder}
 			<span
 				class="hold-fill"
 				aria-hidden="true"
-				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
+				style="animation-duration: {HOLD_MS}ms;"
 			></span>
 		{/if}
 		{#if pick === null && glyph}
@@ -2079,27 +1608,7 @@
 					{/if}
 
 					{#if isScale}
-						<div class="key-controls">
-							<button
-								class="follow-btn"
-								class:on={session.keyFollowEnabled}
-								onclick={toggleFollow}
-								aria-pressed={session.keyFollowEnabled}
-								aria-label={session.keyFollowEnabled
-									? 'The key follows the loops. Tap to lock it.'
-									: 'The key is locked. Tap to let it follow the loops.'}
-							>
-								{session.keyFollowEnabled ? 'Following' : 'Locked'}
-							</button>
-							<button
-								class="detect-btn"
-								class:pending={detectPending}
-								onclick={detectKey}
-								aria-label="Detect the key of the launched clips and set it"
-							>
-								{detectPending ? 'Listening…' : 'Detect key'}
-							</button>
-						</div>
+						<ScaleKeyControls {keyDetect} />
 					{/if}
 
 				</div>
@@ -2107,69 +1616,9 @@
 
 			<div class="stage" bind:this={stageEl}>
 				{#if isScale}
-					<!-- Key mode: root notes then scale names -->
+					<!-- Key mode: what was detected, the roots, then the scale names -->
 					<div class="layer scale">
-						{#if detected}
-							<!-- ADR-446: what the surface heard. The tooltip is the audit
-							     trail — every vote that decided it, one per line. -->
-							<div class="scale-section detected-section" title={detectedTitle}>
-								<button
-									class="scale-heading reasons-toggle"
-									onclick={() => (showReasons = !showReasons)}
-									aria-expanded={showReasons}
-									aria-label="Detected key; tap to show why"
-								>
-									Detected {showReasons ? '▾' : '▸'}
-								</button>
-								<div class="detected-row">
-									{#if detected.band === 'no-key'}
-										<span class="detected-key none">No key</span>
-										<span class="detected-band">{detected.reasons.split(' | ').pop()}</span>
-									{:else}
-										<span class="detected-key">{ROOT_NOTES[detected.root]} {detected.scale}</span>
-										<span class="detected-band {detected.band}">{detected.band}{detectedIsCurrent ? ' · set' : ''}</span>
-										{#if detected.runnerRoot >= 0}
-											<button class="runner-up" onclick={applyRunnerUp}>
-												or {ROOT_NOTES[detected.runnerRoot]} {detected.runnerScale}
-											</button>
-										{/if}
-									{/if}
-								</div>
-								{#if showReasons}
-									<ul class="reasons">
-										<!-- Keyed by position: two clips can say the same line, and the list is
-										     replaced whole on every answer. -->
-										{#each detected.reasons.split(' | ') as line, i (i)}
-											<li>{line}</li>
-										{/each}
-									</ul>
-								{/if}
-							</div>
-						{/if}
-						<div class="scale-section roots-section">
-							<div class="scale-heading">Root</div>
-							<div class="roots">
-								{#each ROOT_NOTES as note, i}
-									<button
-										class="root-key"
-										class:selected={session.rootNote === i}
-										onclick={() => selectRootNote(i)}
-									>{note}</button>
-								{/each}
-							</div>
-						</div>
-						<div class="scale-section scales-section">
-							<div class="scale-heading">Scale</div>
-							<div class="scale-grid">
-								{#each SCALE_NAMES as name}
-									<button
-										class="scale-key"
-										class:selected={session.scaleName === getScaleIndex(name)}
-										onclick={() => selectScaleName(name)}
-									>{name}</button>
-								{/each}
-							</div>
-						</div>
+						<ScalePicker {keyDetect} />
 					</div>
 				{:else if !selectedVendorId}
 					<!-- No category chosen yet: prompt (rail is how you pick) -->
@@ -2202,11 +1651,11 @@
 						style="--header-h: {SECTION_HEADER_H}px; --section-gap: {SECTION_GAP}px;"
 					>
 						{#key `${selectedVendor}:${currentPath.join('/')}`}
-						<div class="grouped-scroll" bind:this={groupedScrollEl} onscroll={scheduleWindowUpdate}>
-							{#if groupedWindow.topPad > 0}
-								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
+						<div class="grouped-scroll" bind:this={windows.groupedScrollEl} onscroll={windows.schedule}>
+							{#if windows.groupedWindow.topPad > 0}
+								<div class="window-spacer" style="height: {windows.groupedWindow.topPad}px"></div>
 							{/if}
-							{#each groupedWindow.sections as sw (sw.section)}
+							{#each windows.groupedWindow.sections as sw (sw.section)}
 								{@const mixed = sw.section > 0 ? mixedGroups[sw.section - 1] : null}
 								<section class="preset-section" class:loose={sw.section === 0}>
 									{#if mixed}
@@ -2233,8 +1682,8 @@
 									</div>
 								</section>
 							{/each}
-							{#if groupedWindow.bottomPad > 0}
-								<div class="window-spacer" style="height: {groupedWindow.bottomPad}px"></div>
+							{#if windows.groupedWindow.bottomPad > 0}
+								<div class="window-spacer" style="height: {windows.groupedWindow.bottomPad}px"></div>
 							{/if}
 						</div>
 						{/key}
@@ -2251,15 +1700,15 @@
 						<!-- Keyed on the navigated location so a fresh folder always opens
 						     scrolled to the top (the DOM — and its scrollTop — is rebuilt). -->
 						{#key `${selectedVendor}:${currentPath.join('/')}`}
-						<div class="grouped-scroll" bind:this={groupedScrollEl} onscroll={scheduleWindowUpdate}>
+						<div class="grouped-scroll" bind:this={windows.groupedScrollEl} onscroll={windows.schedule}>
 							<!-- ADR-404 row windowing: sections/rows outside the viewport
 							     collapse into spacers + grid padding, scroll geometry stays
 							     pixel-identical to the full render. The bottom spacer only
 							     renders when sections are actually skipped below, so the
 							     final section's :last-child margin reset still applies when
 							     it IS the last child. -->
-							{#if groupedWindow.topPad > 0}
-								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
+							{#if windows.groupedWindow.topPad > 0}
+								<div class="window-spacer" style="height: {windows.groupedWindow.topPad}px"></div>
 							{/if}
 							{#each windowedGroups as { sw, band } (band.groups.map((g) => g.folder ?? '·').join('|') + ':' + (band.groups[0]?.presets[0]?.path ?? ''))}
 								{#if band.kind === 'full'}
@@ -2307,8 +1756,8 @@
 									</section>
 								{/if}
 							{/each}
-							{#if groupedWindow.bottomPad > 0}
-								<div class="window-spacer" style="height: {groupedWindow.bottomPad}px"></div>
+							{#if windows.groupedWindow.bottomPad > 0}
+								<div class="window-spacer" style="height: {windows.groupedWindow.bottomPad}px"></div>
 							{/if}
 						</div>
 						{/key}
@@ -2330,10 +1779,10 @@
 							     the old (clamped) scrollTop. Simpler↔Audio keeps its place:
 							     that switch changes neither vendor nor path (PR #457 review). -->
 							{#key `${selectedVendor}:${currentPath.join('/')}`}
-							<div class="preset-scroll" bind:this={presetGridEl} onscroll={scheduleWindowUpdate}>
+							<div class="preset-scroll" bind:this={windows.presetGridEl} onscroll={windows.schedule}>
 								<div
 									class="adaptive-grid windowed"
-									style="--cols: {gridLayout.columns}; --tile-h: {gridLayout.tileHeight}px; padding-top: {presetWindow.topPad}px; padding-bottom: {presetWindow.bottomPad}px;"
+									style="--cols: {gridLayout.columns}; --tile-h: {gridLayout.tileHeight}px; padding-top: {windows.presetWindow.topPad}px; padding-bottom: {windows.presetWindow.bottomPad}px;"
 								>
 									{#each windowedPresets as p (p.path)}
 										{@render presetTile(p)}
@@ -2932,7 +2381,7 @@
 		width: auto;
 	}
 	/* Its folder names: a slim label in the folder's ink sitting on its
-	   tiles, no band behind it (FILL_HEADER_H). */
+	   tiles, no band behind it (`BROWSER_GRID.fillHeaderH`). */
 	.band-row.fill .section-head,
 	:global([data-grammar="flat"]) .band-row.fill .section-head {
 		min-height: var(--header-h, 22px);
@@ -3034,9 +2483,9 @@
 		opacity: 0.7;
 	}
 
-	/* HOLD → a random preset from the section (`sectionPress`): the folder
-	   tile's rising fill, climbing the header behind its labels over exactly
-	   HOLD_TO_RANDOM_MS. The header is already a positioned box (sticky, or
+	/* HOLD → a random preset from the section (`HoldPick.sectionPress`): the
+	   folder tile's rising fill, climbing the header behind its labels over
+	   exactly HOLD_MS. The header is already a positioned box (sticky, or
 	   relative in a packed cell), so the fill anchors to it. */
 	.section-head .hold-fill {
 		position: absolute;
@@ -3103,7 +2552,7 @@
 	/* CHARGE — a rising fill, exactly ClipCentralView's hold-gate idiom, now that
 	   the window (500ms) is long enough to read as a bar rather than a flicker.
 	   It grows bottom-to-top over the hold window (duration bound inline from
-	   HOLD_TO_RANDOM_MS) and lands full on the fire, so the motion cannot drift
+	   HOLD_MS) and lands full on the fire, so the motion cannot drift
 	   from the timer that ends it. `forwards` holds the
 	   filled look through the async pick until `.picked` takes over.
 
@@ -3176,7 +2625,7 @@
 		background: color-mix(in oklab, var(--k) 55%, var(--browser-bg-secondary, #1d2027));
 		border: 2px solid var(--k);
 		color: color-mix(in oklab, var(--k) 12%, white);
-		/* Denser than the folder slabs (see PRESET_COMFORT): the tiles are small
+		/* Denser than the folder slabs (see PRESET_COMFORT in drillDownModel): the tiles are small
 		   enough that 14px of padding would eat a whole line of the name. */
 		padding: var(--spacing-sm);
 	}
@@ -3330,7 +2779,7 @@
 		letter-spacing: -0.01em;
 		text-wrap: balance;
 		/* Scales with the tile: cqw = 1% of the tile's width. The floor is sized to
-		   the densest preset tile (PRESET_COMFORT) so names shrink with the grid
+		   the densest preset tile (drillDownModel PRESET_COMFORT) so names shrink with the grid
 		   instead of overflowing it; the cap keeps big folder tiles from getting
 		   oversized. A word wider than the tile ("Platyrhynchos)") caps it lower
 		   again, to what that word can take (`use:fitText` measures it as
@@ -3355,109 +2804,8 @@
 	}
 	.folder-tile .tile-name { font-weight: 800; letter-spacing: -0.02em; }
 
-	/* Scale grid keeps a simple responsive auto-fill (fixed 32-item list). */
-	.scale-grid {
-		flex: 1 1 auto;
-		min-height: 0;
-		overflow-y: auto;
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-		grid-auto-rows: minmax(96px, 1fr);
-		gap: var(--grid-gap, 8px);
-		align-content: start;
-		scrollbar-width: none;
-	}
-	.scale-grid::-webkit-scrollbar { display: none; }
-
-	/* Scale mode: root grid on top, scale grid fills the rest */
+	/* Scale mode: the picker's sections down the stage (`ScalePicker`). */
 	.scale { display: flex; flex-direction: column; gap: var(--spacing-lg); }
-	.scales-section { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
-	.scale-heading { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground, #8a8f9c); font-weight: 650; margin-bottom: var(--spacing-sm); }
-	/* Roots in two rows of six (matches the request; also gives bigger tap targets
-	   than the old single row of twelve). */
-	.roots { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--spacing-sm); }
-
-	/* ADR-446: the Detect button sits where the browse switch would (column 1
-	   of the bar controls) — in Key mode that column is otherwise empty. */
-	.key-controls {
-		grid-column: 1;
-		justify-self: start;
-		height: 100%;
-		display: flex;
-		gap: var(--spacing-sm);
-	}
-	.follow-btn,
-	.detect-btn {
-		height: 100%;
-		padding: 0 var(--spacing-lg);
-		border-radius: 12px;
-		border: 1px solid var(--browser-border, #2a2e37);
-		background: var(--browser-bg-primary, #16181d);
-		color: var(--foreground, #eef0f4);
-		font-size: var(--text-lg);
-		font-weight: var(--font-weight-semibold);
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
-		cursor: pointer;
-	}
-	.follow-btn:active,
-	.detect-btn:active { transform: scale(0.96); }
-	.follow-btn.on { background: var(--accent); border-color: var(--accent); color: #0c0d10; }
-	.reasons-toggle { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
-	.reasons { margin: var(--spacing-sm) 0 0; padding-left: 1.2em; color: var(--muted-foreground, #8a8f9c); font-size: 14px; line-height: 1.5; }
-	.detect-btn.pending { color: var(--accent); border-color: var(--accent); }
-	.detected-row { display: flex; align-items: baseline; gap: var(--spacing-md); flex-wrap: wrap; }
-	.detected-key { font-size: 24px; font-weight: var(--font-weight-semibold); color: var(--foreground, #eef0f4); }
-	.detected-key.none { color: var(--muted-foreground, #8a8f9c); }
-	.detected-band { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground, #8a8f9c); }
-	.detected-band.sure { color: var(--accent); }
-	.detected-band.unsure { color: var(--destructive, #e5484d); }
-	.runner-up {
-		padding: 4px 12px;
-		border-radius: 999px;
-		border: 1px solid var(--browser-border, #2a2e37);
-		background: transparent;
-		color: var(--foreground, #eef0f4);
-		font-size: 14px;
-		cursor: pointer;
-	}
-	.runner-up:active { transform: scale(0.96); }
-
-	/* Root notes and scale names share ONE key style so they read identically:
-	   neutral dark chip when unselected, solid-orange accent chip when selected. */
-	.root-key,
-	.scale-key {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		text-align: center;
-		min-height: 64px;
-		padding: var(--spacing-sm) var(--spacing-md);
-		border-radius: 14px;
-		border: 1px solid var(--browser-border, #2a2e37);
-		background: var(--browser-bg-secondary, #1d2027);
-		color: var(--foreground, #eef0f4);
-		font-size: 22px;
-		font-weight: 700;
-		line-height: 1.15;
-		text-wrap: balance;
-		cursor: pointer;
-		transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s, color 0.12s;
-	}
-	/* Scale names are longer than the single-glyph roots — a touch smaller so they
-	   fit the chip without wrapping awkwardly. */
-	.scale-key { font-size: 18px; }
-	.root-key:active,
-	.scale-key:active { transform: scale(0.96); }
-	/* Selected — filled in the scale accent (orange) with a glow, so the current
-	   root / scale reads at a glance. Identical for both. */
-	.root-key.selected,
-	.scale-key.selected {
-		background: #ff9500;
-		border-color: #ff9500;
-		color: #1a1206;
-		box-shadow: 0 0 0 1px #ff9500, 0 0 14px color-mix(in oklab, #ff9500 55%, transparent);
-	}
 
 	/* Prompt / empty / loading */
 	.prompt {
@@ -3740,36 +3088,6 @@
 		border-color: var(--line-strong);
 		color: var(--flat-disabled-fg);
 	}
-	/* Scale picker: control fields; the selected root / scale is the one
-	   ON colour (ChosenDefault) with dark text — no orange literal, no
-	   glow. Heading in normal case, no tracking. */
-	:global([data-grammar="flat"]) .scale-heading {
-		text-transform: none;
-		letter-spacing: 0;
-		font-weight: var(--font-weight-medium);
-	}
-	:global([data-grammar="flat"]) .root-key,
-	:global([data-grammar="flat"]) .scale-key {
-		border-radius: 2px;
-		border-color: var(--line-strong);
-		background: var(--surface-well);
-		color: var(--foreground);
-		font-weight: var(--font-weight-medium);
-	}
-	:global([data-grammar="flat"]) .root-key.selected,
-	:global([data-grammar="flat"]) .scale-key.selected {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-		box-shadow: none;
-	}
-	/* Light: the ON fill sits at ~1:1 luminance against the light ladder,
-	   so the frame stays dark. */
-	:global(.light[data-grammar="flat"]) .root-key.selected,
-	:global(.light[data-grammar="flat"]) .scale-key.selected {
-		border-color: var(--line-strong);
-	}
-
 	/* Loading sweep: a solid accent bar, no gradient. */
 	:global([data-grammar="flat"]) .loading-bar {
 		background: var(--accent);

@@ -133,10 +133,10 @@
   // (`useTrackDevice`). The count itself no longer shapes the grid; only
   // "greater than zero" is read, so a rack naming more patterns than the
   // picker has states still draws the picker rather than a broken grid.
-  let isPatternRack = $derived(() => patternCountFromName(parameterNames[1], PICKER_STATES) > 0);
+  let isPatternRack = $derived(patternCountFromName(parameterNames[1], PICKER_STATES) > 0);
 
   // The picker state macro 1 currently sits on: 0 auto, 1-4 the patterns.
-  let selectedState = $derived(() => pickerSlotAt(macroValues[0], PICKER_STATES, MACRO_MAX));
+  let selectedState = $derived(pickerSlotAt(macroValues[0], PICKER_STATES, MACRO_MAX));
 
   // Macros 3-16 (macro 1 is the pattern selector, macro 2 the Offset button).
   const controlLayout = $derived(buildMacroLayout(parameterNames, 3, MACRO_COUNT));
@@ -197,7 +197,7 @@
   {#if instrument}
     <div class="flex-1 min-h-0 flex gap-(--central-gap) p-(--central-inset) controls-panel">
       <!-- The picker: 16th | 8th | Offbeat over 4th | 6/4 | Auto -->
-      {#if isPatternRack()}
+      {#if isPatternRack}
         <div
           class="pattern-grid"
           style="flex-grow: {gridGrow}; grid-template-columns: repeat({PICKER_COLS}, minmax(0, 1fr)); grid-template-rows: repeat({PICKER_ROWS}, minmax(0, 1fr));"
@@ -215,7 +215,7 @@
             {:else if cell.kind === 'auto'}
               <button
                 class="physical-button pattern-button auto-button"
-                class:active={selectedState() === AUTO_STATE}
+                class:active={selectedState === AUTO_STATE}
                 use:press={{ onPress: () => handleStateSelect(AUTO_STATE) }}
               >
                 <span class="pattern-face">Auto</span>
@@ -224,7 +224,7 @@
               {@const rhythm = patternRhythms[cell.pattern]}
               <button
                 class="physical-button pattern-button"
-                class:active={selectedState() === patternState(cell.pattern)}
+                class:active={selectedState === patternState(cell.pattern)}
                 use:press={{ onPress: () => handleStateSelect(patternState(cell.pattern)) }}
               >
                 <span class="pattern-face">
@@ -254,7 +254,7 @@
            edge is a rule with nothing to separate (caught by the tour's
            layout check, ADR-434). Offbeat used to hold that side up; it
            sits inside the picker now. -->
-      {#if isPatternRack() && controlLayout.length > 0}
+      {#if isPatternRack && controlLayout.length > 0}
         <SectionDivider orientation="vertical" />
       {/if}
 

@@ -120,25 +120,30 @@
 		});
 	});
 	// Re-seed default windows when the focused clip changes (path or type).
-	let lastSeedKey = $state<string>('');
+	// Keyed on the path and type alone: the seed reads the loop, the length
+	// and the notes untracked, so their changes never re-seed. The last key
+	// is a plain edge detector, not state anything renders.
+	let lastSeedKey = '';
 	$effect(() => {
 		const key = `${clipPath ?? ''}:${clip.clipType ?? ''}`;
 		if (key === lastSeedKey) return;
 		lastSeedKey = key;
-		if (!clip.hasClip) return;
-		beatWindow = clampBeatWindow(
-			defaultBeatWindow({
-				looping,
-				loopStartBeats: loopStart,
-				loopEndBeats: loopEnd,
-				lengthBeats: clip.totalBeats
-			}),
-			clip.viewEnd,
-			clip.viewStart
-		);
-		if (isMidi) {
-			pitchWindow = defaultPitchWindow(notes.map((n) => n.pitch));
-		}
+		untrack(() => {
+			if (!clip.hasClip) return;
+			beatWindow = clampBeatWindow(
+				defaultBeatWindow({
+					looping,
+					loopStartBeats: loopStart,
+					loopEndBeats: loopEnd,
+					lengthBeats: clip.totalBeats
+				}),
+				clip.viewEnd,
+				clip.viewStart
+			);
+			if (isMidi) {
+				pitchWindow = defaultPitchWindow(notes.map((n) => n.pitch));
+			}
+		});
 	});
 	// Once notes land for a freshly-focused MIDI clip, fit the pitch
 	// window to them (the seed above runs before notes resolve).
@@ -149,13 +154,15 @@
 	// per-clip arrival behaviour, not a per-edit one: once the window has
 	// been fitted for a clip, the performer owns it until they focus
 	// another.
-	let notesFitKey = $state<string>('');
+	let notesFitKey = '';
 	$effect(() => {
 		if (!isMidi || clip.notesLoadState !== 'loaded') return;
 		const key = clipPath ?? '';
 		if (key === notesFitKey) return;
 		notesFitKey = key;
-		pitchWindow = defaultPitchWindow(notes.map((n) => n.pitch));
+		untrack(() => {
+			pitchWindow = defaultPitchWindow(notes.map((n) => n.pitch));
+		});
 	});
 
 	// ── Fold (Live's Fold) ───────────────────────────────────────────

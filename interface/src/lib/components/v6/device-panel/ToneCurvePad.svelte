@@ -1,5 +1,7 @@
 <script lang="ts">
   import { press } from '$lib/actions/press';
+  import { drag, type DragInfo, type DragOptions } from '$lib/actions/drag';
+  import { TAP_SLOP_PX, relativeDragValue } from './padGesture';
   /**
    * A three-band tone pad over its own response curve: the left third drags
    * the low shelf, the middle is an invisible XY for the mid band (X its
@@ -48,34 +50,27 @@
     { freq: 4500, gain: (high - 0.5) * 24, q: 0.4, type: 'highshelf' }
   ]);
 
-  const TAP_MOVEMENT_THRESHOLD = 5; // pixels - matches DeviceXY
-
-  // A vertical drag on a shelf zone: 100 px spans the whole range.
-  function shelfDrag(read: () => number, write: ((v: number) => void) | undefined) {
-    let dragging = false;
-    let startY = 0;
+  // A vertical drag on a shelf zone: 100 px spans the whole range. It
+  // writes nothing until it has travelled the tap slop up or down, so a tap
+  // reaches the panel's `onTap`. `use:drag` owns the pointer (ADR-427): a
+  // second finger on the zone neither drives nor ends the drag. The down
+  // still reaches the panel's press, which a drag past its slop releases.
+  function shelfDrag(read: () => number, write: ((v: number) => void) | undefined): DragOptions {
     let startValue = 0;
     let hasMoved = false;
     return {
-      onpointerdown(e: PointerEvent) {
-        dragging = true;
-        startY = e.clientY;
+      commit: 'immediate',
+      binding: 'capture',
+      onStart: () => {
         startValue = read();
         hasMoved = false;
-        (e.target as Element).setPointerCapture(e.pointerId);
       },
-      onpointermove(e: PointerEvent) {
-        if (!dragging || !e.buttons) return;
-        const deltaY = startY - e.clientY;
+      onMove: ({ dy }: DragInfo) => {
         if (!hasMoved) {
-          if (Math.abs(deltaY) < TAP_MOVEMENT_THRESHOLD) return; // Ignore micro-movements
+          if (Math.abs(dy) < TAP_SLOP_PX) return; // Ignore micro-movements
           hasMoved = true;
         }
-        write?.(Math.max(0, Math.min(1, startValue + deltaY / 100)));
-      },
-      onpointerup(e: PointerEvent) {
-        dragging = false;
-        (e.target as Element).releasePointerCapture(e.pointerId);
+        write?.(relativeDragValue({ startValue, delta: dy, size: 100, min: 0, max: 1 }));
       }
     };
   }
@@ -160,13 +155,10 @@
   <div class="absolute inset-0 flex gap-1 p-1 z-10">
     <!-- Low shelf (left) - invisible container -->
     <div class="flex-1 relative">
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="h-full w-full flex items-center justify-center cursor-ns-resize"
         data-band="low"
-        onpointerdown={lowDrag.onpointerdown}
-        onpointermove={lowDrag.onpointermove}
-        onpointerup={lowDrag.onpointerup}
+        use:drag={lowDrag}
       ></div>
     </div>
 
@@ -185,13 +177,10 @@
 
     <!-- High shelf (right) - invisible container -->
     <div class="flex-1 relative">
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="h-full w-full flex items-center justify-center cursor-ns-resize"
         data-band="high"
-        onpointerdown={highDrag.onpointerdown}
-        onpointermove={highDrag.onpointermove}
-        onpointerup={highDrag.onpointerup}
+        use:drag={highDrag}
       ></div>
     </div>
   </div>

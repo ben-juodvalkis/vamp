@@ -29,7 +29,13 @@ export interface PanelParams {
 	writeUnit(name: string, t: number, switchName?: string): void;
 }
 
-export function usePanelParams(getDevice: () => PanelDevice | undefined): PanelParams {
+/** A live device's params, which can also name a parameter's path. */
+export interface DevicePanelParams extends PanelParams {
+	/** The parameter's path on the device now, `undefined` while it is unlisted. */
+	pathOf(name: string): string | undefined;
+}
+
+export function usePanelParams(getDevice: () => PanelDevice | undefined): DevicePanelParams {
 	const indexByName = $derived.by(() => {
 		const device = getDevice();
 		const map = new Map<string, number>();
@@ -73,6 +79,7 @@ export function usePanelParams(getDevice: () => PanelDevice | undefined): PanelP
 
 	return {
 		has: (name) => indexByName.has(name),
+		pathOf,
 		raw,
 		range,
 		display(name) {
