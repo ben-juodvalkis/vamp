@@ -4,10 +4,5 @@
  * Re-exports all message handlers for convenient importing.
  */
 
-export {
-	handleBridgeMessage,
-	handleCommandMessage,
-	handlePingPongMessage,
-	handleInitMessage
-} from './miscHandlers';
+export { handleBridgeMessage, handleCommandMessage } from './miscHandlers';
 export { toNumber, toString } from './oscTypeHelpers';
