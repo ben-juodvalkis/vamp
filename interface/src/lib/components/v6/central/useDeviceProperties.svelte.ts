@@ -20,7 +20,8 @@ export interface DeviceProperties {
 	/** The property's value, `undefined` with no device or before it answers. */
 	raw(name: string): PropertyValue;
 	/** The property's value, or `fallback` with no device or before it answers. */
-	get<T>(name: string, fallback: T): T;
+	get(name: string, fallback: number): number;
+	get(name: string, fallback: string): string;
 }
 
 export function useDeviceProperties(
@@ -39,10 +40,11 @@ export function useDeviceProperties(
 		return path ? selectedTrackStore.propertyValue(path, name) : undefined;
 	}
 
-	return {
-		raw,
-		get<T>(name: string, fallback: T): T {
-			return (raw(name) as T | undefined) ?? fallback;
-		}
-	};
+	function get(name: string, fallback: number): number;
+	function get(name: string, fallback: string): string;
+	function get(name: string, fallback: number | string): number | string {
+		return (raw(name) as number | string | undefined) ?? fallback;
+	}
+
+	return { raw, get };
 }
