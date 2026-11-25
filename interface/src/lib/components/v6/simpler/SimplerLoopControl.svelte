@@ -17,6 +17,10 @@
 	import { paintTokens } from '$lib/utils/paintTokens';
 	import { paintPeaks } from '$lib/utils/waveformPaint';
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
+	import { getPeaks, cancelPeaks } from '$lib/services/clipWaveformService';
+	import { logger } from '$lib/utils/logger';
+
+	const PEAK_BINS = 1024;
 
 	// Simpler parameter indices (matching SimplerCentralView)
 	const SIMPLER_PARAMS = {
@@ -122,6 +126,8 @@
 	// Keep the previous waveform visible until a new fetch resolves —
 	// avoids flicker on rapid sample swaps.
 	let peakData = $state<Peaks | null>(null);
+	// The container's last observed size; the draw effect depends on it.
+	let size = $state({ w: 0, h: 0 });
 
 	// Display values (cache updates optimistically)
 	let displayStart = $derived(sampleStart);
@@ -328,21 +334,18 @@
 			return;
 		}
 		let cancelled = false;
-		import('$lib/services/clipWaveformService').then(
-			({ getPeaks, cancelPeaks }) => {
+		getPeaks(path, PEAK_BINS)
+			.then((data) => {
 				if (cancelled) return;
-				getPeaks(path, 1024).then((data) => {
-					if (cancelled) return;
-					peakData = data;
-				});
-				return () => {
-					cancelled = true;
-					cancelPeaks(path, 1024);
-				};
-			}
-		);
+				peakData = data;
+			})
+			.catch((err) => {
+				if (cancelled) return;
+				logger.warn('SimplerLoopControl: peak fetch failed', err);
+			});
 		return () => {
 			cancelled = true;
+			cancelPeaks(path, PEAK_BINS);
 		};
 	});
 
@@ -369,6 +372,9 @@
 		if (!container) return;
 
 		const dpr = window.devicePixelRatio || 1;
+		// Read the observed size so a resize re-runs this draw; measure the
+		// box itself so the first draw (before the observer reports) is right.
+		void size;
 		const w = container.clientWidth;
 		const h = container.clientHeight;
 		if (w === 0 || h === 0) return;
@@ -428,15 +434,13 @@
 		}
 	});
 
-	// Container resize → redraw. Tracked separately so the draw effect
-	// above doesn't need to take a width/height dep that would force it
-	// to read DOM measurements every reactive tick.
+	// Container resize → redraw: the observer writes the measured size,
+	// which the draw effect above reads.
 	$effect(() => {
 		const container = containerRef;
 		if (!container) return;
 		const ro = new ResizeObserver(() => {
-			// Touch a $state to trigger the draw effect.
-			peakData = peakData ? { ...peakData } : null;
+			size = { w: container.clientWidth, h: container.clientHeight };
 		});
 		ro.observe(container);
 		return () => ro.disconnect();
