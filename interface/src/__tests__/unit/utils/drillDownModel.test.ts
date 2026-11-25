@@ -13,8 +13,84 @@ import { groupPresetsByInstrument, groupPresetsForLevel,
 	replaceLanding,
 	windowsEqual,
 	groupedWindowsEqual,
-	type GroupedSectionSpec
+	type GroupedSectionSpec,
+	BROWSER_GRID,
+	browserGridLayout,
+	presetSectionChrome,
+	type BrowserGridInput
 } from '$lib/components/v6/browser/utils/drillDownModel';
+
+describe('browserGridLayout', () => {
+	const base: BrowserGridInput = {
+		screen: 'folders',
+		stageWidth: 1000,
+		stageHeight: 800,
+		folderCount: 6,
+		presetCount: 0,
+		mixedSections: [],
+		presetSections: [],
+		fill: false
+	};
+	const inner = { width: 1000 - 2 * BROWSER_GRID.padding, height: 800 - 2 * BROWSER_GRID.padding };
+
+	it('Key mode, an empty screen or an unmeasured stage lays out nothing', () => {
+		const none = { columns: 2, rows: 1, scrolls: false, tileWidth: 0, tileHeight: 0 };
+		expect(browserGridLayout({ ...base, screen: null })).toEqual(none);
+		expect(browserGridLayout({ ...base, folderCount: 0 })).toEqual(none);
+		expect(browserGridLayout({ ...base, stageWidth: 0 })).toEqual(none);
+	});
+
+	it('folders take the roomy floors, a short stage the tighter ones', () => {
+		const roomy = computeGridLayout({ ...inner, count: 6, gap: 8, minTile: 150, minTileHeight: 110, targetAspect: 1.5 });
+		expect(browserGridLayout(base)).toEqual(roomy);
+		const short = browserGridLayout({ ...base, stageHeight: 400 });
+		expect(short).toEqual(
+			computeGridLayout({ width: inner.width, height: 400 - 32, count: 6, gap: 8, minTile: 120, minTileHeight: 64, targetAspect: 1.5 })
+		);
+	});
+
+	it('a grouped preset screen counts its sections as drawn', () => {
+		const sections = [
+			{ count: 3, named: false },
+			{ count: 40, named: true }
+		];
+		const got = browserGridLayout({ ...base, screen: 'presets', presetCount: 43, presetSections: sections, fill: true });
+		const chrome = presetSectionChrome(true);
+		expect(got).toEqual(
+			computeGroupedGridLayout({
+				...inner,
+				groups: [3, 40],
+				headerCount: 1,
+				headers: [false, true],
+				fill: true,
+				headerHeight: chrome.headerH,
+				sectionGap: chrome.sectionGap,
+				gap: 8,
+				minTile: 112,
+				minTileHeight: 92,
+				targetAspect: 1.5
+			})
+		);
+		expect(chrome).toEqual({ headerH: BROWSER_GRID.fillHeaderH, sectionGap: BROWSER_GRID.fillSectionGap });
+	});
+
+	it('a mixed level puts its folders and presets on one ruler', () => {
+		const got = browserGridLayout({ ...base, screen: 'mixed', folderCount: 2, presetCount: 9, mixedSections: [9] });
+		expect(got).toEqual(
+			computeGroupedGridLayout({
+				...inner,
+				groups: [2, 9],
+				headerCount: 1,
+				headerHeight: BROWSER_GRID.sectionHeaderH,
+				sectionGap: BROWSER_GRID.sectionGap,
+				gap: 8,
+				minTile: 112,
+				minTileHeight: 92,
+				targetAspect: 1.5
+			})
+		);
+	});
+});
 
 describe('drillDownModel — screenKind', () => {
 	it('shows categories when no vendor is selected', () => {

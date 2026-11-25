@@ -502,13 +502,16 @@ projection (`get browseMode` / `setBrowseMode`): `midi`↔instruments,
 ## Grid layout
 
 `computeGridLayout` is the single source of truth for BOTH folder and preset grids.
-The component measures the stage (`ResizeObserver`) and feeds width/height/count +
-comfort constraints; the solver returns `{ columns, rows, scrolls, tileWidth,
-tileHeight }`, applied via `--cols` / `--tile-h`.
+The component measures the stage (`ResizeObserver`) and feeds the stage size and
+the screen's counts to `browserGridLayout` (drillDownModel), which picks the
+solver and the comfort constraints; the solver returns `{ columns, rows,
+scrolls, tileWidth, tileHeight }`, applied via `--cols` / `--tile-h`. The tile
+gap, padding and header sizes are `BROWSER_GRID` there. Row windowing is
+`useVirtualWindows.svelte.ts` (`VirtualWindows`), fed the same geometry.
 
-Two comfort profiles live in the component: `FOLDER_COMFORT` (`minTile` 150,
+Two comfort profiles live in drillDownModel: `FOLDER_COMFORT` (`minTile` 150,
 `minTileHeight` 110) for the folder grid, and the denser `PRESET_COMFORT`
-(`minTile` 112, `minTileHeight` 78) for preset grids — a leaf can hold thousands
+(`minTile` 112, `minTileHeight` 92) for preset grids — a leaf can hold thousands
 of patches, so scan density beats tile size there. Both use `targetAspect` 1.5.
 The preset floors are what `.preset-tile`'s tighter padding and `.tile-name`'s
 `clamp()` floor are sized against; move one and re-check the others.

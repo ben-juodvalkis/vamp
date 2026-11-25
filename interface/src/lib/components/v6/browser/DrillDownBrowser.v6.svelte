@@ -83,10 +83,9 @@
 		screenKind,
 		buildCrumbs,
 		pathForCrumb,
-		computeGridLayout,
-		computeGroupedGridLayout,
-		computeVisibleWindow,
-		computeGroupedVisibleWindow,
+		BROWSER_GRID,
+		browserGridLayout,
+		presetSectionChrome,
 		groupPresetsByOrigin,
 		groupPresetsByInstrument,
 		groupPresetsForLevel,
@@ -95,16 +94,13 @@
 		replaceLanding,
 		railBands,
 		keepRecent,
-		windowsEqual,
-		groupedWindowsEqual,
-		type VirtualWindow,
-		type GroupedVirtualWindow
 	} from './utils/drillDownModel';
 	import BrowserPresetWaveform from './BrowserPresetWaveform.svelte';
 	import ScalePicker from './ScalePicker.svelte';
 	import ScaleKeyControls from './ScaleKeyControls.svelte';
 	import { KeyDetect } from './keyDetect.svelte';
 	import { HoldPick, HOLD_MS } from './useHoldPick.svelte';
+	import { VirtualWindows, type WindowInput } from './useVirtualWindows.svelte';
 	import { isAudioThumbnailType } from '$lib/utils/waveformThumbnail';
 
 	import constants from '$config/constants.json';
@@ -291,24 +287,14 @@
 	// count (see computeGridLayout). One system for both grids.
 	let stageWidth = $state(0);
 	let stageHeight = $state(0);
-	// Tile gap and stage padding, on the app's interior ladder: 16 frames a
-	// panel, 8 separates tiles inside one, 4 separates rows inside a tile.
-	// BOTH are published as custom properties on the component root
-	// (--grid-gap / --grid-pad) and read back by the CSS, so the solver and
-	// the stylesheet cannot drift — the packed-band row below is only correct
-	// while its gap is EXACTLY the tile gap.
-	const GRID_GAP = 8;
-	const GRID_PADDING = 16;
-	// Grouped preset sections (recovered origin folders): header band height and
-	// the extra air between sections. Mirrored into CSS via --header-h /
-	// --section-gap so the solver and the stylesheet can't drift apart.
-	const SECTION_HEADER_H = 44;
-	const SECTION_GAP = 16;
-	// The effects screen's folders: a slim label in the folder's own ink over
-	// its tiles, not a band (user, 2026-10-26: "all the dead space just for
-	// the folder name").
-	const FILL_HEADER_H = 22;
-	const FILL_SECTION_GAP = 10;
+	// Tile geometry: `BROWSER_GRID` in drillDownModel, published as custom
+	// properties below so the solver and the stylesheet cannot drift.
+	const {
+		gap: GRID_GAP,
+		padding: GRID_PADDING,
+		sectionHeaderH: SECTION_HEADER_H,
+		sectionGap: SECTION_GAP
+	} = BROWSER_GRID;
 	// The hold key of a mixed level's preset header — a path separator no
 	// folder name can contain, so it never lights a folder tile's charge.
 	const HERE_KEY = '/here';
@@ -341,8 +327,9 @@
 	// The effects screen fills every row (`packFillSections`): its sections
 	// are few and small, and a half-empty row is dead space (user, 2026-10-26).
 	const fillRows = $derived(onEffectsScreen);
-	const presetHeaderH = $derived(fillRows ? FILL_HEADER_H : SECTION_HEADER_H);
-	const presetSectionGap = $derived(fillRows ? FILL_SECTION_GAP : SECTION_GAP);
+	const presetChrome = $derived(presetSectionChrome(fillRows));
+	const presetHeaderH = $derived(presetChrome.headerH);
+	const presetSectionGap = $derived(presetChrome.sectionGap);
 	const sectionInkOf = $derived.by(() => {
 		if (!onEffectsScreen) return null;
 		// From every folder, the hidden MIDI effects' included, so a section
@@ -369,84 +356,22 @@
 				: packGroupedSections(presetGroups, gridLayout.columns)
 	);
 
-	// Comfort constraints for the grid solvers: tiles grow to FILL the stage and
-	// only scroll once filling would shrink them below the floors. Wider-than-tall
-	// reads well, so the target aspect stays at 1.5 for both.
-	//
-	// FOLDERS keep the roomy floors — folder counts are bounded by catalog
-	// structure, so those grids almost always fill the stage anyway and the big
-	// slabs are the primary navigation target.
-	const FOLDER_COMFORT = { gap: GRID_GAP, minTile: 150, minTileHeight: 110, targetAspect: 1.5 };
-	// PRESETS use a denser floor: a leaf can hold thousands of patches, and the
-	// scarce resource is how many you can scan at once, not how big each one is.
-	// ~112×78 still clears the 44px touch target with room to spare, and roughly
-	// doubles the tiles onscreen vs the folder floors (more columns AND more rows).
-	// 92 (78 before 2026-10-28): room for two rows of tags under a two-line name.
-	const PRESET_COMFORT = { gap: GRID_GAP, minTile: 112, minTileHeight: 92, targetAspect: 1.5 };
-	// A short stage (a phone on its side, ~320px under the bar) would fit only
-	// two rows of the roomy folder slabs; it takes the folder floors down so
-	// three or four rows show. The iPad's stage is twice that and never does.
-	const SHORT_STAGE_PX = 420;
-	const SHORT_FOLDER_COMFORT = { gap: GRID_GAP, minTile: 120, minTileHeight: 64, targetAspect: 1.5 };
-
-	const gridLayout = $derived.by(() => {
-		const count = isScale
-			? 0
-			: screen === 'folders'
-				? folders.length
-				: screen === 'mixed'
-					? folders.length + presets.length
-					: presets.length;
-		if (!count || stageWidth <= 0 || stageHeight <= 0) {
-			return { columns: 2, rows: 1, scrolls: false, tileWidth: 0, tileHeight: 0 };
-		}
-		const width = stageWidth - GRID_PADDING * 2;
-		const height = stageHeight - GRID_PADDING * 2;
-		if (screen === 'mixed') {
-			// Folders, then the level's own presets under their header(s)
-			// (`mixedGroups`): sections on ONE ruler, at the preset grid's
-			// density, so a folder tile and a preset tile are the same size and
-			// share columns.
-			return computeGroupedGridLayout({
-				width,
-				height,
-				groups: [folders.length, ...mixedGroups.map((g) => g.presets.length)],
-				headerCount: mixedGroups.length,
-				headerHeight: SECTION_HEADER_H,
-				sectionGap: SECTION_GAP,
-				...PRESET_COMFORT
-			});
-		}
-		if (screen === 'presets' && useGroupedPresets) {
-			// Sectioned layout: same solver scoring, but rows round up per section
-			// and headers consume fixed chrome — so grouped tiles keep exactly the
-			// plain grid's comfortable proportions (identical cols + height once
-			// the content scrolls, which a flattened folder always does).
-			return computeGroupedGridLayout({
-				width,
-				height,
-				groups: presetGroups.map((g) => g.presets.length),
-				headerCount: presetGroups.filter((g) => g.folder !== null).length,
-				// Counted as drawn: small sections share rows (ADR-409), so the
-				// tiles grow into the height the packing frees.
-				headers: presetGroups.map((g) => g.folder !== null),
-				fill: fillRows,
-				headerHeight: presetHeaderH,
-				sectionGap: presetSectionGap,
-				...PRESET_COMFORT
-			});
-		}
-		return computeGridLayout({
-			width,
-			height,
-			count,
-			...(screen === 'presets'
-				? PRESET_COMFORT
-				: stageHeight < SHORT_STAGE_PX
-					? SHORT_FOLDER_COMFORT
-					: FOLDER_COMFORT)
-		});
-	});
+	// The stage's grid for the screen on show (`browserGridLayout`).
+	const gridLayout = $derived(
+		browserGridLayout({
+			screen: isScale ? null : screen,
+			stageWidth,
+			stageHeight,
+			folderCount: folders.length,
+			presetCount: presets.length,
+			mixedSections: screen === 'mixed' ? mixedGroups.map((g) => g.presets.length) : [],
+			presetSections:
+				screen === 'presets' && useGroupedPresets
+					? presetGroups.map((g) => ({ count: g.presets.length, named: g.folder !== null }))
+					: [],
+			fill: fillRows
+		})
+	);
 
 	// Measure the stage so the grid layout can adapt to its real size.
 	let stageEl = $state<HTMLDivElement | undefined>(undefined);
@@ -462,45 +387,29 @@
 		return () => ro.disconnect();
 	});
 
-	// ── Row windowing (ADR-404) ──
-	// Only the preset rows intersecting the viewport (± overscan) are in the DOM;
-	// grid padding stands in for the rest, so a multi-thousand-sample flat leaf
-	// scrolls like a short one. Geometry is exact (uniform --tile-h rows from the
-	// solver), so the window is pure arithmetic — computeVisibleWindow /
-	// computeGroupedVisibleWindow in drillDownModel. Folder grids stay unwindowed
-	// (their counts are bounded by catalog structure, not library size).
-	const OVERSCAN_ROWS = 3;
-	let presetGridEl = $state<HTMLDivElement | undefined>(undefined);
-	let groupedScrollEl = $state<HTMLDivElement | undefined>(undefined);
-	let presetWindow = $state<VirtualWindow>({ start: 0, end: 0, topPad: 0, bottomPad: 0 });
-	let groupedWindow = $state<GroupedVirtualWindow>({ sections: [], topPad: 0, bottomPad: 0 });
-
-	function updateWindows() {
+	// ── Row windowing (ADR-404, `useVirtualWindows`) ──
+	const windows = new VirtualWindows((): WindowInput => {
+		const grid = { columns: gridLayout.columns, tileHeight: gridLayout.tileHeight, gap: GRID_GAP };
 		if (screen === 'mixed') {
 			// Windowing sections: the folders (headerless, the grid pad on top,
 			// like the loose bucket), then each of `mixedGroups` under its header.
 			// Windowed like any grouped screen — a level can hold hundreds of
 			// samples beside one subfolder (FX › Nature › Animals › Birds: 218).
-			const next = computeGroupedVisibleWindow({
-				scrollTop: groupedScrollEl?.scrollTop ?? 0,
+			return {
+				kind: 'grouped',
 				viewportHeight: stageHeight,
 				sections: [
 					{ count: folders.length, headerHeight: 0, leadPad: GRID_PADDING },
 					...mixedGroups.map((g) => ({ count: g.presets.length, headerHeight: SECTION_HEADER_H }))
 				],
-				columns: gridLayout.columns,
-				tileHeight: gridLayout.tileHeight,
-				gap: GRID_GAP,
 				sectionGap: SECTION_GAP,
-				overscanRows: OVERSCAN_ROWS
-			});
-			if (!groupedWindowsEqual(next, untrack(() => groupedWindow))) groupedWindow = next;
-			return;
+				...grid
+			};
 		}
-		if (screen !== 'presets') return;
+		if (screen !== 'presets') return { kind: 'none' };
 		if (useGroupedPresets) {
-			const next = computeGroupedVisibleWindow({
-				scrollTop: groupedScrollEl?.scrollTop ?? 0,
+			return {
+				kind: 'grouped',
 				// .grouped-layer has no padding — the scroller spans the full stage.
 				viewportHeight: stageHeight,
 				// One windowing section per row-BAND (a packed band is one tile row,
@@ -517,53 +426,20 @@
 						leadPad: named ? 0 : GRID_PADDING
 					};
 				}),
-				columns: gridLayout.columns,
-				tileHeight: gridLayout.tileHeight,
-				gap: GRID_GAP,
 				sectionGap: presetSectionGap,
-				overscanRows: OVERSCAN_ROWS
-			});
-			// untrack: the compare must not make the recompute-effect depend on the
-			// window it writes (one wasted re-run per commit otherwise).
-			if (!groupedWindowsEqual(next, untrack(() => groupedWindow))) groupedWindow = next;
-		} else {
-			const next = computeVisibleWindow({
-				scrollTop: presetGridEl?.scrollTop ?? 0,
-				// The grid is height:100% inside the .layer's padding.
-				viewportHeight: stageHeight - GRID_PADDING * 2,
-				count: presets.length,
-				columns: gridLayout.columns,
-				tileHeight: gridLayout.tileHeight,
-				gap: GRID_GAP,
-				overscanRows: OVERSCAN_ROWS
-			});
-			if (!windowsEqual(next, untrack(() => presetWindow))) presetWindow = next;
+				...grid
+			};
 		}
-	}
-
-	// Scroll → recompute at most once per frame. State only changes when the
-	// window actually crosses a row boundary, so plain scrolling re-renders nothing.
-	let windowRaf = 0;
-	function scheduleWindowUpdate() {
-		if (windowRaf) return;
-		windowRaf = requestAnimationFrame(() => {
-			windowRaf = 0;
-			updateWindows();
-		});
-	}
-
-	// Recompute whenever the inputs change (level load, resize/layout change,
-	// scroller mount). updateWindows reads all of them, so this effect tracks them.
-	$effect(() => {
-		updateWindows();
+		// The grid is height:100% inside the .layer's padding.
+		return { kind: 'flat', count: presets.length, viewportHeight: stageHeight - GRID_PADDING * 2, ...grid };
 	});
 
-	const windowedPresets = $derived(presets.slice(presetWindow.start, presetWindow.end));
+	const windowedPresets = $derived(presets.slice(windows.presetWindow.start, windows.presetWindow.end));
 	// Window sections joined back to their groups. Guarded lookup: the window is
 	// corrected by the effect one flush AFTER presetGroups changes, so a stale
 	// index must degrade to "skip" (never a crash) for that single frame.
 	const windowedGroups = $derived(
-		groupedWindow.sections
+		windows.groupedWindow.sections
 			.map((sw) => ({ sw, band: presetBands[sw.section] }))
 			.filter((x) => x.band !== undefined)
 	);
@@ -1360,9 +1236,7 @@
 		hold.destroy();
 		keyDetect.clearPending();
 		clearPostLoadClose();
-		// Guarded: onDestroy also runs during SSR, where cAF doesn't exist (and
-		// windowRaf is always 0 there — nothing schedules frames server-side).
-		if (windowRaf) cancelAnimationFrame(windowRaf);
+		windows.destroy();
 		browserNavigationStore.clearAllCaches();
 	});
 
@@ -1777,11 +1651,11 @@
 						style="--header-h: {SECTION_HEADER_H}px; --section-gap: {SECTION_GAP}px;"
 					>
 						{#key `${selectedVendor}:${currentPath.join('/')}`}
-						<div class="grouped-scroll" bind:this={groupedScrollEl} onscroll={scheduleWindowUpdate}>
-							{#if groupedWindow.topPad > 0}
-								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
+						<div class="grouped-scroll" bind:this={windows.groupedScrollEl} onscroll={windows.schedule}>
+							{#if windows.groupedWindow.topPad > 0}
+								<div class="window-spacer" style="height: {windows.groupedWindow.topPad}px"></div>
 							{/if}
-							{#each groupedWindow.sections as sw (sw.section)}
+							{#each windows.groupedWindow.sections as sw (sw.section)}
 								{@const mixed = sw.section > 0 ? mixedGroups[sw.section - 1] : null}
 								<section class="preset-section" class:loose={sw.section === 0}>
 									{#if mixed}
@@ -1808,8 +1682,8 @@
 									</div>
 								</section>
 							{/each}
-							{#if groupedWindow.bottomPad > 0}
-								<div class="window-spacer" style="height: {groupedWindow.bottomPad}px"></div>
+							{#if windows.groupedWindow.bottomPad > 0}
+								<div class="window-spacer" style="height: {windows.groupedWindow.bottomPad}px"></div>
 							{/if}
 						</div>
 						{/key}
@@ -1826,15 +1700,15 @@
 						<!-- Keyed on the navigated location so a fresh folder always opens
 						     scrolled to the top (the DOM — and its scrollTop — is rebuilt). -->
 						{#key `${selectedVendor}:${currentPath.join('/')}`}
-						<div class="grouped-scroll" bind:this={groupedScrollEl} onscroll={scheduleWindowUpdate}>
+						<div class="grouped-scroll" bind:this={windows.groupedScrollEl} onscroll={windows.schedule}>
 							<!-- ADR-404 row windowing: sections/rows outside the viewport
 							     collapse into spacers + grid padding, scroll geometry stays
 							     pixel-identical to the full render. The bottom spacer only
 							     renders when sections are actually skipped below, so the
 							     final section's :last-child margin reset still applies when
 							     it IS the last child. -->
-							{#if groupedWindow.topPad > 0}
-								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
+							{#if windows.groupedWindow.topPad > 0}
+								<div class="window-spacer" style="height: {windows.groupedWindow.topPad}px"></div>
 							{/if}
 							{#each windowedGroups as { sw, band } (band.groups.map((g) => g.folder ?? '·').join('|') + ':' + (band.groups[0]?.presets[0]?.path ?? ''))}
 								{#if band.kind === 'full'}
@@ -1882,8 +1756,8 @@
 									</section>
 								{/if}
 							{/each}
-							{#if groupedWindow.bottomPad > 0}
-								<div class="window-spacer" style="height: {groupedWindow.bottomPad}px"></div>
+							{#if windows.groupedWindow.bottomPad > 0}
+								<div class="window-spacer" style="height: {windows.groupedWindow.bottomPad}px"></div>
 							{/if}
 						</div>
 						{/key}
@@ -1905,10 +1779,10 @@
 							     the old (clamped) scrollTop. Simpler↔Audio keeps its place:
 							     that switch changes neither vendor nor path (PR #457 review). -->
 							{#key `${selectedVendor}:${currentPath.join('/')}`}
-							<div class="preset-scroll" bind:this={presetGridEl} onscroll={scheduleWindowUpdate}>
+							<div class="preset-scroll" bind:this={windows.presetGridEl} onscroll={windows.schedule}>
 								<div
 									class="adaptive-grid windowed"
-									style="--cols: {gridLayout.columns}; --tile-h: {gridLayout.tileHeight}px; padding-top: {presetWindow.topPad}px; padding-bottom: {presetWindow.bottomPad}px;"
+									style="--cols: {gridLayout.columns}; --tile-h: {gridLayout.tileHeight}px; padding-top: {windows.presetWindow.topPad}px; padding-bottom: {windows.presetWindow.bottomPad}px;"
 								>
 									{#each windowedPresets as p (p.path)}
 										{@render presetTile(p)}
@@ -2507,7 +2381,7 @@
 		width: auto;
 	}
 	/* Its folder names: a slim label in the folder's ink sitting on its
-	   tiles, no band behind it (FILL_HEADER_H). */
+	   tiles, no band behind it (`BROWSER_GRID.fillHeaderH`). */
 	.band-row.fill .section-head,
 	:global([data-grammar="flat"]) .band-row.fill .section-head {
 		min-height: var(--header-h, 22px);
@@ -2751,7 +2625,7 @@
 		background: color-mix(in oklab, var(--k) 55%, var(--browser-bg-secondary, #1d2027));
 		border: 2px solid var(--k);
 		color: color-mix(in oklab, var(--k) 12%, white);
-		/* Denser than the folder slabs (see PRESET_COMFORT): the tiles are small
+		/* Denser than the folder slabs (see PRESET_COMFORT in drillDownModel): the tiles are small
 		   enough that 14px of padding would eat a whole line of the name. */
 		padding: var(--spacing-sm);
 	}
@@ -2905,7 +2779,7 @@
 		letter-spacing: -0.01em;
 		text-wrap: balance;
 		/* Scales with the tile: cqw = 1% of the tile's width. The floor is sized to
-		   the densest preset tile (PRESET_COMFORT) so names shrink with the grid
+		   the densest preset tile (drillDownModel PRESET_COMFORT) so names shrink with the grid
 		   instead of overflowing it; the cap keeps big folder tiles from getting
 		   oversized. A word wider than the tile ("Platyrhynchos)") caps it lower
 		   again, to what that word can take (`use:fitText` measures it as
