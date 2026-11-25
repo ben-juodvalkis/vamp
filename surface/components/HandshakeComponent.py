@@ -119,6 +119,12 @@ V3_ERROR_ADDRESS = "/looping/v3/error"
 # 2026-11-12 adds 3.13.0 (ADR-529): rack chains on the wire — the path
 # grammar's ``…/chains/<i>/devices/<j>``, the ``chain_devices`` row and the
 # ``rack-chain`` scoped tree. A 3.12.0 surface answers path-not-supported.
+# The head is this surface's protocol version: ``DebugComponent`` and
+# ``SurfaceHelloComponent`` derive ``PROTOCOL_VERSION`` from it, so a bump
+# prepends here and nowhere else surface-side. The tail is accepted for
+# clients that never read the tree (the Swift menubar advertises 3.3.0);
+# a pre-3.6.0 client that wants ``state/full`` cannot be served at any
+# floor (surface/CLAUDE.md, "state/full is one message"). Don't trim it.
 SUPPORTED_VERSIONS: tuple = (
     "3.13.0", "3.12.0", "3.11.0", "3.10.0", "3.9.0", "3.8.0", "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0", "3.2.0", "3.1.0", "3.0.0",
 )

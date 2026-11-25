@@ -24,6 +24,8 @@ import collections
 import logging
 import re as _re
 
+from .HandshakeComponent import SUPPORTED_VERSIONS
+
 logger = logging.getLogger("looping")
 
 
@@ -58,7 +60,9 @@ CLIP_JUMP_PROBE_ADDRESS = "/looping/probe/clip_jump_probe"
 # 2026-09-10 bumped to 3.8.0 (issue #491): the ``pads/<note>`` path
 # segment and the pad-scoped ``state/full/tree``.
 # 2026-09-15 bumped to 3.9.0 (ADR-439): T record 14 -> 15, ``preset``.
-PROTOCOL_VERSION = "3.13.0"
+# Derived: the head of ``HandshakeComponent.SUPPORTED_VERSIONS`` is the
+# one literal a bump changes on this side.
+PROTOCOL_VERSION = SUPPORTED_VERSIONS[0]
 
 
 # --- probe chain grammar ---------------------------------------------------
