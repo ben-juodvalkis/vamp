@@ -291,6 +291,7 @@ from .drum_vm_functions import (
     RACK_NON_MACRO_PARAMS,
     RESEED_DELAY_MS,
     SELECTED_PAD_KEY,
+    SHIFT_RELEASE_IDLE_MS,
     SELECTED_PAD_PROPERTY,
     STALE_READ_WINDOW_MS,
     TOGGLE_ON_ABOVE_T,
@@ -378,6 +379,15 @@ def _holds_pad_shift(st: _RackState) -> bool:
     return any(p.shift for p in st.pads.values())
 
 
+def _idle(st: _RackState) -> bool:
+    """Nothing keeps the state: no subscriber, no rack shift, no pad shift."""
+    return not st.subscribed and not st.shift and not _holds_pad_shift(st)
+
+
+def _is_parked(st: _RackState) -> bool:
+    return "#parked" in st.device_path
+
+
 class DrumVirtualMacroComponent:
     """Computed-property provider for ``DrumGroupDevice`` ``vm.*`` rows.
 
@@ -462,7 +472,7 @@ class DrumVirtualMacroComponent:
         if st is None:
             return
         st.subscribed.discard(function)
-        if not st.subscribed and not st.shift and not _holds_pad_shift(st):
+        if _idle(st):
             self.release(device_path)
 
     def release(self, device_path: str) -> None:
@@ -677,6 +687,7 @@ class DrumVirtualMacroComponent:
             return False
         st.shift = target
         logger.debug("DrumVirtualMacroComponent: %s sequencer shift -> %d", st.device_path, target)
+        self._release_when_idle(st)
         return True
 
     def pad_sequencer_shift(self, device_path: str, note) -> int:
@@ -792,7 +803,41 @@ class DrumVirtualMacroComponent:
         logger.debug(
             "DrumVirtualMacroComponent: %s pad %d sequencer shift -> %d", st.device_path, pad_note, target,
         )
+        self._release_when_idle(st)
         return True
+
+    def _release_when_idle(self, st: _RackState) -> None:
+        """A shift just returned to 0. A state the engine alone created
+        (``set_sequencer_shift`` on a rack no UI subscribes to) or parked
+        under ``#parked`` would otherwise keep its member and chain
+        listeners for the rest of the session: :meth:`unsubscribe` and
+        :meth:`_displace` release only a state with no shift, and neither
+        runs again. A parked state goes now — its rack is at no path, and
+        the restore that parked it has landed. A live one goes after
+        :data:`SHIFT_RELEASE_IDLE_MS` with nothing holding it, so a step
+        pattern that turns the octave back on within a bar keeps its state
+        (and its own-write baselines) instead of re-resolving per step.
+        Without a ``schedule_delayed`` a live state is kept."""
+        if not _idle(st):
+            return
+        if _is_parked(st):
+            self._release_state(st)
+            return
+        if self._schedule_delayed is None:
+            return  # no clock to wait on (unit tests): keep it
+        try:
+            self._schedule_delayed(SHIFT_RELEASE_IDLE_MS, lambda: self._release_state(st))
+        except Exception as e:
+            logger.warning("DrumVirtualMacroComponent: schedule_delayed failed: %s", e)
+
+    def _release_state(self, st: _RackState) -> None:
+        """Release ``st`` if it is still held and still idle."""
+        if self._disconnected or not _idle(st):
+            return
+        if self._states.get(st.device_path) is not st:
+            return
+        logger.debug("DrumVirtualMacroComponent: %s released (idle after its shift)", st.device_path)
+        self.release(st.device_path)
 
     def flush(self) -> int:
         """Apply every pending ``(device, function)`` once, latest value.

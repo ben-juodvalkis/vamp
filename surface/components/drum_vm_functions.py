@@ -136,6 +136,12 @@ STALE_READ_WINDOW_MS = 400
 #: the LOM notification (the repo rule: a listener marks and schedules,
 #: nothing else).
 EDIT_ABSORB_DELAY_MS = 150
+#: How long a rack state the sequencer alone kept (no subscriber) stays
+#: after its shift returns to 0 before it is released. A step pattern turns
+#: the octave back on within a bar, and a release would cost a re-resolve
+#: and a re-seed per step — reading a DrumCell that may still sit one write
+#: behind — so the state is let go only once the engine has left it idle.
+SHIFT_RELEASE_IDLE_MS = 10000
 #: Ceiling on member value listeners for one rack. A 32-pad DrumCell kit
 #: carries ~700 continuous members (``fx1`` alone is ten a pad), which is
 #: within Live's reach; the cap is what stops an unforeseen kit from
