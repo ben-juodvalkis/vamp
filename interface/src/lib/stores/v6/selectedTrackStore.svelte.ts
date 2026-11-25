@@ -425,7 +425,7 @@ class SelectedTrackStore {
 	/**
 	 * PR-3.5.1 (2026-04-15) — path-keyed parameter read.
 	 *
-	 * Reads directly from `v3Store.paramByPath`; no `deviceId`
+	 * Reads directly from `v3Store.param(path)`; no `deviceId`
 	 * resolver, no v2 fallback. Returns `undefined` when the path
 	 * isn't in the v3 tree yet (cold-start race before state/full
 	 * lands, or an invalidated subtree). Callers that render sliders
@@ -433,15 +433,15 @@ class SelectedTrackStore {
 	 * posture as the deprecated `getParameterValue` on miss, but
 	 * without the silent fall-through to v2-populated state.
 	 *
-	 * Reactive dependency: `v3Store.paramByPath` is a `$derived.by`
-	 * rebuilt on every tree mutation, so accessing it here is what
-	 * ties this method into Svelte's reactivity graph.
+	 * Reactive dependency: `v3Store.param` is a keyed read of the owning
+	 * device's params `SvelteMap`, so a caller re-runs when this record
+	 * changes and not on another parameter's echo.
 	 *
 	 * @see setParamValue for the companion write path.
 	 * @see paramPath for the `(Device, paramIndex)` composer.
 	 */
 	paramValue(paramPath: string): number | undefined {
-		return v3Store.paramByPath.get(paramPath)?.value;
+		return v3Store.param(paramPath)?.value;
 	}
 
 	/**
@@ -453,7 +453,7 @@ class SelectedTrackStore {
 	 * to a local format of `value` + `unit`. Companion to {@link paramValue}.
 	 */
 	paramDisplay(paramPath: string): string | undefined {
-		return v3Store.paramByPath.get(paramPath)?.displayValue;
+		return v3Store.param(paramPath)?.displayValue;
 	}
 
 	/**
@@ -466,7 +466,7 @@ class SelectedTrackStore {
 	 * will reconcile via echo-after-accept once the next state/full
 	 * lands.
 	 *
-	 * Optimistically writes the value into `v3Store.paramByPath`
+	 * Optimistically writes the value into the v3 store
 	 * before sending — `MutationComponent.on_param_value_changed`
 	 * suppresses echoes for UI-armed pids to prevent jitter loops, so
 	 * without the local write the store would stay stuck at the
@@ -513,7 +513,7 @@ class SelectedTrackStore {
 	paramValueArmed(paramPath: string): number | undefined {
 		const armed = getArmedValue(paramPath);
 		if (armed !== undefined) return armed;
-		return v3Store.paramByPath.get(paramPath)?.value;
+		return v3Store.param(paramPath)?.value;
 	}
 
 	/**
@@ -672,23 +672,21 @@ class SelectedTrackStore {
 	 * Returns the display name for a single parameter at `paramPath`,
 	 * or `undefined` when the path isn't in the v3 tree yet (cold-start
 	 * race before state/full lands, invalidated subtree). Reads
-	 * directly off `v3Store.paramByPath`; no `deviceId` resolver, no v2
+	 * directly off `v3Store.param(path)`; no `deviceId` resolver, no v2
 	 * fallback, no Promise (the v2 method's `Promise<string[]>` was a
 	 * bridge round-trip artifact that no longer exists — names ride
 	 * every state/full chunk on the P record per
 	 * [04 §5](https://github.com/ben-juodvalkis/Looping/blob/dbae35ae/documentation/archive/m4l-to-python-v3/04-wire-protocol.md#5-state-full-tree-args-layout)).
 	 *
-	 * Reactive dependency: `v3Store.paramByPath` is a `$derived.by`
-	 * rebuilt on every tree mutation, so accessing it here ties this
-	 * method into Svelte's reactivity graph — a preset swap that bumps
-	 * generation re-derives paramByPath, and consumers re-read the
-	 * fresh names without a stale flash.
+	 * Reactive dependency: a keyed read of the owning device's params
+	 * (`v3Store.param`) — a preset swap that replaces the record re-runs
+	 * consumers, which re-read the fresh names without a stale flash.
 	 *
 	 * @see paramNamesForDevice for the whole-device variant.
 	 * @see paramValue for the value sibling.
 	 */
 	paramName(paramPath: string): string | undefined {
-		return v3Store.paramByPath.get(paramPath)?.name;
+		return v3Store.param(paramPath)?.name;
 	}
 
 	/**
@@ -698,7 +696,7 @@ class SelectedTrackStore {
 	 * than a hard-coded range.
 	 */
 	paramRange(paramPath: string): { min: number; max: number } | undefined {
-		const rec = v3Store.paramByPath.get(paramPath);
+		const rec = v3Store.param(paramPath);
 		return rec ? { min: rec.min, max: rec.max } : undefined;
 	}
 

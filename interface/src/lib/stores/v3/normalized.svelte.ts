@@ -319,10 +319,10 @@ export const CHAIN_RACK_CLASSES: ReadonlySet<string> = new Set([
  * Flat paramPath → ParamRecord view. Replaces
  * `deviceParameterStorage.paramIds` under v3.
  *
- * Rebuilt whenever the tree mutates — fine at session scale (see
- * [06 §6]: single-digit-MB store, sub-ms rebuild), and simpler than
- * maintaining a parallel index. If a future profile says otherwise,
- * the rebuild can be narrowed without changing the interface.
+ * Rebuilt whenever the tree mutates, including every param echo, and
+ * every reader of it is invalidated each time. Single-path readers use
+ * `v3Store.param(path)` instead, a keyed lookup through the owning
+ * device; this view is for bulk readers.
  */
 const paramByPathView = $derived.by<Map<string, ParamRecord>>(() => {
 	const out = new Map<string, ParamRecord>();
@@ -1242,6 +1242,13 @@ function findDevice(devicePath: string): DeviceRecord | undefined {
 	return tracks.get(trackPath)?.devices.get(devicePath);
 }
 
+/** A param record by path, through {@link findDevice}. */
+function paramAt(paramPath: string): ParamRecord | undefined {
+	const { devicePath } = splitParamPath(paramPath);
+	if (!devicePath) return undefined;
+	return findDevice(devicePath)?.params.get(paramPath);
+}
+
 /**
  * Drop everything rooted at any of `paths` and advance the stored
  * generation. Called by the state/invalidate handler.
@@ -1656,6 +1663,19 @@ export const v3Store = {
 	get tracks() {
 		return tracks;
 	},
+	/**
+	 * One parameter by path, read through its owning device: a keyed
+	 * lookup on the track's (or pad chain's, or rack chain's) `SvelteMap`s,
+	 * so a reader depends on that one record and is not invalidated by an
+	 * echo for any other parameter. Prefer it to `paramByPath.get(path)`,
+	 * whose whole-set view is rebuilt — and every reader invalidated — on
+	 * every param echo.
+	 */
+	param(paramPath: string): ParamRecord | undefined {
+		return paramAt(paramPath);
+	},
+	/** The whole set as one map. Rebuilt on every tree mutation; for bulk
+	 *  readers only — a single-path read should use {@link param}. */
 	get paramByPath() {
 		return paramByPathView;
 	},

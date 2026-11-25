@@ -2,7 +2,7 @@
  * Sequencer Store — Phase 10 PR-10c: derived from v3Store.
  *
  * Permute exposes its pattern controls on the standard `Device.parameters`
- * wire. This store reads them out of `v3Store.paramByPath` for the
+ * wire. This store reads them through `v3Store.param(path)` for the
  * selected track's Permute device and writes via `/looping/v3/param/set`
  * — the same path every other device uses. The v5-era broadcast cache,
  * origin tagging, and echo filtering are gone: LOM owns the state,
@@ -89,7 +89,7 @@ export const PUSH_STATE_GRACE_MS = 200;
 
 function readRole(layout: PermuteLayout | undefined, role: PermuteRole): number | undefined {
   if (!layout) return undefined;
-  return v3Store.paramByPath.get(layout.paths[role])?.value;
+  return v3Store.param(layout.paths[role])?.value;
 }
 
 function writeRole(layout: PermuteLayout, role: PermuteRole, value: number): void {
