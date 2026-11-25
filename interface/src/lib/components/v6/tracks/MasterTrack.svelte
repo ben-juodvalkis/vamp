@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Card } from '$lib/components/ui/card';
+    import { cn } from '$lib/utils.js';
     import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
     import { setMasterVolume, selectTrack } from '$lib/services/trackCommands';
     import { session } from '$lib/stores/session.svelte';
@@ -9,12 +9,13 @@
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { interceptForGroupGesture } from '$lib/components/v6/tracks/composables/useTrackData.svelte.js';
     import { meterStore } from '$lib/stores/v3/meters.svelte';
-    import { drag } from '$lib/components/v6/parameters/actions/dragAction';
+    import { MASTER_TRACK_DEFAULTS } from './TrackStrip/utils/trackConstants';
+    import { useStripFader } from './composables/useStripFader.svelte';
     import { press } from '$lib/actions/press';
     import { HOLD_MS } from '$lib/actions';
     import Lock from '@lucide/svelte/icons/lock';
     import { detectKey, setSignatureNumerator } from '$lib/services/sessionCommands';
-    import { drag as dragAction } from '$lib/actions/drag';
+    import { drag, type DragInfo, type DragOptions } from '$lib/actions/drag';
     import { createStepDrag } from '$lib/actions/stepDrag';
 
     interface Props {
@@ -43,10 +44,10 @@
     const masterTrack = $derived({
         index: MASTER_INDEX,
         name: masterRecord?.name ?? 'Master',
-        volume: masterRecord?.volume ?? 0.85,
+        volume: masterRecord?.volume ?? MASTER_TRACK_DEFAULTS.volume,
         meterLevel,
         mute: masterRecord?.mute ?? false,
-        color: masterRecord?.color ?? 0xff8800
+        color: masterRecord?.color ?? MASTER_TRACK_DEFAULTS.color
     });
 
     // Derive if selected
@@ -96,17 +97,29 @@
     // $derived above). No CustomEvent listeners needed on this
     // component — both stores are fine-grained-reactive.
 
-    // Read directly from the v3 store via `masterRecord.volume`. The
-    // store IS the optimistic value during drag — `setMasterVolume`
-    // applies locally before sending OSC, so we don't need a parallel
-    // `optimisticVolume` field. Outside edits and LOM rejections
-    // reconcile via the surface's non-suppressed echo, same shape as
-    // `setParamValue`. See ADR for the optimistic-apply contract.
-    const currentVolume = $derived(masterRecord?.volume ?? 0.85);
+    // The fader: the strips' own (`useStripFader`). The handle draws a
+    // local value that moves with the finger at once, and the store's echo
+    // only lands while no drag is open; writes go out one per frame. Gain 1
+    // over the Card's height, the strips' feel, so the handle stays under
+    // the finger.
+    const fader = useStripFader({
+        read: () => masterRecord?.volume ?? MASTER_TRACK_DEFAULTS.volume,
+        send: setMasterVolume
+    });
 
-    function handleVolumeChange(value: number) {
-        setMasterVolume(value);
-    }
+    // Vertical only: a press that sets off sideways is not a fader drag.
+    // No `onTap` — the Card carries its own `use:press`, which selects.
+    const faderDrag: DragOptions = {
+        commit: 'y',
+        touchAction: 'none',
+        onDown: () => fader.grab(),
+        onStart: () => fader.start(),
+        onMove: ({ dy, height }: DragInfo) => fader.move(dy, height),
+        // An unmount mid-drag sends nothing, as on a strip.
+        onEnd: ({ reason }) => (reason === 'teardown' ? fader.cancel() : fader.release())
+    };
+
+    $effect(() => () => fader.cancel());
 
     // Single tap to open key signature browser
     /**
@@ -162,9 +175,6 @@
         onSelect?.();
     }
 
-    // Drag action options — matches TrackVolumeMeter so the master
-    // fader feel is identical to regular tracks (8 ms debounce,
-    // 0.5 sensitivity, leading+trailing edge emits).
     // Always true (FLIP went 2026-09-26; uiPrefsStore pins it).
     let flipLayout = $derived(uiPrefsStore.flipLayout);
 
@@ -172,51 +182,26 @@
     // `cardBands` rule (TrackStrip), so the key band is exactly as tall as
     // their name bands: three with the device band on, two without.
     const cardBands = $derived(uiPrefsStore.showDeviceBand ? 3 : 2);
-
-
-    /**
-     * Master select — a tap anywhere on the Card.
-     *
-     * Attached imperatively rather than as `use:press`, because `<Card>` is
-     * a component and Svelte directives only apply to DOM elements. It is
-     * the same action given the Card's own root node, so it still owns its
-     * `touch-action` and its own teardown; only the binding syntax differs.
-     *
-     * It has to coexist with the volume drag on the overlay inside the Card,
-     * and does, in both directions: the drag claims the pointer it was given
-     * and this claims the one it was given, and a press that travels past
-     * its slop abandons — so a fader drag no longer also selects the master
-     * on release, which the `onclick` this replaces did.
-     */
-    let masterCard = $state<HTMLDivElement | null>(null);
-
-    $effect(() => {
-        const node = masterCard;
-        if (!node) return;
-        const handle = press(node, { onPress: handleSelect, touchAction: 'none' });
-        return () => handle.destroy();
-    });
-
-    const dragOptions = $derived({
-        orientation: 'vertical' as const,
-        min: 0,
-        max: 1,
-        value: currentVolume,
-        sensitivity: 0.5,
-        enableJumpToClick: false,
-        onChange: handleVolumeChange,
-        // No `onTap` — the Card already carries its own `use:press`, so
-        // wiring it here too selected the master twice per tap.
-        debounceMs: 8
-    });
-
 </script>
 
 <div class="master-col">
-<Card
-    class="glass-card master-track transition-colors duration-100 touch-manipulation cursor-pointer {isSelected ? 'master-selected' : ''}"
+<!-- The Card: a plain div wearing the shadcn card's classes (so the flat
+     grammar's `[data-slot="card"]` rule still reaches it), so `use:press`
+     can sit on it directly. A tap anywhere on it selects the master.
+
+     The press coexists with the volume drag on the overlay inside it, in
+     both directions: the drag claims the pointer it was given and the press
+     the one it was given, and a press that travels past its slop abandons,
+     so a fader drag does not also select the master on release. -->
+<div
+    class={cn(
+        'bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-lg dark:shadow-xl light:shadow-md light:border-2',
+        'glass-card master-track transition-colors duration-100 touch-manipulation cursor-pointer',
+        isSelected && 'master-selected'
+    )}
+    data-slot="card"
     data-debug="master-card"
-    bind:ref={masterCard}
+    use:press={{ onPress: handleSelect, touchAction: 'none' }}
     style="--track-color: var(--act-master); flex: {cardBands} {cardBands} calc(var(--strip-gap) * {cardBands - 1}); min-height: 0; padding: 0; border-radius: var(--radius-md); container-type: inline-size; position: relative; overflow: hidden;"
     aria-label="Master Track"
 >
@@ -230,11 +215,9 @@
         topInset={0}
     />
 
-    <!-- Volume control overlay — drag action + optimistic update
-         matches TrackVolumeMeter, so master fader behaves like
-         a regular track fader (8 ms debounce, 0.5 sensitivity). -->
+    <!-- Volume control overlay: the strips' fader (`useStripFader`). -->
     <div
-        use:drag={dragOptions}
+        use:drag={faderDrag}
         class="absolute cursor-ns-resize"
         style="inset: 0 0 0 0; z-index: 10;"
         role="slider"
@@ -242,14 +225,14 @@
         aria-label="Master volume"
         aria-valuemin={0}
         aria-valuemax={1}
-        aria-valuenow={currentVolume}
+        aria-valuenow={fader.value}
     >
         <div
             class="master-vol-handle absolute left-0 right-0 pointer-events-none"
-            style="bottom: {currentVolume * 100}%;"
+            style="bottom: {fader.value * 100}%;"
         ></div>
     </div>
-</Card>
+</div>
 
 <!-- Key band — a SIBLING of the Card, the master's answer to the strips'
      name band. It takes the same share of the same third, so the key reads
@@ -288,7 +271,7 @@
     <div
         class="sig-band"
         class:active={sigDragging}
-        use:dragAction={numeratorDrag}
+        use:drag={numeratorDrag}
         role="slider"
         tabindex={-1}
         aria-label="Time signature {session.timeSignatureString}. Drag up or down to change the beats per bar"
