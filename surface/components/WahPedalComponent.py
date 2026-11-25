@@ -131,6 +131,7 @@ from __future__ import annotations
 import logging
 from typing import Callable, Optional, Tuple
 
+from ._common import LOM_ERRORS
 from .MidiWheelsComponent import (
     CONFIG_KEY as MIDI_WHEELS_CONFIG_KEY,
     read_midi_wheels_config,
@@ -142,7 +143,7 @@ logger = logging.getLogger("looping")
 # Tuple of exceptions every LOM touch must catch. ``TypeError`` covers
 # ``Boost.Python.ArgumentError`` (a TypeError subclass) raised when a C++
 # handle is torn down — see the merge-gate rule in surface/CLAUDE.md.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 # The hot freq write additionally guards against a non-numeric ``min``/``max``
 # read (``ValueError`` isn't a LOM error but must not escape the sweep path).

@@ -97,6 +97,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 # The virtual-macro vocabulary comes from the module that owns it, not
 # through the component's re-export shim. One statement per alias is
 # ruff's isort default (``combine-as-imports`` off), not a leftover.
+from ._common import coerce_str, safe_remove, safe_emit
 from .drum_vm_functions import (
     DRUM_RACK_CLASS_NAME,
 )
@@ -174,7 +175,6 @@ from .RackChainDevicesComponent import (
 # ``is`` fast path, then masked ``_live_ptr`` — shared with the resolver rather
 # than reimplemented here.
 from .path_resolver import ResolveStatus, resolve_device, same_lom_handle
-from ._common import safe_remove
 
 logger = logging.getLogger("looping")
 
@@ -754,19 +754,8 @@ def spec_for(class_name: str, property_name: str) -> Optional[PropertySpec]:
 
 
 def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; everything else → ``str()``.
-
-    Mirrors ``DevicesComponent._coerce_str`` so behaviour is identical
-    across the two v3 components. Kept module-private to discourage
-    import sprawl — string coercion is a property of the wire, not of
-    any one component.
-    """
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+    """``coerce_str``, keeping this component's ``None`` → ``"None"``."""
+    return coerce_str(x, none="None")
 
 
 def _walk_listener_target(device, listener_path: str):
@@ -1842,12 +1831,7 @@ class PropertyComponent:
         """
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning(
-                "PropertyComponent: emit %s failed: %s", address, e,
-            )
+        safe_emit(self._emit, address, payload, "PropertyComponent")
 
     def _emit_error(
         self,

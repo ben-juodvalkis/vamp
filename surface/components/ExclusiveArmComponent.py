@@ -61,14 +61,15 @@ kind and swallow — arm enforcement is best-effort.
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
+from ._common import LOM_ERRORS
 from .LOMListeners import _is_stale_handle_error
 
 logger = logging.getLogger("looping")
 
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 class ExclusiveArmComponent:

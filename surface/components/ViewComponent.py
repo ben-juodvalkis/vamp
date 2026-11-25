@@ -20,13 +20,15 @@ component because no UI surface needs to react to view focus today.
 from __future__ import annotations
 
 import logging
-from typing import Callable, Tuple
+from typing import Callable
+
+from ._common import coerce_str, LOM_ERRORS
 
 logger = logging.getLogger("looping")
 
 
 # Tuple of exceptions every LOM touch must catch.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum) -----------------------------------------
@@ -54,16 +56,7 @@ _VALID_VIEWS = frozenset((
 ))
 
 
-def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; ``None`` → ``""``."""
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 class ViewComponent:

@@ -96,6 +96,7 @@ except Exception:  # pragma: no cover
 # *writes* them; this one only reads them back onto the T record.
 # The pad-chain grammar (issue #491, protocol 3.8.0): a pad-scoped bundle
 # resolves its pad here and composes its records' paths the same way.
+from ._common import LOM_ERRORS
 from .drum_vm_functions import REASON_PAD_CHAIN, _is_instrument
 from .path_resolver import (
     ResolveStatus,
@@ -186,7 +187,7 @@ _SLOT_STATE_RECORDING = 3
 # [CLAUDE.md] merge-gate rule (9). Used by the S/C walk so a half-
 # torn-down slot during structural change degrades to state=0
 # instead of aborting the chunk.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # How many scopes ``_ChecksumMemo`` retains. Scope keys are ``None``

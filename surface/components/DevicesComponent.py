@@ -59,6 +59,7 @@ try:
 except ImportError:  # pytest imports these flat — see osc_transport.py
     from V3StateFullComponent import extract_etag
 
+from ._common import LOM_ERRORS
 from .LOMListeners import _safe_int_id
 from .path_resolver import ResolveStatus, resolve_device, resolve_param
 
@@ -74,7 +75,7 @@ V3_DEVICE_PARAMS_SET_ADDRESS = "/looping/v3/device/params/set"
 # is not written: the preset already has it.
 DEVICE_PARAMS_SAME_FRACTION = 1e-6
 
-_LOM_ERRORS = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 V3_STATE_RESYNC_ADDRESS = "/looping/v3/state/resync"
 V3_ERROR_ADDRESS = "/looping/v3/error"
 

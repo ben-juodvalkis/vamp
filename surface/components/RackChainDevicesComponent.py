@@ -53,8 +53,9 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
+from ._common import LOM_ERRORS, safe_emit, WarnOnce
 from .path_resolver import (
     compose_chain_device_path,
     compose_param_path_under,
@@ -98,7 +99,7 @@ MAX_CHAIN_PARAM_LISTENERS = 512
 CHAIN_DEVICES_BYTES_SOFT_CAP = 8000
 
 _CHAIN_FIELD_RE = re.compile(r"^chain\.(0|[1-9][0-9]{0,2})\.(mute|solo|volume)$")
-_LOM_ERRORS = (RuntimeError, AttributeError, TypeError, ValueError)
+_LOM_ERRORS = LOM_ERRORS + (ValueError,)
 
 
 def parse_chain_field(property_name) -> Optional[Tuple[int, str]]:
@@ -367,7 +368,7 @@ class RackChainDevicesComponent:
         # (Show Devices, the selected chain) a client is following.
         self._show_watch: Dict[Tuple[str, str], Tuple[object, List[Tuple[object, str]], Callable[[], None]]] = {}
         self._disconnected = False
-        self._warned: Set[Tuple[str, str]] = set()
+        self._warned = WarnOnce("RackChainDevicesComponent")
         logger.info(
             "RackChainDevicesComponent: ready (row=%s, writes=chain.<i>.mute|solo, provider=%s)",
             CHAIN_DEVICES_PROPERTY, PROVIDER_NAME,
@@ -676,17 +677,10 @@ class RackChainDevicesComponent:
     def _safe_emit(self, address: str, payload: tuple) -> None:
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning("RackChainDevicesComponent: emit %s failed: %s", address, e)
+        safe_emit(self._emit, address, payload, "RackChainDevicesComponent")
 
     def _warn_once(self, device_path: str, key: str, message: str) -> None:
-        k = (device_path, key)
-        if k in self._warned:
-            return
-        self._warned.add(k)
-        logger.warning("RackChainDevicesComponent: %s: %s", device_path, message)
+        self._warned(device_path, key, message)
 
 
 __all__ = [

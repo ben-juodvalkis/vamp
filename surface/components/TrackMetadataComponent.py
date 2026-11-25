@@ -100,6 +100,7 @@ import math
 from collections.abc import Mapping
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from ._common import coerce_str, LOM_ERRORS, safe_remove, safe_emit
 from .drum_vm_functions import DEVICE_TYPE_INSTRUMENT, device_type
 from .path_resolver import ResolveStatus, resolve_track
 
@@ -109,7 +110,7 @@ logger = logging.getLogger("looping")
 # LOM error tuple — matches ClipsComponent / ScenesComponent per
 # CLAUDE.md merge-gate rule (9): ``Boost.Python.ArgumentError`` is a
 # ``TypeError`` subclass raised when a C++ handle is invalidated.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum; renames fail at import time) ------------
@@ -298,16 +299,8 @@ _MIXER_ATTRS = frozenset({_ATTR_VOLUME})
 
 
 def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; everything else → ``str()``.
-
-    Mirrors PropertyComponent._coerce_str.
-    """
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+    """``coerce_str``, keeping this component's ``None`` → ``"None"``."""
+    return coerce_str(x, none="None")
 
 
 def _is_regular_track_path(path: str) -> bool:
@@ -634,21 +627,10 @@ class TrackMetadataComponent:
         side already did it. Logged at DEBUG so a delete-heavy session
         doesn't flood Log.txt.
         """
-        remove = getattr(target, remove_method_name, None)
-        if not callable(remove):
-            return
-        try:
-            remove(cb)
-        except _LOM_ERRORS as e:
-            logger.debug(
-                "TrackMetadataComponent: %s on %s raised: %s",
-                remove_method_name, path, e,
-            )
-        except Exception as e:
-            logger.debug(
-                "TrackMetadataComponent: %s on %s raised: %s",
-                remove_method_name, path, e,
-            )
+        safe_remove(
+            target, remove_method_name, cb,
+            "TrackMetadataComponent %s" % path, other_level=logging.DEBUG,
+        )
 
     # --- listener attach / detach -----------------------------------------
 
@@ -1608,12 +1590,7 @@ class TrackMetadataComponent:
         """
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning(
-                "TrackMetadataComponent: emit %s failed: %s", address, e,
-            )
+        safe_emit(self._emit, address, payload, "TrackMetadataComponent")
 
     def _emit_error(
         self,

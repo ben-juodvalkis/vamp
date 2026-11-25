@@ -42,6 +42,7 @@ import json
 import logging
 from typing import Callable, Optional, Tuple
 
+from ._common import coerce_str
 from . import path_resolver
 from .drum_vm_functions import MEMBERS_KEY, PITCH_MAX, PITCH_MIN, PROPERTY_PREFIX
 from .drum_vm_resolve import find_track_drum_rack
@@ -63,12 +64,7 @@ RESULT_NO_TRACK = "no-track"
 PITCH_FUNCTION = "pitch"
 
 
-def _coerce_str(x) -> str:
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 def _parse_int(raw) -> Optional[int]:

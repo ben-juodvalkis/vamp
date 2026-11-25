@@ -17,14 +17,16 @@ logger = logging.getLogger("looping")
 LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 
 
-def coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``: bytes → utf-8, ``None`` → ``""``.
+def coerce_str(x, none: str = "") -> str:
+    """Coerce an OSC arg to ``str``: bytes → utf-8, ``None`` → ``none``.
 
     ``None`` shows up when the OSC encoder collapses an empty string, and
-    reads as ``""`` so an empty-path check stays reachable.
+    reads as ``""`` so an empty-path check stays reachable. A component
+    whose copy used to ``str()`` it (``"None"``) passes ``none="None"``
+    to keep that behavior.
     """
     if x is None:
-        return ""
+        return none
     if isinstance(x, bytes):
         try:
             return x.decode("utf-8")
@@ -75,3 +77,39 @@ def safe_remove(target, method_name: str, cb, ctx: str,
             logger.log(other_level, "%s: %s failed on %r: %s", ctx, method_name, target, e)
         return False
     return True
+
+
+def safe_emit(emit, address: str, payload, ctx: str) -> None:
+    """``emit(address, payload)``; a raise is logged as a warning, never
+    propagated (a closed transport in a teardown race, an encode error).
+    The caller keeps its own ``_disconnected`` check."""
+    try:
+        emit(address, payload)
+    except Exception as e:
+        logger.warning("%s: emit %s failed: %s", ctx, address, e)
+
+
+class WarnOnce:
+    """Log a warning once per ``(scope, key)``: ``warned(scope, key, msg)``.
+
+    For a LOM read that can fail on every listener fire, so a broken
+    object names itself once instead of flooding Log.txt. ``(scope, key)
+    in warned`` and ``clear()`` behave as on the set it replaces.
+    """
+
+    def __init__(self, ctx: str):
+        self._ctx = ctx
+        self._seen: set = set()
+
+    def __call__(self, scope: str, key: str, message: str) -> None:
+        k = (scope, key)
+        if k in self._seen:
+            return
+        self._seen.add(k)
+        logger.warning("%s: %s: %s", self._ctx, scope, message)
+
+    def __contains__(self, k) -> bool:
+        return k in self._seen
+
+    def clear(self) -> None:
+        self._seen.clear()
