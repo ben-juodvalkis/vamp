@@ -100,12 +100,11 @@
     type ChainPlace,
     clampChainIndex,
     moved,
-    planReorder,
     liveChainIndex,
-    REORDER_IDLE,
-    sameDevices,
-    type ReorderState
+    sameDevices
   } from '$lib/utils/chainDrop';
+  import { ChainReorder } from './chain/useChainReorder.svelte';
+  import { useKeyedSubscriptions } from './chain/useKeyedSubscriptions.svelte';
   import { onDestroy, tick, untrack } from 'svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
@@ -449,11 +448,8 @@
    * Reordering (2026-10-26). Three layers, each changing only as often as
    * it must:
    *
-   * - `reorder` — drops Live has not shown yet (`utils/chainDrop`'s
-   *   `planReorder`): the order held on screen, and the one move on the
-   *   wire. A move is sent against the paths Live last reported, and the
-   *   next waits until Live shows the last, so two quick drops never send
-   *   a path the first has shifted.
+   * - `reorder` — drops Live has not shown yet (`chain/useChainReorder`):
+   *   the order held on screen, and the one move on the wire.
    * - `drag` — the drag in flight: the order it started from and where it
    *   would land. It changes when the landing changes, not per finger
    *   frame.
@@ -470,7 +466,13 @@
   const GRID_GAP = 8;
 
   let chainEl = $state<HTMLElement | null>(null);
-  let reorder = $state<ReorderState>(REORDER_IDLE);
+  const reorder = new ChainReorder(
+    () => cells,
+    // `to` is a position in the chain as drawn; Live moves by its own index.
+    (path, to, drawnCells) => moveDevice(path, liveChainIndex(drawnCells, to)),
+    MOVE_TIMEOUT_MS
+  );
+  onDestroy(() => reorder.destroy());
 
   type Drag = {
     key: string;
@@ -498,22 +500,6 @@
   /** The dragged cell's own node. */
   let dragNode: HTMLElement | null = null;
 
-  // Drops on the wire follow Live: each report lands the move in flight
-  // (or not), and the next goes out.
-  $effect(() => {
-    const state = reorder;
-    if (!state.desired) return;
-    const now = Date.now();
-    const { state: next, send } = planReorder(state, cells, now, MOVE_TIMEOUT_MS);
-    // `send.to` is a position in the chain as drawn; Live moves by its own index.
-    if (send) void moveDevice(send.path, liveChainIndex(cells, send.to)).catch(() => (reorder = REORDER_IDLE));
-    if (next !== state) reorder = next;
-    if (!next.inflight) return;
-    // Wake when the move in flight runs out, if Live never shows it.
-    const timer = setTimeout(() => (reorder = { ...reorder }), Math.max(0, next.inflight.until - now));
-    return () => clearTimeout(timer);
-  });
-
   // Another track or pad: nothing in flight here means anything there.
   const scopeKey = $derived(`${trackPath}|${padScope?.padPath ?? ''}`);
   let lastScope = '';
@@ -521,7 +507,7 @@
     if (scopeKey === lastScope) return;
     lastScope = scopeKey;
     untrack(() => {
-      reorder = REORDER_IDLE;
+      reorder.reset();
       drag = null;
     });
   });
@@ -532,7 +518,7 @@
   });
 
   /** The cells as Live will have them once the drops land. */
-  const settled = $derived((reorder.desired && arrange(cells, reorder.desired)) || cells);
+  const settled = $derived((reorder.state.desired && arrange(cells, reorder.state.desired)) || cells);
 
   /** The cells in the order to draw them: the drag's preview, else `settled`. */
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
@@ -673,51 +659,18 @@
   const openRacks = $derived(
     drawn.filter((c) => c.foldable && rackFold.isOpen(c.path)).map((c) => c.path)
   );
-  const rackRows = new Map<string, () => void>();
-  // Every rack drawn follows Live's Show Devices toggle, open or not, so a
-  // rack unfolded in Live unfolds here (the fold mirrors it both ways).
-  const foldRows = new Map<string, () => void>();
   const drawnRacks = $derived(drawn.filter((c) => c.foldable).map((c) => c.path));
-  $effect(() => {
-    const want = new Set(drawnRacks);
-    untrack(() => {
-      for (const [path, release] of [...foldRows]) {
-        if (!want.has(path)) {
-          release();
-          foldRows.delete(path);
-        }
-      }
-      for (const path of want) {
-        if (foldRows.has(path)) continue;
-        // …and Live's visible macro count, which says how many knobs its face draws.
-        const releases = [SHOW_DEVICES, VISIBLE_MACROS].map((row) => selectedTrackStore.subscribeProperty(path, row));
-        foldRows.set(path, () => releases.forEach((release) => release()));
-      }
-    });
-  });
-  $effect(() => {
-    const want = new Set(openRacks);
-    untrack(() => {
-      for (const [path, release] of [...rackRows]) {
-        if (!want.has(path)) {
-          release();
-          rackRows.delete(path);
-        }
-      }
-      for (const path of want) {
-        if (rackRows.has(path)) continue;
-        // An open rack's chains, and which of them Live shows (the chosen chain).
-        const releases = [CHAIN_DEVICES, SELECTED_CHAIN].map((row) => selectedTrackStore.subscribeProperty(path, row));
-        rackRows.set(path, () => releases.forEach((release) => release()));
-      }
-    });
-  });
-  onDestroy(() => {
-    for (const release of rackRows.values()) release();
-    rackRows.clear();
-    for (const release of foldRows.values()) release();
-    foldRows.clear();
-  });
+  /** Subscribe `rows` of the device at `path`; the release lets go of all of them. */
+  function holdRows(path: string, rows: string[]): () => void {
+    const releases = rows.map((row) => selectedTrackStore.subscribeProperty(path, row));
+    return () => releases.forEach((release) => release());
+  }
+  // Every rack drawn follows Live's Show Devices toggle, open or not, so a
+  // rack unfolded in Live unfolds here (the fold mirrors it both ways), and
+  // Live's visible macro count, which says how many knobs its face draws.
+  useKeyedSubscriptions(() => drawnRacks, (path) => holdRows(path, [SHOW_DEVICES, VISIBLE_MACROS]));
+  // An open rack's chains, and which of them Live shows (the chosen chain).
+  useKeyedSubscriptions(() => openRacks, (path) => holdRows(path, [CHAIN_DEVICES, SELECTED_CHAIN]));
 
   /*
    * The chain has the section's lower two thirds, under the palette bar
@@ -1034,7 +987,7 @@
       }
       return;
     } else if (d && info.reason === 'up' && d.to !== d.from) {
-      reorder = { desired: moved(d.base, d.from, d.to), inflight: reorder.inflight };
+      reorder.drop(moved(d.base, d.from, d.to));
     }
     if (node) settle(node);
   }
