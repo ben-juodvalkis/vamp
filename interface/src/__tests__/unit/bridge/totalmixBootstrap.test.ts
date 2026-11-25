@@ -23,10 +23,15 @@ import { createRequire } from 'node:module';
 import constants from '$config/constants.json';
 import {
 	bootstrapFromLegacy,
-	parseDbString,
+	parseDbString as parseDbStringWith,
 	legacyReads
 } from '../../../../bridge/handlers/totalmixBootstrap.js';
-import { createTotalMixLink } from '../../../../bridge/handlers/totalmixLink.js';
+import { createTotalMixLink as createLinkWith } from '../../../../bridge/handlers/totalmixLink.js';
+
+// The modules read no config: the bridge hands them its blocks, and so do
+// these tests, the tracked file's.
+const parseDbString = (text: unknown) => parseDbStringWith(text, constants.osc.totalmix.silenceDb);
+const createTotalMixLink = () => createLinkWith({ config: constants.osc.totalmix });
 
 // The bridge's own OSC codec, required as the bridge requires it: `osc` ships
 // no type declarations, and the fake mixer below only needs its two calls.
@@ -37,7 +42,7 @@ const osc = createRequire(import.meta.url)('osc') as {
 
 // constants.json's own reads. The module no longer computes these when it is
 // required (a bridge with TotalMix switched off carries no such block).
-const READS = legacyReads();
+const READS = legacyReads(constants.osc.totalmixLegacy);
 
 const SILENCE_DB = -300;
 

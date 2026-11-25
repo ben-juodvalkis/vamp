@@ -451,7 +451,15 @@ const { httpServer, wss } = createWebSocketServer(
     // Thread the launch mode through so the WS server can announce it to
     // each client on connect (see /bridge/server_mode). Merged, not mutated,
     // so the shared constants object stays untouched.
-    { ...OSC_CONFIG.webSocket, serverMode: SERVER_MODE, httpRoutes: { [PAIRING_PATH]: pairingRelay } },
+    // The auth block and the routing scopes come from the config loaded
+    // above, once; the server reads no config file of its own.
+    {
+        ...OSC_CONFIG.webSocket,
+        serverMode: SERVER_MODE,
+        httpRoutes: { [PAIRING_PATH]: pairingRelay },
+        auth: constants.osc.webSocket.auth,
+        backendScope: constants.osc.backendScope
+    },
     // `pythonSurface` here is the link, so a UI write takes the stream
     // whenever it is up (ADR-489).
     outboundPorts,

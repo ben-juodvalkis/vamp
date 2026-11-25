@@ -18,7 +18,20 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createTotalMixLink, clampDb, loadRememberedLevels, saveRememberedLevels } from '../../../../bridge/handlers/totalmixLink.js';
+import constants from '$config/constants.json';
+import {
+	createTotalMixLink as createLinkWith,
+	clampDb as clampDbWith,
+	loadRememberedLevels,
+	saveRememberedLevels
+} from '../../../../bridge/handlers/totalmixLink.js';
+
+// The module reads no config: the bridge hands it its `osc.totalmix` block,
+// and these tests hand it the tracked file's unless a test brings its own.
+const TOTALMIX = constants.osc.totalmix;
+const createTotalMixLink = (deps: Record<string, unknown> = {}) => createLinkWith({ config: TOTALMIX, ...deps });
+const clampDb = (db: unknown) =>
+	clampDbWith(db, { minDb: TOTALMIX.minDb, maxDb: TOTALMIX.maxDb, silenceDb: TOTALMIX.silenceDb });
 
 const MIN_DB = -65;
 const SILENCE_DB = -300;
