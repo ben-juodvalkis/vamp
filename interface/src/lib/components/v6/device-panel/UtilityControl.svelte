@@ -2,7 +2,6 @@
   import { controlFor, resolveParam, type ParamRef, type SliderControl } from './deviceControls';
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import { slotRegistry } from '$lib/stores/v6/slotRegistry.svelte';
   import { session } from '$lib/stores/session.svelte';
   import { v3Store } from '$lib/stores/v3/normalized.svelte';
   import { meterStore } from '$lib/stores/v3/meters.svelte';
