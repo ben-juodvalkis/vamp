@@ -182,7 +182,7 @@ export const trackHoldScope = {
 		const tracks = heldTracks();
 		if (tracks.length < 2 || prev === undefined) return [];
 		if (trackOfDevicePath(device.devicePath) !== tracks[0]) return [];
-		const primaryParam = v3Store.paramByPath.get(`${device.devicePath}/params/${paramIndex}`);
+		const primaryParam = v3Store.param(`${device.devicePath}/params/${paramIndex}`);
 		const span = primaryParam ? primaryParam.max - primaryParam.min : 0;
 		if (!(span > 0)) return [];
 		const fraction = (next - prev) / span;
@@ -191,7 +191,7 @@ export const trackHoldScope = {
 			const twin = twinOn(trackPath, device);
 			if (!twin) continue;
 			const path = `${twin.devicePath}/params/${paramIndex}`;
-			const param = v3Store.paramByPath.get(path);
+			const param = v3Store.param(path);
 			if (!param) continue;
 			const base = followerLocal.get(path) ?? selectedTrackStore.paramValueArmed(path) ?? param.value;
 			const value = Math.min(param.max, Math.max(param.min, base + fraction * (param.max - param.min)));

@@ -17,6 +17,7 @@
  */
 
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
+import { regularTrackIndexOf } from '$lib/utils/livePaths';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { isPatternRackMacroName } from '$lib/utils/macroLayoutUtils';
 import {
@@ -85,9 +86,8 @@ function trackTypeFromV3(trackIndex: number): 'midi' | 'audio' | null {
 function* regularTrackIndices(): IterableIterator<number> {
 	const indices: number[] = [];
 	for (const trackPath of v3Store.tracks.keys()) {
-		if (!trackPath.startsWith('tracks/')) continue;
-		const idx = parseInt(trackPath.slice('tracks/'.length), 10);
-		if (!Number.isNaN(idx)) indices.push(idx);
+		const idx = regularTrackIndexOf(trackPath);
+		if (idx !== null) indices.push(idx);
 	}
 	indices.sort((a, b) => a - b);
 	for (const i of indices) yield i;

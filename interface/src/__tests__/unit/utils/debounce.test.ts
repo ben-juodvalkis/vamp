@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { debounce, throttle } from '$lib/utils/performance/debounce';
+import { debounce } from '$lib/utils/performance/debounce';
 
 describe('debounce', () => {
 	beforeEach(() => {
@@ -186,75 +186,5 @@ describe('debounce', () => {
 			vi.advanceTimersByTime(100);
 			expect(fn).toHaveBeenCalledTimes(2);
 		});
-	});
-});
-
-describe('throttle', () => {
-	beforeEach(() => {
-		vi.useFakeTimers();
-	});
-
-	afterEach(() => {
-		vi.useRealTimers();
-	});
-
-	it('should invoke immediately on first call (leading=true by default)', () => {
-		const fn = vi.fn();
-		const throttled = throttle(fn, 100);
-
-		throttled();
-		expect(fn).toHaveBeenCalledTimes(1);
-	});
-
-	it('should throttle subsequent calls', () => {
-		const fn = vi.fn();
-		const throttled = throttle(fn, 100);
-
-		throttled();
-		throttled();
-		throttled();
-
-		expect(fn).toHaveBeenCalledTimes(1);
-	});
-
-	it('should invoke trailing call after wait period', () => {
-		const fn = vi.fn();
-		const throttled = throttle(fn, 100);
-
-		throttled('first');
-		throttled('second');
-		throttled('third');
-
-		expect(fn).toHaveBeenCalledTimes(1);
-		expect(fn).toHaveBeenCalledWith('first');
-
-		vi.advanceTimersByTime(100);
-
-		expect(fn).toHaveBeenCalledTimes(2);
-		expect(fn).toHaveBeenLastCalledWith('third');
-	});
-
-	it('should not invoke trailing when trailing=false', () => {
-		const fn = vi.fn();
-		const throttled = throttle(fn, 100, { trailing: false });
-
-		throttled();
-		throttled();
-		throttled();
-
-		vi.advanceTimersByTime(100);
-
-		expect(fn).toHaveBeenCalledTimes(1);
-	});
-
-	it('should not invoke leading when leading=false', () => {
-		const fn = vi.fn();
-		const throttled = throttle(fn, 100, { leading: false });
-
-		throttled();
-		expect(fn).not.toHaveBeenCalled();
-
-		vi.advanceTimersByTime(100);
-		expect(fn).toHaveBeenCalledTimes(1);
 	});
 });

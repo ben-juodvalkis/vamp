@@ -32,6 +32,7 @@
  */
 
 import { logger } from '$lib/utils/logger';
+import { nextRequestId } from '$lib/api/connection/requestId';
 import { toUint8Array } from './clipNotesService';
 
 export interface RichNote {
@@ -103,7 +104,6 @@ const pendingAdd = new Map<string, PendingAdd>();
 
 let _getSender: RichGetSender | null = null;
 let _editSender: RichEditSender | null = null;
-let _seq = 0;
 // clipPath → timestamp of last local write (for own-write echo suppression).
 const lastLocalWrite = new Map<string, number>();
 
@@ -112,11 +112,6 @@ export function setRichGetSender(sender: RichGetSender): void {
 }
 export function setRichEditSender(sender: RichEditSender): void {
 	_editSender = sender;
-}
-
-function nextRequestId(prefix: string): string {
-	_seq = (_seq + 1) & 0x7fffffff;
-	return `${prefix}-${Date.now().toString(36)}-${_seq}`;
 }
 
 // --- M3 read --------------------------------------------------------------
@@ -491,7 +486,6 @@ export function __resetClipRichNotesServiceForTests(): void {
 	pendingAdd.clear();
 	inflightByClipPath.clear();
 	lastLocalWrite.clear();
-	_seq = 0;
 }
 
 /** Re-export for handler wiring symmetry with clipNotesService. */

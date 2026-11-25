@@ -1,30 +1,19 @@
 /**
- * V6 Session Store - AbletonOSC Integration
- * Type-safe session state management using validated domain updates
+ * Session Store — the song-level state the v3 surface reports (transport,
+ * tempo, signature, loop, scale, launch quantization, session settings)
+ * and the UI's selected track, scene and focused clip.
+ *
+ * The v3 handlers (`api/handlers/v3Session.ts`, `v3SelectedTrack.ts`,
+ * `v3SelectedScene.ts`, `v3Clip.ts`) call the `handle*` setters below
+ * directly. The UI's own writes paint first through the `*Optimistically`
+ * methods; a pending latch per value drops the one stale echo a rapid
+ * A→B tap can produce.
  */
 
-import type { LiveSong, TimeSignature } from '$lib/domain/live-objects.js';
-import type {
-  DomainUpdate,
-  TempoUpdate,
-  TransportUpdate,
-  SessionRecordUpdate,
-  TimeSignatureUpdate,
-  CurrentTimeUpdate,
-  LoopUpdate,
-  MetronomeUpdate,
-  GrooveUpdate,
-  TrackSelectionUpdate,
-  SceneSelectionUpdate,
-  FocusedViewUpdate
-} from '$lib/domain/updates.js';
-import {
-  isTempoUpdate,
-  isTransportUpdate,
-  createErrorUpdate
-} from '$lib/domain/updates.js';
+import type { TimeSignature } from '$lib/domain/live-objects.js';
 import { logger } from '$lib/utils/logger';
-import { ROOT_NOTES, SCALE_NAMES, getRootNoteName, getScaleName, getScaleIndex } from '$lib/data/scales';
+import { parseClipPath, regularTrackIndexOf } from '$lib/utils/livePaths';
+import { getRootNoteName, getScaleName, getScaleIndex } from '$lib/data/scales';
 import {
   DEFAULT_LAUNCH_QUANTIZATION,
   isValidLaunchQuantization
@@ -34,12 +23,10 @@ import { clipPropertiesStore } from '$lib/stores/v6/clipPropertiesStore.svelte';
 import { clipGrooveStore } from '$lib/stores/v6/clipGrooveStore.svelte';
 import { focusedNotesStore } from '$lib/stores/v6/focusedNotesStore.svelte';
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
-import { createErrorGrouper } from './sessionErrorGrouper';
 
 // Session state using Svelte 5 runes
 let _tempo = $state(120.0);
 let _isPlaying = $state(false);
-let _isRecording = $state(false);
 let _currentTime = $state(0.0);
 let _loopStart = $state(0.0);
 let _loopEnd = $state(4.0);
@@ -54,8 +41,6 @@ let _selectedTrackIndex = $state(0);
 let _pendingTrackIndex: number | null = null;
 let _selectedSceneIndex = $state(0);
 let _sessionRecord = $state(false);
-let _arrangementOverdub = $state(false);
-let _backToArranger = $state(false);
 let _metronome = $state(false);
 let _pendingMetronome: boolean | null = null;
 let _pendingIsPlaying: boolean | null = null;
@@ -63,31 +48,19 @@ let _pendingIsPlaying: boolean | null = null;
 // confirmations; echoes that don't match during a drag are Ableton's
 // clamped/rounded value and should be accepted (clear pending on any echo).
 let _pendingTempo: number | null = null;
-let _songLength = $state(0.0);
 let _groove = $state(0.0);
 
-// ROW 6.9 (2026-04-21): track list derived from v3Store.tracks — the
+// ROW 6.9 (2026-04-21): track count derived from v3Store.tracks — the
 // state/full T-records are the single source of truth. Regular tracks
 // are keyed `tracks/<N>`; master and returns/<N> are excluded because
-// `_trackCount` historically mirrored LOM's `live_set.tracks` count.
-const TRACK_PATH_RE = /^tracks\/(\d+)$/;
+// it mirrors LOM's `live_set.tracks` count.
 const _trackCount = $derived.by(() => {
   let count = 0;
   for (const key of v3Store.tracks.keys()) {
-    if (TRACK_PATH_RE.test(key)) count++;
+    if (regularTrackIndexOf(key) !== null) count++;
   }
   return count;
 });
-const _trackIndices = $derived.by(() => {
-  const indices: number[] = [];
-  for (const key of v3Store.tracks.keys()) {
-    const m = TRACK_PATH_RE.exec(key);
-    if (m) indices.push(Number(m[1]));
-  }
-  indices.sort((a, b) => a - b);
-  return indices;
-});
-
 // PR-5e1: v3 focused clipPath authored by the Python Control Surface.
 // Empty string on the wire means "no focused clip" — normalized to null here.
 // Surviving clearSession (owned by v3, not legacy v6 track list).
@@ -97,9 +70,6 @@ let _focusedClipPath = $state<string | null>(null);
 // Parse once on change rather than in the getter, both for perf and
 // to prevent reference inequality causing infinite $effect loops.
 let _cachedFocusedClipIndices = $state<{ track: number; scene: number } | null>(null);
-
-// Focused view state - tracks whether Session or Arranger view is focused
-let _focusedDocumentView = $state<'Session' | 'Arranger' | null>(null);
 
 // Scale/Root Note state - from Max4Live live_set.root_note and live_set.scale_name
 let _rootNote = $state(0); // 0-11 (C, C#, D, D#, E, F, F#, G, G#, A, A#, B)
@@ -152,31 +122,41 @@ let _keyFollowEnabled = $state(true);
 // — the one value with audibly different launch behavior).
 let _clipTriggerQuantization = $state(DEFAULT_LAUNCH_QUANTIZATION);
 
-// Groove state for selected clip (from liveAPI-v6.js)
-let _selectedClipHasGroove = $state(false);
-let _selectedClipGrooveBase = $state(1); // 0=1/8, 1=1/8T, 2=1/16
-let _selectedClipGrooveTiming = $state(0);
-let _selectedClipGrooveQuantization = $state(0);
-let _selectedClipGrooveRandom = $state(0);
+/**
+ * Track-change side effects (the FX grid's reset, dropping param arms, the
+ * `track-changed` window event) belong to whoever owns them; they register
+ * here and run once per real change of the selected track, whether the UI
+ * selected it or Live did. A stale echo the pending latch drops never
+ * reaches them.
+ */
+type SelectedTrackListener = (trackIndex: number, previous: number) => void;
+const _selectedTrackListeners = new Set<SelectedTrackListener>();
 
-// Validation statistics for monitoring
-let _updateCount = $state(0);
-let _errorCount = $state(0);
-let _lastUpdateTime = $state(0);
-let _connectionStatus = $state<'connected' | 'disconnected' | 'error'>('disconnected');
+export function onSelectedTrackChange(listener: SelectedTrackListener): () => void {
+  _selectedTrackListeners.add(listener);
+  return () => _selectedTrackListeners.delete(listener);
+}
 
-// Error grouping to prevent spam (delegated to sessionErrorGrouper).
-const _errorGrouper = createErrorGrouper();
+function setSelectedTrack(trackIndex: number): void {
+  const previous = _selectedTrackIndex;
+  if (previous === trackIndex) return;
+  _selectedTrackIndex = trackIndex;
+  for (const listener of _selectedTrackListeners) {
+    try {
+      listener(trackIndex, previous);
+    } catch (error) {
+      logger.error('Selected-track listener failed', { error, trackIndex, previous });
+    }
+  }
+}
 
 /**
- * V6 Session Store Interface
- * Reactive getters with Svelte 5 integration
+ * The session store's reactive surface.
  */
 export const session = {
   // Core song properties
   get tempo() { return _tempo; },
   get isPlaying() { return _isPlaying; },
-  get isRecording() { return _isRecording; },
   get currentTime() { return _currentTime; },
   get loopStart() { return _loopStart; },
   get loopEnd() { return _loopEnd; },
@@ -185,19 +165,11 @@ export const session = {
   get selectedTrackIndex() { return _selectedTrackIndex; },
   get selectedSceneIndex() { return _selectedSceneIndex; },
   get sessionRecord() { return _sessionRecord; },
-  get arrangementOverdub() { return _arrangementOverdub; },
-  get backToArranger() { return _backToArranger; },
   get metronome() { return _metronome; },
-  get songLength() { return _songLength; },
   get groove() { return _groove; },
 
   // Track list state
-  get trackCount() { return _trackCount; },
-  get numTracks() { return _trackCount; }, // Alias for UI components
-  get trackIndices() { return _trackIndices; },
-
-  // Focused view state - Session or Arranger
-  get focusedDocumentView() { return _focusedDocumentView; },
+  get numTracks() { return _trackCount; },
 
   // PR-5e1: v3 focused clipPath (positional ref like `tracks/0/slots/2/clip`).
   // Authoritative source for clip property addressing in v3 UI.
@@ -223,9 +195,6 @@ export const session = {
   get scaleDisplayName(): string {
     return getScaleName(_scaleName);
   },
-  get scaleDisplayString(): string {
-    return `${this.rootNoteName} ${this.scaleDisplayName}`;
-  },
   get scaleMode() { return _scaleMode; },
   /** ADR-446: the last key detection, or null before the first. */
   get scaleDetected(): ScaleDetected | null { return _scaleDetected; },
@@ -237,92 +206,23 @@ export const session = {
   get keyFollowEnabled() { return _keyFollowEnabled; },
   get clipTriggerQuantization() { return _clipTriggerQuantization; },
 
-  // Groove state
-  get selectedClipHasGroove() { return _selectedClipHasGroove; },
-  get selectedClipGrooveBase() { return _selectedClipGrooveBase; },
-  get selectedClipGrooveTiming() { return _selectedClipGrooveTiming; },
-  get selectedClipGrooveQuantization() { return _selectedClipGrooveQuantization; },
-  get selectedClipGrooveRandom() { return _selectedClipGrooveRandom; },
-
-  // Whether a clip is currently selected (track with valid scene selection)
-  get hasSelectedClip(): boolean {
-    return _selectedTrackIndex >= 0 && _selectedSceneIndex >= 0;
-  },
-
   // Computed properties
   get timeSignatureString(): string {
     return `${_timeSignature.numerator}/${_timeSignature.denominator}`;
   },
-  get tempoString(): string {
-    return `${Math.round(_tempo)} BPM`;
-  },
-  /**
-   * Song position as Live's own transport readout: `bar.beat.sixteenth`,
-   * all 1-based.
-   *
-   * The old form was `${bars}.${beats.toFixed(1)}` — which rendered as
-   * three numbers by accident (`2.3.0`) where the last was a TENTH of a
-   * beat dressed as Live's sixteenth. Fed by
-   * `/looping/v3/session/song_time` (10 Hz off the surface's
-   * `current_song_time` listener); before that channel existed nothing
-   * moved this at all and the header showed a frozen `1.1.0`.
-   */
-  get currentTimeString(): string {
-    const num = _timeSignature.numerator || 4;
-    const t = Math.max(0, _currentTime);
-    const bar = Math.floor(t / num) + 1;
-    const beat = Math.floor(t % num) + 1;
-    const sixteenth = Math.floor((t % 1) * 4) + 1;
-    return `${bar}.${beat}.${sixteenth}`;
-  },
-
-  // Complete LiveSong object
-  get liveSong(): LiveSong {
-    return {
-      tempo: _tempo,
-      isPlaying: _isPlaying,
-      isRecording: _isRecording,
-      currentTime: _currentTime,
-      loopStart: _loopStart,
-      loopEnd: _loopEnd,
-      timeSignature: _timeSignature,
-      selectedTrackIndex: _selectedTrackIndex,
-      selectedSceneIndex: _selectedSceneIndex,
-      sessionRecord: _sessionRecord,
-      arrangementOverdub: _arrangementOverdub,
-      backToArranger: _backToArranger,
-      metronome: _metronome,
-      songLength: _songLength,
-      groove: _groove
-    };
-  },
-
-  // Store statistics
-  get updateCount() { return _updateCount; },
-  get errorCount() { return _errorCount; },
-  get lastUpdateTime() { return _lastUpdateTime; },
-  get connectionStatus() { return _connectionStatus; },
-  get errorRate(): number {
-    return _updateCount > 0 ? (_errorCount / _updateCount) : 0;
-  },
-
-  // Reset error count
-  resetErrorCount() {
-    logger.info('Resetting error count', { previousCount: _errorCount });
-    _errorCount = 0;
-  },
 
   // Optimistically update selected track index before the OSC round-trip
   // completes. Records a pending index so stale echoes from previous taps
-  // are ignored — see _pendingTrackIndex above.
+  // are ignored — see _pendingTrackIndex above. The track-change side
+  // effects run from here, once (`onSelectedTrackChange`).
   selectTrackOptimistically(trackIndex: number) {
     if (_selectedTrackIndex === trackIndex) return;
     logger.debug('Track selection optimistic update', { from: _selectedTrackIndex, to: trackIndex });
-    _selectedTrackIndex = trackIndex;
     _pendingTrackIndex = trackIndex;
     if (trackIndex === -1) {
       centralDisplayStore.setView('system');
     }
+    setSelectedTrack(trackIndex);
   },
 
   // Optimistically move the selected scene before Live echoes it back.
@@ -377,16 +277,6 @@ export const session = {
       return;
     }
     _clipTriggerQuantization = value;
-  },
-
-  // Validation method
-  validateSession(): { valid: boolean; errors: string[] } {
-    return validateSession();
-  },
-
-  // Performance metrics
-  getSessionMetrics() {
-    return getSessionMetrics();
   }
 };
 
@@ -416,271 +306,126 @@ export function requireFocusedClip(opts?: {
   return clipPath;
 }
 
-/**
- * Handle domain updates from AbletonOSC router
- * Type-safe discriminated union handling
- */
-export function handleSessionUpdate(update: DomainUpdate): boolean {
-  try {
-    _updateCount++;
-    _lastUpdateTime = update.timestamp;
-    
-    // Handle session-relevant updates
-    switch (update.type) {
-      case 'tempo':
-        handleTempoUpdate(update);
-        return true;
+// ============================================
+// Setters the v3 handlers call
+// ============================================
 
-      case 'transport':
-        handleTransportUpdate(update);
-        return true;
-
-      case 'session-record':
-        handleSessionRecordUpdate(update);
-        return true;
-
-      case 'time-signature':
-        handleTimeSignatureUpdate(update);
-        return true;
-
-      case 'current-time':
-        handleCurrentTimeUpdate(update);
-        return true;
-
-      case 'loop':
-        handleLoopUpdate(update);
-        return true;
-
-      case 'metronome':
-        handleMetronomeUpdate(update);
-        return true;
-
-      case 'groove':
-        handleGrooveUpdate(update);
-        return true;
-
-      case 'track-selection':
-        handleTrackSelectionUpdate(update);
-        return true;
-
-      case 'scene-selection':
-        handleSceneSelectionUpdate(update);
-        return true;
-
-      case 'focused-view':
-        handleFocusedViewUpdate(update);
-        return true;
-
-      case 'connection':
-        if (update.source === 'pythonSurface') {
-          const previousStatus = _connectionStatus;
-          _connectionStatus = update.status;
-          // Only log connection errors or status changes from connected to disconnected
-          if (update.status === 'error' || (previousStatus === 'connected' && update.status !== 'connected')) {
-            logger.error('Python Surface connection lost', { status: update.status, previousStatus });
-          }
-        }
-        return true;
-
-      case 'error': {
-        _errorCount++;
-
-        const errorType = update.error || 'Unknown error';
-        const grouped = _errorGrouper.recordError(errorType);
-
-        if (grouped.isRepeat) {
-          if (grouped.shouldLogRepeat) {
-            logger.warn('Error repeated', { repeatCount: grouped.repeatCount, errorType });
-          }
-          return false;
-        }
-
-        const errorInfo = {
-          count: _errorCount,
-          error: errorType,
-          message: update.error,
-          failedOperation: (update as any).failedOperation,
-          originalMessage: update.originalMessage,
-          source: update.source,
-          timestamp: new Date(update.timestamp).toLocaleTimeString()
-        };
-
-        if (update.error?.includes('Observer not connected')) {
-          logger.error('Observer Not Connected', {
-            ...errorInfo,
-            action: 'To fix: Restart the AbletonOSC device in Ableton Live',
-            details: 'The observer component is required for listener operations (start_listen/stop_listen)',
-            lastOperation: errorInfo.failedOperation || errorInfo.originalMessage?.address
-          });
-        } else {
-          logger.error('AbletonOSC Error', errorInfo);
-        }
-        return false;
-      }
-
-      default:
-        // Not a session-relevant update
-        return false;
-    }
-  } catch (error) {
-    _errorCount++;
-    logger.error('Failed to handle session update', { error, update });
-    return false;
-  }
-}
-
-// Individual update handlers with validation and logging
-
-function handleTempoUpdate(update: TempoUpdate) {
-  // Always accept the echo — it may carry Ableton's clamped/rounded value.
-  // Just clear the pending flag so we stop suppressing future Ableton-
-  // initiated changes (e.g. tempo automation, tap-tempo from hardware).
+/** `/looping/session/tempo`. Always accepts the echo — it may carry
+ *  Ableton's clamped/rounded value — and clears the pending flag so later
+ *  Live-initiated changes (automation, tap tempo) are not suppressed. */
+export function handleTempoUpdate(bpm: number): void {
   _pendingTempo = null;
   const oldTempo = _tempo;
-  _tempo = update.bpm;
-  logger.debug('Tempo updated', { oldTempo: oldTempo.toFixed(1), newTempo: update.bpm.toFixed(1) });
+  _tempo = bpm;
+  logger.debug('Tempo updated', { oldTempo: oldTempo.toFixed(1), newTempo: bpm.toFixed(1) });
 }
 
-function handleTransportUpdate(update: TransportUpdate) {
-  if (_pendingIsPlaying !== null && update.isPlaying !== _pendingIsPlaying) {
-    logger.debug('Transport echo dropped (stale)', { echo: update.isPlaying, pending: _pendingIsPlaying });
+/** `/looping/v3/session/is_playing`. */
+export function handleTransportUpdate(isPlaying: boolean): void {
+  if (_pendingIsPlaying !== null && isPlaying !== _pendingIsPlaying) {
+    logger.debug('Transport echo dropped (stale)', { echo: isPlaying, pending: _pendingIsPlaying });
     // Clear the latch even though this echo is dropped. The latch exists to
     // swallow the ONE stale echo from a rapid A→B tap; it is not a filter
     // that should persist. Nothing else writes these back to null and there
     // is no timer, so a latch left set here is set forever — and the
     // confirming echo can legitimately never arrive, because the surface
     // emits only on an actual change (a write landing on the value Live is
-    // already on produces no echo at all). One missed echo used to mean
-    // every subsequent Live-initiated change was dropped here until a
-    // reconnect. `_pendingTempo` has always done this correctly.
+    // already on produces no echo at all). `_pendingTempo` has always done
+    // this correctly.
     _pendingIsPlaying = null;
     return;
   }
   _pendingIsPlaying = null;
-  const oldPlaying = _isPlaying;
-  _isPlaying = update.isPlaying;
-  logger.debug('Transport updated', { oldState: oldPlaying ? 'Playing' : 'Stopped', newState: update.isPlaying ? 'Playing' : 'Stopped' });
+  _isPlaying = isPlaying;
+  logger.debug('Transport updated', { state: isPlaying ? 'Playing' : 'Stopped' });
 }
 
-function handleSessionRecordUpdate(update: SessionRecordUpdate) {
-  const oldRecording = _sessionRecord;
-  _sessionRecord = update.isRecording;
-  logger.debug('Session Record updated', { oldState: oldRecording ? 'On' : 'Off', newState: update.isRecording ? 'On' : 'Off' });
+/** `/looping/v3/session/session_record`. */
+export function handleSessionRecordUpdate(enabled: boolean): void {
+  _sessionRecord = enabled;
+  logger.debug('Session Record updated', { state: enabled ? 'On' : 'Off' });
 }
 
-function handleTimeSignatureUpdate(update: TimeSignatureUpdate) {
-  const oldSig = _timeSignature;
-
-  // Simply accept incoming values. AbletonOSC sends numerator and denominator
-  // as separate messages, but each message contains valid values (with parser
-  // defaults for the missing component). We just take what we're given.
-  _timeSignature = {
-    numerator: update.timeSignature.numerator,
-    denominator: update.timeSignature.denominator
-  };
-
-  logger.debug('Time Signature updated', {
-    oldSig: `${oldSig.numerator}/${oldSig.denominator}`,
-    newSig: `${_timeSignature.numerator}/${_timeSignature.denominator}`
-  });
+/** `/looping/v3/session/signature_num` / `signature_den`: the surface sends
+ *  the two halves separately, so a caller passes the half it did not get
+ *  from the store. */
+export function handleTimeSignatureUpdate(numerator: number, denominator: number): void {
+  _timeSignature = { numerator, denominator };
+  logger.debug('Time Signature updated', { signature: `${numerator}/${denominator}` });
 }
 
-function handleCurrentTimeUpdate(update: CurrentTimeUpdate) {
-  _currentTime = update.beats;
-  // Only log occasionally to avoid spam
-  if (Math.floor(update.beats) % 4 === 0 && update.beats % 1 < 0.1) {
-    logger.debug('Position updated', { beats: update.beats.toFixed(1) });
-  }
+/** `/looping/v3/session/song_time`: beats since the arrangement start. */
+export function handleSongTimeUpdate(beats: number): void {
+  _currentTime = beats;
 }
 
-function handleLoopUpdate(update: LoopUpdate) {
-  _isLooping = update.isLooping;
-  _loopStart = update.loopStart;
-  _loopEnd = update.loopEnd;
+/** `/looping/v3/session/loop`, `loop_start`, `loop_length` (the store keeps
+ *  start and end; the caller converts from Live's start and length). */
+export function handleLoopUpdate(isLooping: boolean, loopStart: number, loopEnd: number): void {
+  _isLooping = isLooping;
+  _loopStart = loopStart;
+  _loopEnd = loopEnd;
   logger.debug('Loop updated', {
-    enabled: update.isLooping,
-    loopStart: update.loopStart.toFixed(1),
-    loopEnd: update.loopEnd.toFixed(1)
+    enabled: isLooping,
+    loopStart: loopStart.toFixed(1),
+    loopEnd: loopEnd.toFixed(1)
   });
 }
 
-function handleMetronomeUpdate(update: MetronomeUpdate) {
-  if (_pendingMetronome !== null && update.enabled !== _pendingMetronome) {
-    logger.debug('Metronome echo dropped (stale)', { echo: update.enabled, pending: _pendingMetronome });
-    // Same self-healing clear as the transport latch above.
+/** `/looping/v3/session/metronome`, with the same self-healing latch as
+ *  the transport. */
+export function handleMetronomeUpdate(enabled: boolean): void {
+  if (_pendingMetronome !== null && enabled !== _pendingMetronome) {
+    logger.debug('Metronome echo dropped (stale)', { echo: enabled, pending: _pendingMetronome });
     _pendingMetronome = null;
     return;
   }
   _pendingMetronome = null;
-  const oldMetronome = _metronome;
-  _metronome = update.enabled;
-  logger.debug('Metronome updated', { oldState: oldMetronome ? 'On' : 'Off', newState: update.enabled ? 'On' : 'Off' });
+  _metronome = enabled;
+  logger.debug('Metronome updated', { state: enabled ? 'On' : 'Off' });
 }
 
-function handleGrooveUpdate(update: GrooveUpdate) {
-  const oldGroove = _groove;
-  _groove = update.amount;
-  logger.debug('Groove updated', {
-    oldGroove: `${(oldGroove * 100).toFixed(0)}%`,
-    newGroove: `${(update.amount * 100).toFixed(0)}%`
-  });
+/** `/looping/v3/session/groove_amount`, 0..1. */
+export function handleGrooveUpdate(amount: number): void {
+  _groove = amount;
+  logger.debug('Groove updated', { groove: `${(amount * 100).toFixed(0)}%` });
 }
 
-function handleTrackSelectionUpdate(update: TrackSelectionUpdate) {
-  // If we have an optimistic write in-flight, only apply an echo that
-  // matches the latest pending index. An echo for an earlier tap (stale)
-  // is dropped so rapid A→B sequences don't flash A's highlight.
-  // An Ableton-initiated selection (no pending write) always applies.
-  if (_pendingTrackIndex !== null && update.trackIndex !== _pendingTrackIndex) {
+/**
+ * `/looping/v3/selected_track`: Live's selected track (-1 is master).
+ *
+ * While an optimistic selection is in flight, only the echo matching the
+ * latest pending index applies; an echo for an earlier tap is dropped so a
+ * rapid A→B sequence neither flashes A's highlight nor runs A's
+ * track-change side effects. A Live-initiated selection (nothing pending)
+ * always applies. Arm-follows-selection is the surface's
+ * `ExclusiveArmComponent`, not the UI's.
+ */
+export function handleTrackSelectionUpdate(trackIndex: number): void {
+  if (_pendingTrackIndex !== null && trackIndex !== _pendingTrackIndex) {
     logger.debug('Track selection echo dropped (stale)', {
-      echo: update.trackIndex,
+      echo: trackIndex,
       pending: _pendingTrackIndex
     });
-    // Same self-healing clear as the transport latch above.
+    // Same self-healing clear as the transport latch.
     _pendingTrackIndex = null;
     return;
   }
   _pendingTrackIndex = null;
-
-  const oldTrack = _selectedTrackIndex;
-  _selectedTrackIndex = update.trackIndex;
-  const oldType = oldTrack === -1 ? 'Master' : `Track ${oldTrack}`;
-  const newType = update.trackIndex === -1 ? 'Master' : `Track ${update.trackIndex}`;
-  logger.debug('Track Selection updated', { oldTrack, oldType, newTrack: update.trackIndex, newType });
-
-  // ROW 13a (2026-04-21): the per-track-leave M4L refresh is gone.
-  // `clipStateStore` $derives from v3Store.tracks; `ClipsComponent`
-  // advances generation on clip create/delete, which publishes a
-  // fresh state/full on the next tick — the active-filter visibility
-  // stays current without a poll.
-
-  // Master track: show system view
-  // Regular tracks: view is handled by instrumentDisplayCoordinator.
-  if (update.trackIndex === -1) {
+  logger.debug('Track Selection updated', { from: _selectedTrackIndex, to: trackIndex });
+  // Master shows the system view; a regular track's view is the
+  // instrumentDisplayCoordinator's.
+  if (trackIndex === -1) {
     centralDisplayStore.setView('system');
   }
-
-  // Arm-follows-selection is owned by Python ``ExclusiveArmComponent``
-  // (surface-side LOM listener on ``song.view.selected_track``). The UI
-  // used to mirror that logic here via ``updateTrackArming``, firing
-  // N-1 disarms + one arm on every selection update, which (a) raced
-  // with the surface component and (b) disarmed user-manually-armed
-  // tracks, violating the "allow user override" requirement. Deleted
-  // 2026-04-22 — surface is the single source of truth for arm-
-  // follows-selection now. ``armTrackWithRetry`` still arms fresh
-  // tracks at creation time via ``trackPreparation``.
+  setSelectedTrack(trackIndex);
 }
 
-function handleSceneSelectionUpdate(update: SceneSelectionUpdate) {
+/** `/looping/v3/selected_scene`. */
+export function handleSceneSelectionUpdate(sceneIndex: number): void {
   const oldScene = _selectedSceneIndex;
-  _selectedSceneIndex = update.sceneIndex;
-  logger.debug('Scene Selection updated', { oldScene, newScene: update.sceneIndex });
-}
-
-function handleFocusedViewUpdate(update: FocusedViewUpdate) {
-  const oldView = _focusedDocumentView;
-  _focusedDocumentView = update.view;
-  logger.debug('Focused View updated', { oldView: oldView || 'Unknown', newView: update.view });
+  _selectedSceneIndex = sceneIndex;
+  logger.debug('Scene Selection updated', { oldScene, newScene: sceneIndex });
 }
 
 /**
@@ -700,35 +445,7 @@ export function clearSession(): void {
   // (surface restart, set load, reconnect) starts with none.
   _scaleDetected = null;
 
-  // ROW 6.9 (2026-04-21): _trackCount / _trackIndices are now $derived
-  // from v3Store.tracks; nothing to reset here. v3Store resets itself
-  // on handshake via replaceTree / resetTree.
-
-  _focusedDocumentView = null;
-
-  _updateCount = 0;
-  _errorCount = 0;
-  _lastUpdateTime = 0;
-  _connectionStatus = 'disconnected';
-
-  logger.info('Session data cleared - ready for AbletonOSC');
-}
-
-// Stub kept only to satisfy legacy vitest mocks
-// (`v3SelectedTrack.test.ts`, `selectedTrackStore.trackSelected.test.ts`).
-// No runtime caller — `/looping/tracks/count` handler was retired in
-// ROW 6.9, and the track list is $derived from v3Store.tracks. Remove
-// once the test mocks are cleaned up.
-/** @deprecated ROW 6.9 — use v3Store.tracks for track count/indices */
-export function handleTrackListUpdate(_trackCountArg: number): void {
-  const elapsed = 0;
-  logger.debug('handleTrackListUpdate is a no-op post-ROW-6.9', {
-    elapsedMs: elapsed,
-    previousCount: 0,
-    newCount: _trackCountArg,
-    previousIndices: '',
-    newIndices: _trackIndices.join(', ')
-  });
+  logger.info('Session data cleared');
 }
 
 /**
@@ -757,10 +474,8 @@ export function handleFocusedClipPath(path: string): void {
   if (normalized === null) {
     _cachedFocusedClipIndices = null;
   } else {
-    const m = normalized.match(/^tracks\/(\d+)\/slots\/(\d+)\/clip$/);
-    _cachedFocusedClipIndices = m
-      ? { track: parseInt(m[1], 10), scene: parseInt(m[2], 10) }
-      : null;
+    const ref = parseClipPath(normalized);
+    _cachedFocusedClipIndices = ref ? { track: ref.trackIndex, scene: ref.sceneIndex } : null;
   }
 
   // Clear scalar property + groove stores on any focus change (including → null).
@@ -913,77 +628,4 @@ export function handleKeyFollowUpdate(enabled: number | boolean): void {
   if (_keyFollowEnabled === next) return;
   _keyFollowEnabled = next;
   logger.info('SessionSettings: key_follow', { enabled: next });
-}
-
-/**
- * Debug function for testing session updates
- */
-export function debugSetTempo(bpm: number): void {
-  if (bpm >= 20 && bpm <= 999) {
-    _tempo = bpm;
-    logger.debug('DEBUG: Tempo set', { bpm });
-  } else {
-    logger.error('DEBUG: Invalid tempo', { bpm, validRange: '20-999 BPM' });
-  }
-}
-
-/**
- * Debug function for testing transport
- */
-export function debugToggleTransport(): void {
-  _isPlaying = !_isPlaying;
-  logger.debug('DEBUG: Transport toggled', { state: _isPlaying ? 'started' : 'stopped' });
-}
-
-/**
- * Session store validation - checks for data consistency
- */
-export function validateSession(): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  if (_tempo < 20 || _tempo > 999) {
-    errors.push(`Invalid tempo: ${_tempo} (must be 20-999 BPM)`);
-  }
-
-  if (_timeSignature.numerator < 1 || _timeSignature.numerator > 32) {
-    errors.push(`Invalid time signature numerator: ${_timeSignature.numerator} (must be 1-32)`);
-  }
-
-  if (![1, 2, 4, 8, 16].includes(_timeSignature.denominator)) {
-    errors.push(`Invalid time signature denominator: ${_timeSignature.denominator} (must be 1, 2, 4, 8, or 16)`);
-  }
-
-  if (_groove < 0 || _groove > 1) {
-    errors.push(`Invalid groove amount: ${_groove} (must be 0.0-1.0)`);
-  }
-
-  if (_selectedTrackIndex < -1) {
-    errors.push(`Invalid selected track index: ${_selectedTrackIndex} (must be >= -1)`);
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors
-  };
-}
-
-/**
- * Get session performance metrics
- */
-export function getSessionMetrics(): {
-  updatesPerSecond: number;
-  errorRate: number;
-  uptime: number;
-  connectionStatus: string;
-} {
-  const now = Date.now();
-  const uptime = _lastUpdateTime > 0 ? (now - _lastUpdateTime) / 1000 : 0;
-  const updatesPerSecond = uptime > 0 ? _updateCount / uptime : 0;
-
-  return {
-    updatesPerSecond: Number(updatesPerSecond.toFixed(2)),
-    errorRate: Number((session.errorRate * 100).toFixed(1)),
-    uptime: Number(uptime.toFixed(1)),
-    connectionStatus: _connectionStatus
-  };
 }

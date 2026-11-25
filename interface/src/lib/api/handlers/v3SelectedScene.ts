@@ -2,16 +2,14 @@
  * v3 selected-scene handler (ROW 7c, 2026-04-21).
  *
  * Consumes `/looping/v3/selected_scene [sceneIndex:int]` from the
- * Python Control Surface's `SelectedTrackComponent`. Forwards to the
- * existing `handleSessionUpdate` path with a `scene-selection`
- * update, the same shape the retiring AbletonOSC
- * `/live/view/get/selected_scene` parser produced.
+ * Python Control Surface's `SelectedTrackComponent` and hands the index
+ * to the session store's `handleSceneSelectionUpdate`.
  *
  * @see surface/components/SelectedTrackComponent.py
  */
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
-import { handleSessionUpdate } from '$lib/stores/session.svelte';
+import { handleSceneSelectionUpdate } from '$lib/stores/session.svelte';
 
 export const V3_SELECTED_SCENE_ADDRESS = '/looping/v3/selected_scene';
 
@@ -30,9 +28,5 @@ export function handleV3SelectedScene(args: OSCArg[]): void {
 		return;
 	}
 
-	handleSessionUpdate({
-		type: 'scene-selection',
-		sceneIndex,
-		timestamp: Date.now()
-	});
+	handleSceneSelectionUpdate(sceneIndex);
 }
