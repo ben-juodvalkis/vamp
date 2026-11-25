@@ -31,13 +31,6 @@
 	import X from '@lucide/svelte/icons/x';
 
 	import {
-		pickRootNote,
-		pickScaleName,
-		pickKey,
-		detectKey as sendDetectKey,
-		setKeyFollow
-	} from '$lib/services/sessionCommands';
-	import {
 		getPlacesIndex,
 		isPlaceVendorId,
 		placeVendorId,
@@ -62,8 +55,6 @@
 	} from '$lib/stores/v6/browserNavigationStore.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { recentInstrumentsStore } from '$lib/stores/v6/recentInstrumentsStore.svelte';
-	import { session, clearScaleDetected } from '$lib/stores/session.svelte';
-	import { ROOT_NOTES, SCALE_NAMES, getScaleIndex } from '$lib/data/scales';
 	import { logger } from '$lib/utils/logger';
 	import { PLACES_CHANGED_EVENT, warmPlacesCache, placeArgs } from '$lib/services/placesLive';
 	import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
@@ -110,6 +101,9 @@
 		type GroupedVirtualWindow
 	} from './utils/drillDownModel';
 	import BrowserPresetWaveform from './BrowserPresetWaveform.svelte';
+	import ScalePicker from './ScalePicker.svelte';
+	import ScaleKeyControls from './ScaleKeyControls.svelte';
+	import { KeyDetect } from './keyDetect.svelte';
 	import { isAudioThumbnailType } from '$lib/utils/waveformThumbnail';
 
 	import constants from '$config/constants.json';
@@ -145,9 +139,6 @@
 	//
 	// One constant for both so the tile's reveal and the close can't drift apart.
 	const PRESET_REVEAL_MS = 750;
-	// ADR-446: how long "Listening…" waits for the surface's answer to Detect
-	// before giving up — a silent surface must not leave the button lying.
-	const DETECT_TIMEOUT_MS = 3000;
 
 	// ── The rail's model ──
 	// Recent, then one button per Place (below). Audio is NOT a category — it is
@@ -1091,69 +1082,8 @@
 		}
 	}
 
-	// ── Scale mode ──
-	// A key picked by hand is a key to keep (ADR-447). The surface turns
-	// Follow off itself when a `scale_root` / `scale_name` write arrives from
-	// any client, before the write — so a pick locks the key without this
-	// component saying so, and a pick of the key already set locks too.
-	function selectRootNote(index: number) {
-		pickRootNote(index);
-	}
-	function selectScaleName(scaleName: string) {
-		pickScaleName(scaleName);
-	}
-	// Root and scale together — the runner-up chip: one write each, one mode.
-	function applyKey(root: number, scaleName: string) {
-		pickKey(root, scaleName);
-	}
-	// Follow / Locked. Turning Follow back on makes the surface detect at once.
-	function toggleFollow() {
-		setKeyFollow(!session.keyFollowEnabled);
-	}
-
-	// ADR-446: ask the surface for the key of what is launched and set it at
-	// once — the same three writes a pick makes (root, scale, scale mode on).
-	// The answer lands in `session.scaleDetected`; the strip above the roots
-	// shows the key, the band and the runner-up, with the vote ladder as its
-	// tooltip. `detectSentAt` tells a fresh answer from the last one, and a
-	// silent surface stops the "Listening" state after three seconds rather
-	// than leaving the button lying.
-	let detectSentAt = $state(0);
-	// The vote ladder rides the strip's tooltip on the Mac; the iPad has no
-	// tooltips, so a tap on the heading unfolds it under the strip.
-	let showReasons = $state(false);
-	let detectTimer: ReturnType<typeof setTimeout> | null = null;
-	const detected = $derived(session.scaleDetected);
-	const detectPending = $derived(detectSentAt > 0 && (!detected || detected.at < detectSentAt));
-	const detectedTitle = $derived(detected ? detected.reasons.split(' | ').join('\n') : '');
-	// "set" is a claim about NOW: shown only while Live's key is still the one
-	// the detection wrote, not after a hand pick or a new set moved it.
-	const detectedIsCurrent = $derived(
-		!!detected &&
-			detected.applied &&
-			session.rootNote === detected.root &&
-			session.scaleName === getScaleIndex(detected.scale)
-	);
-	function detectKey() {
-		detectSentAt = Date.now();
-		if (detectTimer) clearTimeout(detectTimer);
-		detectTimer = setTimeout(() => {
-			detectTimer = null;
-			detectSentAt = 0;
-		}, DETECT_TIMEOUT_MS);
-		sendDetectKey();
-	}
-	function clearDetectPending() {
-		if (detectTimer) {
-			clearTimeout(detectTimer);
-			detectTimer = null;
-		}
-		detectSentAt = 0;
-	}
-	function applyRunnerUp() {
-		if (!detected || detected.runnerRoot < 0 || !detected.runnerScale) return;
-		applyKey(detected.runnerRoot, detected.runnerScale);
-	}
+	// ── Scale mode ── (`ScalePicker`, `ScaleKeyControls`; ADR-446/447)
+	const keyDetect = new KeyDetect();
 
 	// ── Post-load: close now, unless locked ──
 	// The browser used to sit open for PRESET_REVEAL_MS after a pick so you could
@@ -1211,9 +1141,7 @@
 		clearPostLoadClose();
 		isExpanded = false;
 		// ADR-446: a detection is a moment, not a setting — the next open starts clean.
-		clearScaleDetected();
-		clearDetectPending();
-		showReasons = false;
+		keyDetect.reset();
 		browserModeStore.isPersistent = false;
 		browserModeStore.isScalePersistent = false;
 		browserModeStore.exitReplaceMode();
@@ -1687,7 +1615,7 @@
 
 	onDestroy(() => {
 		if (pickRevealTimer) { clearTimeout(pickRevealTimer); pickRevealTimer = null; }
-		clearDetectPending();
+		keyDetect.clearPending();
 		if (chargeRaf) cancelAnimationFrame(chargeRaf);
 		if (pickShowTimer) clearTimeout(pickShowTimer);
 		clearPostLoadClose();
@@ -2079,27 +2007,7 @@
 					{/if}
 
 					{#if isScale}
-						<div class="key-controls">
-							<button
-								class="follow-btn"
-								class:on={session.keyFollowEnabled}
-								onclick={toggleFollow}
-								aria-pressed={session.keyFollowEnabled}
-								aria-label={session.keyFollowEnabled
-									? 'The key follows the loops. Tap to lock it.'
-									: 'The key is locked. Tap to let it follow the loops.'}
-							>
-								{session.keyFollowEnabled ? 'Following' : 'Locked'}
-							</button>
-							<button
-								class="detect-btn"
-								class:pending={detectPending}
-								onclick={detectKey}
-								aria-label="Detect the key of the launched clips and set it"
-							>
-								{detectPending ? 'Listening…' : 'Detect key'}
-							</button>
-						</div>
+						<ScaleKeyControls {keyDetect} />
 					{/if}
 
 				</div>
@@ -2107,69 +2015,9 @@
 
 			<div class="stage" bind:this={stageEl}>
 				{#if isScale}
-					<!-- Key mode: root notes then scale names -->
+					<!-- Key mode: what was detected, the roots, then the scale names -->
 					<div class="layer scale">
-						{#if detected}
-							<!-- ADR-446: what the surface heard. The tooltip is the audit
-							     trail — every vote that decided it, one per line. -->
-							<div class="scale-section detected-section" title={detectedTitle}>
-								<button
-									class="scale-heading reasons-toggle"
-									onclick={() => (showReasons = !showReasons)}
-									aria-expanded={showReasons}
-									aria-label="Detected key; tap to show why"
-								>
-									Detected {showReasons ? '▾' : '▸'}
-								</button>
-								<div class="detected-row">
-									{#if detected.band === 'no-key'}
-										<span class="detected-key none">No key</span>
-										<span class="detected-band">{detected.reasons.split(' | ').pop()}</span>
-									{:else}
-										<span class="detected-key">{ROOT_NOTES[detected.root]} {detected.scale}</span>
-										<span class="detected-band {detected.band}">{detected.band}{detectedIsCurrent ? ' · set' : ''}</span>
-										{#if detected.runnerRoot >= 0}
-											<button class="runner-up" onclick={applyRunnerUp}>
-												or {ROOT_NOTES[detected.runnerRoot]} {detected.runnerScale}
-											</button>
-										{/if}
-									{/if}
-								</div>
-								{#if showReasons}
-									<ul class="reasons">
-										<!-- Keyed by position: two clips can say the same line, and the list is
-										     replaced whole on every answer. -->
-										{#each detected.reasons.split(' | ') as line, i (i)}
-											<li>{line}</li>
-										{/each}
-									</ul>
-								{/if}
-							</div>
-						{/if}
-						<div class="scale-section roots-section">
-							<div class="scale-heading">Root</div>
-							<div class="roots">
-								{#each ROOT_NOTES as note, i}
-									<button
-										class="root-key"
-										class:selected={session.rootNote === i}
-										onclick={() => selectRootNote(i)}
-									>{note}</button>
-								{/each}
-							</div>
-						</div>
-						<div class="scale-section scales-section">
-							<div class="scale-heading">Scale</div>
-							<div class="scale-grid">
-								{#each SCALE_NAMES as name}
-									<button
-										class="scale-key"
-										class:selected={session.scaleName === getScaleIndex(name)}
-										onclick={() => selectScaleName(name)}
-									>{name}</button>
-								{/each}
-							</div>
-						</div>
+						<ScalePicker {keyDetect} />
 					</div>
 				{:else if !selectedVendorId}
 					<!-- No category chosen yet: prompt (rail is how you pick) -->
@@ -3355,109 +3203,8 @@
 	}
 	.folder-tile .tile-name { font-weight: 800; letter-spacing: -0.02em; }
 
-	/* Scale grid keeps a simple responsive auto-fill (fixed 32-item list). */
-	.scale-grid {
-		flex: 1 1 auto;
-		min-height: 0;
-		overflow-y: auto;
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-		grid-auto-rows: minmax(96px, 1fr);
-		gap: var(--grid-gap, 8px);
-		align-content: start;
-		scrollbar-width: none;
-	}
-	.scale-grid::-webkit-scrollbar { display: none; }
-
-	/* Scale mode: root grid on top, scale grid fills the rest */
+	/* Scale mode: the picker's sections down the stage (`ScalePicker`). */
 	.scale { display: flex; flex-direction: column; gap: var(--spacing-lg); }
-	.scales-section { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
-	.scale-heading { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground, #8a8f9c); font-weight: 650; margin-bottom: var(--spacing-sm); }
-	/* Roots in two rows of six (matches the request; also gives bigger tap targets
-	   than the old single row of twelve). */
-	.roots { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--spacing-sm); }
-
-	/* ADR-446: the Detect button sits where the browse switch would (column 1
-	   of the bar controls) — in Key mode that column is otherwise empty. */
-	.key-controls {
-		grid-column: 1;
-		justify-self: start;
-		height: 100%;
-		display: flex;
-		gap: var(--spacing-sm);
-	}
-	.follow-btn,
-	.detect-btn {
-		height: 100%;
-		padding: 0 var(--spacing-lg);
-		border-radius: 12px;
-		border: 1px solid var(--browser-border, #2a2e37);
-		background: var(--browser-bg-primary, #16181d);
-		color: var(--foreground, #eef0f4);
-		font-size: var(--text-lg);
-		font-weight: var(--font-weight-semibold);
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
-		cursor: pointer;
-	}
-	.follow-btn:active,
-	.detect-btn:active { transform: scale(0.96); }
-	.follow-btn.on { background: var(--accent); border-color: var(--accent); color: #0c0d10; }
-	.reasons-toggle { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
-	.reasons { margin: var(--spacing-sm) 0 0; padding-left: 1.2em; color: var(--muted-foreground, #8a8f9c); font-size: 14px; line-height: 1.5; }
-	.detect-btn.pending { color: var(--accent); border-color: var(--accent); }
-	.detected-row { display: flex; align-items: baseline; gap: var(--spacing-md); flex-wrap: wrap; }
-	.detected-key { font-size: 24px; font-weight: var(--font-weight-semibold); color: var(--foreground, #eef0f4); }
-	.detected-key.none { color: var(--muted-foreground, #8a8f9c); }
-	.detected-band { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground, #8a8f9c); }
-	.detected-band.sure { color: var(--accent); }
-	.detected-band.unsure { color: var(--destructive, #e5484d); }
-	.runner-up {
-		padding: 4px 12px;
-		border-radius: 999px;
-		border: 1px solid var(--browser-border, #2a2e37);
-		background: transparent;
-		color: var(--foreground, #eef0f4);
-		font-size: 14px;
-		cursor: pointer;
-	}
-	.runner-up:active { transform: scale(0.96); }
-
-	/* Root notes and scale names share ONE key style so they read identically:
-	   neutral dark chip when unselected, solid-orange accent chip when selected. */
-	.root-key,
-	.scale-key {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		text-align: center;
-		min-height: 64px;
-		padding: var(--spacing-sm) var(--spacing-md);
-		border-radius: 14px;
-		border: 1px solid var(--browser-border, #2a2e37);
-		background: var(--browser-bg-secondary, #1d2027);
-		color: var(--foreground, #eef0f4);
-		font-size: 22px;
-		font-weight: 700;
-		line-height: 1.15;
-		text-wrap: balance;
-		cursor: pointer;
-		transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s, color 0.12s;
-	}
-	/* Scale names are longer than the single-glyph roots — a touch smaller so they
-	   fit the chip without wrapping awkwardly. */
-	.scale-key { font-size: 18px; }
-	.root-key:active,
-	.scale-key:active { transform: scale(0.96); }
-	/* Selected — filled in the scale accent (orange) with a glow, so the current
-	   root / scale reads at a glance. Identical for both. */
-	.root-key.selected,
-	.scale-key.selected {
-		background: #ff9500;
-		border-color: #ff9500;
-		color: #1a1206;
-		box-shadow: 0 0 0 1px #ff9500, 0 0 14px color-mix(in oklab, #ff9500 55%, transparent);
-	}
 
 	/* Prompt / empty / loading */
 	.prompt {
@@ -3740,36 +3487,6 @@
 		border-color: var(--line-strong);
 		color: var(--flat-disabled-fg);
 	}
-	/* Scale picker: control fields; the selected root / scale is the one
-	   ON colour (ChosenDefault) with dark text — no orange literal, no
-	   glow. Heading in normal case, no tracking. */
-	:global([data-grammar="flat"]) .scale-heading {
-		text-transform: none;
-		letter-spacing: 0;
-		font-weight: var(--font-weight-medium);
-	}
-	:global([data-grammar="flat"]) .root-key,
-	:global([data-grammar="flat"]) .scale-key {
-		border-radius: 2px;
-		border-color: var(--line-strong);
-		background: var(--surface-well);
-		color: var(--foreground);
-		font-weight: var(--font-weight-medium);
-	}
-	:global([data-grammar="flat"]) .root-key.selected,
-	:global([data-grammar="flat"]) .scale-key.selected {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-		box-shadow: none;
-	}
-	/* Light: the ON fill sits at ~1:1 luminance against the light ladder,
-	   so the frame stays dark. */
-	:global(.light[data-grammar="flat"]) .root-key.selected,
-	:global(.light[data-grammar="flat"]) .scale-key.selected {
-		border-color: var(--line-strong);
-	}
-
 	/* Loading sweep: a solid accent bar, no gradient. */
 	:global([data-grammar="flat"]) .loading-bar {
 		background: var(--accent);
