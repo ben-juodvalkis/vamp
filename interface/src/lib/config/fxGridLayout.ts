@@ -43,79 +43,30 @@ export interface FXGridSlotConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: Component<any>;
 
-  /** Device preset configuration (derived from DEVICE_PRESETS) */
+  /** Device preset configuration: `DEVICE_PRESETS[deviceType]` */
   config: DevicePresetConfig;
 }
 
 /** The slots, one per device type that has a tile of its own. */
-export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
-  {
-    position: 'fx1',
-    deviceType: 'random',
-    component: RandomControl,
-    config: DEVICE_PRESETS.random
-  },
-  {
-    position: 'fx3',
-    deviceType: 'eq',
-    component: EQControl,
-    config: DEVICE_PRESETS.eq
-  },
-  {
-    position: 'fx4',
-    deviceType: 'filter',
-    component: AutoFilterControl,
-    config: DEVICE_PRESETS.filter
-  },
-  {
-    position: 'fx5',
-    deviceType: 'saturator',
-    component: SaturatorControl,
-    config: DEVICE_PRESETS.saturator
-  },
-  {
-    position: 'fx6',
-    deviceType: 'drum',
-    component: DrumBussControl,
-    config: DEVICE_PRESETS.drum
-  },
-  {
-    position: 'fx7',
-    deviceType: 'utility',
-    component: UtilityControl,
-    config: DEVICE_PRESETS.utility
-  },
-  {
-    position: 'fx8',
-    deviceType: 'variation',
-    component: VariationControl,
-    config: DEVICE_PRESETS.variation
-  },
-  {
-    position: 'fx9',
-    deviceType: 'chorus',
-    component: ChorusControl,
-    config: DEVICE_PRESETS.chorus
-  },
-  {
-    position: 'fx10',
-    deviceType: 'tremolo',
-    component: AutoPanControl,
-    config: DEVICE_PRESETS.tremolo
-  },
-  {
-    position: 'fx11',
-    deviceType: 'echo',
-    component: EchoControl,
-    config: DEVICE_PRESETS.echo
-  },
-  {
-    position: 'fx12',
-    deviceType: 'reverb',
-    component: ReverbControl,
-    config: DEVICE_PRESETS.reverb
-  }
+const SLOTS: Omit<FXGridSlotConfig, 'config'>[] = [
+  { position: 'fx1', deviceType: 'random', component: RandomControl },
+  { position: 'fx3', deviceType: 'eq', component: EQControl },
+  { position: 'fx4', deviceType: 'filter', component: AutoFilterControl },
+  { position: 'fx5', deviceType: 'saturator', component: SaturatorControl },
+  { position: 'fx6', deviceType: 'drum', component: DrumBussControl },
+  { position: 'fx7', deviceType: 'utility', component: UtilityControl },
+  { position: 'fx8', deviceType: 'variation', component: VariationControl },
+  { position: 'fx9', deviceType: 'chorus', component: ChorusControl },
+  { position: 'fx10', deviceType: 'tremolo', component: AutoPanControl },
+  { position: 'fx11', deviceType: 'echo', component: EchoControl },
+  { position: 'fx12', deviceType: 'reverb', component: ReverbControl }
 ];
+
+/** The slot table, each slot's preset config read off its device type. */
+export const FX_GRID_LAYOUT: FXGridSlotConfig[] = SLOTS.map((slot) => ({
+  ...slot,
+  config: DEVICE_PRESETS[slot.deviceType]
+}));
 
 /**
  * Utility: Get grid slot by position

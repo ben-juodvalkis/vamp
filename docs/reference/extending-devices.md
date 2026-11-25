@@ -54,12 +54,10 @@ delay: {
   curveType: 'none'
 }
 
-// Virtual device
 chorus: {
   presetPath: 'ableton/Presets/Effect Patches/Chorus.adv',
   defaultName: 'Chorus',
   expectedClassName: 'Chorus2',
-  gridSlot: false,
   color: familyScheme('modulation')
 }
 ```
@@ -197,17 +195,18 @@ its own takes a slot in `interface/src/lib/config/fxGridLayout.ts`, the
 slot table, so tiles and views resolve it by position:
 
 ```typescript
-export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
-  { position: 'fx11', deviceType: 'echo', component: EchoControl, config: DEVICE_PRESETS.echo },
+const SLOTS: Omit<FXGridSlotConfig, 'config'>[] = [
+  { position: 'fx11', deviceType: 'echo', component: EchoControl },
   // ...
 ];
 ```
 
-A position is a name, not a place.
+A position is a name, not a place; the slot's preset config is read off its
+`deviceType`.
 
 ### 1.6 Step 4-alt — virtual device
 
-For `gridSlot: false` devices, skip the `fxGridLayout.ts` entry and
+For a device with no slot, skip the `fxGridLayout.ts` entry and
 instead drop the control into the central view for its
 `centralViewGroup`:
 

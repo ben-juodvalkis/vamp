@@ -89,7 +89,6 @@ gate: {
   defaultName: 'Gate',          // Live names a device after the file's basename
   expectedClassName: 'Gate',    // the .adv's root element (Max: MxDeviceAudioEffect)
   padScoped: true,              // may live in a drum pad's chain
-  gridSlot: false,              // a virtual slot: the FX grid is gone (ADR-485)
   color: familyScheme('dynamics')
 },
 ```
