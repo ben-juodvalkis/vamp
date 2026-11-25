@@ -693,11 +693,15 @@ function dispatchClientMessage(ws, message, context) {
         // Everything else needs a proven client. Refusing here rather
         // than at the socket means a client that authenticates late
         // simply starts working, with no reconnect needed.
+        // Rate-rolled: a client that never authenticates may keep sending,
+        // and a plain warn is a synchronous disk write per frame.
         if (ws && ws.loopingAuth && !ws.loopingAuth.ok) {
-            logger.warn('Refusing message from unauthenticated client', {
-                clientId: context.clientId,
-                address: message && message.address
-            });
+            logger.rate(
+                `unauthed:${context.clientId}`,
+                LogLevel.WARN,
+                'Refusing message from unauthenticated client',
+                { clientId: context.clientId, address: message && message.address }
+            );
             return;
         }
 
@@ -820,7 +824,13 @@ function routeMessageToUDP(message, udpPorts, metrics, captureOverride) {
 
     const port = udpPorts[routingTarget];
     if (!port) {
-        logger.warn('No route found for address', { address: message.address, routingTarget });
+        // Per frame, so rate-rolled like the null-args check above.
+        logger.rate(
+            `no-route:${message.address}`,
+            LogLevel.WARN,
+            'No route found for address',
+            { address: message.address, routingTarget }
+        );
         metrics.routingErrors++;
         return;
     }
