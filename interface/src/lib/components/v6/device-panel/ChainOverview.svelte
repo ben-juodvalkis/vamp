@@ -92,7 +92,6 @@
   import { isHiddenFromChain, visibleDevices } from '$lib/config/hiddenDevices';
   import {
     arrange,
-    chainUnitLayout,
     chainIndexAt,
     dropIntoTarget,
     dropSide,
@@ -104,6 +103,20 @@
     sameDevices
   } from '$lib/utils/chainDrop';
   import { ChainReorder } from './chain/useChainReorder.svelte';
+  import {
+    chainLayout,
+    deviceIndexOf,
+    deviceKind,
+    expandChain,
+    levelOf,
+    nthOfKind,
+    rackArms,
+    topAt,
+    withLanding,
+    type Cell,
+    type ExpandDeps
+  } from './chain/chainCells';
+  import { childKeys, flipChildren, flyFrom, measureChildren, slideFrom } from './chain/flip';
   import { useKeyedSubscriptions } from './chain/useKeyedSubscriptions.svelte';
   import { onDestroy, tick, untrack } from 'svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -168,35 +181,6 @@
   const MIDI_WHEELS = constants.devices.midiWheels;
   const isMidiWheels = (d: DeviceRecord) => d.className === MIDI_WHEELS.className && d.name === MIDI_WHEELS.deviceName;
 
-  /**
-   * What a cell is: only what changes when the chain does. Live values
-   * (Device On, a rack's macros) are read in the markup, so a moving
-   * parameter repaints its own cell and never rebuilds the list.
-   */
-  type Cell = {
-    /** Stable across Live's renumbering (paths are positions): name, class, and which of those it is. */
-    key: string;
-    /** Class and name: what the device is, shared by two of a kind. */
-    sig: string;
-    /** Where Live has it now. */
-    path: string;
-    device: DeviceRecord;
-    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains';
-    presetKey: string | null;
-    tile: string | null;
-    ink: string;
-    /** The track's Drum Rack, drawn as its Trnsp, and kept first while a pad is scoped. */
-    kit: boolean;
-    /** A rack Live lets the wire into (ADR-529): it folds and unfolds. */
-    foldable?: boolean;
-    /** Drawn inside an unfolded rack (ADR-529): the rack, its ink, how deep. */
-    inside?: { rackPath: string; ink: string; depth: number; chain: RackChain; chains: number };
-    /** The chain list of an unfolded rack: its chains. */
-    chains?: RackChain[];
-    /** An effect on its way into Live (ADR-540): its load's id. Drawn, editable, not yet a device (no path to move or open). */
-    landing?: string;
-  };
-
   // A held strip (`trackHoldScope`) shows ITS chain while the finger stays,
   // without selecting it: the cells, their inks and their tiles are the
   // held track's (the user, 2026-11-16; the cells stayed the selected
@@ -238,7 +222,7 @@
   const liveDevices = $derived(
     padChain
       ? padChain.map((c) => c.device)
-      : visibleDevices(trackDevices).sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
+      : visibleDevices(trackDevices).sort((a, b) => deviceIndexOf(a.devicePath) - deviceIndexOf(b.devicePath))
   );
 
   /*
@@ -264,21 +248,6 @@
       };
     });
   }
-  /** Live's devices with the landing ones put where Live will put them. */
-  function withLanding(live: DeviceRecord[], landing: { device: DeviceRecord }[]): DeviceRecord[] {
-    if (!landing.length) return live;
-    const out = [...live];
-    for (const { device: d } of landing) {
-      if (!isMidiEffectClass(d.className)) {
-        out.push(d);
-        continue;
-      }
-      const at = out.findIndex((x) => !isMidiEffectClass(x.className));
-      out.splice(at < 0 ? out.length : at, 0, d);
-    }
-    return out;
-  }
-  const isMidiEffectClass = (className: string) => className.startsWith('Midi') || className === 'MxDeviceMidiEffect';
   const landing = $derived(landingDevices(padScope?.padPath ?? trackPath));
   /** The blue hand, a ghost's resolved to the device it became (a chip's pick shows at once). */
   const appointedPath = $derived(landingEffects.resolve(fxChainStore.appointed));
@@ -306,21 +275,13 @@
 
   const cells = $derived<Cell[]>(
     devices.map((device, i, all) => {
-      const nth = all.slice(0, i).filter((d) => d.name === device.name && d.className === device.className).length;
+      const nth = nthOfKind(all, i);
       const presetKey = presetKeyFor(device);
       const isInstrument = padChain
         ? (padChain.find((c) => c.device === device)?.instrument ?? false)
         : glance.kind === 'instrument' && glance.headPath === device.devicePath;
-      const kind: Cell['kind'] = isInstrument
-        ? 'instrument'
-        : isChainRack(device.className) && !presetKey
-          ? 'rack'
-          : device.className.startsWith('MxDevice') && !presetKey
-            ? 'max'
-            : device.className.endsWith('PluginDevice')
-              ? 'plugin'
-              : 'effect';
-      const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
+      const kind: Cell['kind'] = isInstrument ? 'instrument' : deviceKind(device.className, presetKey, isChainRack);
+      const family = familyInk(presetKey, kind);
       const sig = `${device.className}|${device.name}`;
       return {
         key: `${sig}|${nth}`,
@@ -351,11 +312,11 @@
    */
   const kitCell = $derived.by<Cell | null>(() => {
     if (!padChain || !padScope) return null;
-    const all = [...trackDevices].sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath));
+    const all = [...trackDevices].sort((a, b) => deviceIndexOf(a.devicePath) - deviceIndexOf(b.devicePath));
     const i = all.findIndex((d) => d.devicePath === padScope.rackPath);
     if (i < 0) return null;
     const device = all[i];
-    const nth = all.slice(0, i).filter((d) => d.name === device.name && d.className === device.className).length;
+    const nth = nthOfKind(all, i);
     const sig = `${device.className}|${device.name}`;
     return { key: `${sig}|${nth}`, sig, path: device.devicePath, device, kind: 'instrument', presetKey: null, tile: null, ink: trackColor, kit: true };
   });
@@ -389,12 +350,10 @@
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
   }
 
-  function indexOf(path: string): number {
-    const m = /\/devices\/(\d+)$/.exec(path);
-    return m ? Number(m[1]) : 0;
-  }
-
   const presetKeyFor = (device: DeviceRecord) => effectTypeOf(device);
+  /** A device's family ink, raw: its preset's, a rack's voice, else utility. */
+  const familyInk = (presetKey: string | null, kind: Cell['kind']) =>
+    presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
 
   /** How many macros Live shows on a rack (its macro count button); subscribed for every rack drawn. */
   const VISIBLE_MACROS = 'visible_macro_count';
@@ -530,26 +489,16 @@
    * belong to the rack: never dragged, and a top-level device dropped on
    * one, or on the chain's +, goes into that chain (ADR-551). `tops[i]` is the chain position a drawn cell stands for.
    */
-  const MAX_DEPTH = 4;
-  function expand(cell: Cell, depth: number, out: Cell[]): void {
-    out.push(cell);
-    if (!cell.foldable || depth >= MAX_DEPTH || !rackFold.isOpen(cell.path)) return;
-    const rackPath = cell.path;
-    const chains = rackChainsOf(rackPath);
-    if (!chains) return;
-    const ink = cell.ink;
-    // A rack with no macros shows its chain list in its own cell (bareChains).
-    if (chains.length > 1 && !isBareRack(cell)) {
-      out.push({ ...listCell(cell), chains, inside: { rackPath, ink, depth, chain: chains[0], chains: chains.length } });
-    }
-    if (chains.length === 0) return;
-    const chosen = chains[Math.min(rackFold.chainOf(rackPath), chains.length - 1)];
-    const inside = { rackPath, ink, depth, chain: chosen, chains: chains.length };
-    // An empty chain draws nothing past the list: its row says it is chosen.
-    chosen.devices.forEach((d, i) => {
+  const expandDeps: ExpandDeps = {
+    isOpen: (path) => rackFold.isOpen(path),
+    chainsOf: (path) => rackChainsOf(path),
+    chosenOf: (path) => rackFold.chainOf(path),
+    isBare: (cell) => isBareRack(cell),
+    nested(parent, chosen, i, inside) {
+      const d = chosen.devices[i];
       // A hidden device (a Tuner) is no cell inside a rack either.
-      if (isHiddenFromChain(d)) return;
-      const devicePath = chainDevicePathOf(rackPath, chosen.index, d.index);
+      if (isHiddenFromChain(d)) return null;
+      const devicePath = chainDevicePathOf(inside.rackPath, chosen.index, d.index);
       const device: DeviceRecord = selectedTrackStore.deviceAt(devicePath) ?? {
         devicePath,
         name: d.name,
@@ -557,77 +506,49 @@
         params: new Map(),
         properties: new Map()
       };
-      const nth = chosen.devices.slice(0, i).filter((x) => x.name === d.name && x.className === d.className).length;
+      const nth = nthOfKind(chosen.devices, i);
       const presetKey = presetKeyFor(device);
-      const kind: Cell['kind'] =
-        isChainRack(device.className) && !presetKey
-          ? 'rack'
-          : device.className.startsWith('MxDevice') && !presetKey
-            ? 'max'
-            : device.className.endsWith('PluginDevice')
-              ? 'plugin'
-              : 'effect';
-      const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
+      const kind = deviceKind(device.className, presetKey, isChainRack);
       // Keyed by the chain row's own class and name, as `nth` counts them:
       // the device's record can lag the row by a message after a change,
       // and a key from the record then collides with its neighbour's.
       const sig = `${d.className}|${d.name}`;
-      const nested: Cell = {
-        key: `${cell.key}|c${chosen.index}|${sig}|${nth}`,
+      return {
+        key: `${parent.key}|c${chosen.index}|${sig}|${nth}`,
         sig,
         path: devicePath,
         device,
         kind: d.type === 1 ? 'instrument' : kind,
         presetKey,
         tile: null,
-        ink: presetKey && DEVICE_PRESETS[presetKey].trackTint ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
+        ink: presetKey && DEVICE_PRESETS[presetKey].trackTint ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(familyInk(presetKey, kind), paint),
         kit: false,
         foldable: isChainRack(device.className),
         inside
       };
-      expand(nested, depth + 1, out);
-    });
-    // An effect on its way into this chain (ADR-540): a ghost cell at its end.
-    for (const { device, id } of landingDevices(chainPathOf(rackPath, chosen.index))) {
-      const presetKey = presetKeyFor(device);
-      const sig = `${device.className}|${device.name}`;
-      const nth = chosen.devices.filter((x) => x.name === device.name && x.className === device.className).length;
-      out.push({
-        key: `${cell.key}|c${chosen.index}|${sig}|${nth}`,
-        sig,
-        path: device.devicePath,
-        device,
-        kind: 'effect',
-        presetKey,
-        tile: null,
-        ink: presetKey ? trackInk(DEVICE_PRESETS[presetKey].color.primary, paint) : trackColor,
-        kit: false,
-        inside,
-        landing: id
+    },
+    landing(parent, chosen, inside) {
+      return landingDevices(chainPathOf(inside.rackPath, chosen.index)).map(({ device, id }) => {
+        const presetKey = presetKeyFor(device);
+        const sig = `${device.className}|${device.name}`;
+        const nth = chosen.devices.filter((x) => x.name === device.name && x.className === device.className).length;
+        return {
+          key: `${parent.key}|c${chosen.index}|${sig}|${nth}`,
+          sig,
+          path: device.devicePath,
+          device,
+          kind: 'effect' as const,
+          presetKey,
+          tile: null,
+          ink: presetKey ? trackInk(DEVICE_PRESETS[presetKey].color.primary, paint) : trackColor,
+          kit: false,
+          inside,
+          landing: id
+        };
       });
     }
-  }
-  function listCell(rack: Cell): Cell {
-    return { ...rack, key: `${rack.key}|chains`, kind: 'chains', tile: null, presetKey: null, foldable: false, kit: false };
-  }
-
-  const expanded = $derived.by(() => {
-    const out: Cell[] = [];
-    const tops: (number | null)[] = [];
-    if (kitCell) {
-      out.push(kitCell);
-      tops.push(null);
-    }
-    shown.forEach((cell, i) => {
-      const part: Cell[] = [];
-      expand(cell, 0, part);
-      for (const [j, c] of part.entries()) {
-        out.push(c);
-        tops.push(j === 0 ? i : null);
-      }
-    });
-    return { cells: out, tops };
-  });
+  };
+  const expanded = $derived(expandChain(kitCell, shown, expandDeps));
   const drawn = $derived(expanded.cells);
   /**
    * The cell lit as the one whose view is open below: Live's blue hand, or,
@@ -640,15 +561,6 @@
     if (centralDisplayStore.view.type !== 'instrument') return appointedPath;
     return drawn.find((c) => c.kind === 'instrument' && !c.inside)?.device.devicePath ?? appointedPath;
   });
-
-  /** The chain position a drawn place stands for: its own, else its rack's. */
-  function topAt(drawnIndex: number): number {
-    const tops = expanded.tops;
-    for (let i = Math.min(drawnIndex, tops.length - 1); i >= 0; i--) {
-      if (tops[i] !== null) return tops[i]!;
-    }
-    return 0;
-  }
 
   /*
    * Each unfolded rack on screen holds its `chain_devices` row: the surface
@@ -680,14 +592,7 @@
    * so the room a second row leaves widens its last cell, as a row's end
    * always has.
    */
-  const layout = $derived.by(() => {
-    const widths = drawn.map(unitsOf);
-    const laid = chainUnitLayout(widths, 0, ROW_UNITS);
-    const places = laid.places.map((p) => ({ ...p }));
-    const last = places[places.length - 1];
-    if (last && laid.ghost.span > 0 && laid.ghost.row === last.row) last.span += laid.ghost.span;
-    return { ...laid, places };
-  });
+  const layout = $derived(chainLayout(drawn.map(unitsOf), ROW_UNITS));
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
 
   /*
@@ -700,40 +605,7 @@
    * an arm folds the rack.
    */
   const ARM_STEP = 18;
-  function levelOf(cell: Cell): number {
-    return cell.inside ? cell.inside.depth + 1 : 0;
-  }
-  const arms = $derived.by(() => {
-    const out: { key: string; path: string; name: string; ink: string; row: number; from: number; to: number; level: number; joined: boolean }[] = [];
-    drawn.forEach((cell, i) => {
-      if (!cell.foldable || cell.kind === 'chains' || !rackFold.isOpen(cell.path)) return;
-      const own = layout.places[i];
-      const under = (c: Cell) => !!c.inside && (c.inside.rackPath === cell.path || c.inside.rackPath.startsWith(`${cell.path}/`));
-      let j = i + 1;
-      while (j < drawn.length && under(drawn[j])) j++;
-      const rows = new Map<number, { from: number; to: number }>();
-      for (let k = i + 1; k < j; k++) {
-        const p = layout.places[k];
-        if (!p) continue;
-        const r = rows.get(p.row);
-        rows.set(p.row, r ? { from: Math.min(r.from, p.col), to: Math.max(r.to, p.col + p.span) } : { from: p.col, to: p.col + p.span });
-      }
-      for (const [row, { from, to }] of rows) {
-        out.push({
-          key: `${cell.key}|arm|${row}`,
-          path: cell.path,
-          name: cell.device.name,
-          ink: cell.ink,
-          row,
-          from,
-          to,
-          level: levelOf(cell),
-          joined: !!own && own.row === row && own.col + own.span === from
-        });
-      }
-    });
-    return out;
-  });
+  const arms = $derived(rackArms(drawn, layout.places, (path) => rackFold.isOpen(path)));
   /** Racks whose arm grows out of their own cell: their top-right corner squares. */
   const armedRacks = $derived(new Set(arms.filter((a) => a.joined).map((a) => a.path)));
 
@@ -803,52 +675,25 @@
   $effect.pre(() => {
     void orderKey;
     if (!chainEl) return;
-    before = new Map();
-    for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
-      if (el !== dragNode) before.set(el.dataset.cellKey!, el.getBoundingClientRect());
-    }
+    before = measureChildren(chainEl, dragNode);
   });
   $effect(() => {
     void orderKey;
     if (!chainEl || before.size === 0) return;
-    const now = [...chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')].map((el) => el.dataset.cellKey!);
-    const reorder = now.length === before.size + (dragNode ? 1 : 0) && now.every((k) => before.has(k) || dragNode?.dataset.cellKey === k);
+    const now = childKeys(chainEl);
+    const sameCells = now.length === before.size + (dragNode ? 1 : 0) && now.every((k) => before.has(k) || dragNode?.dataset.cellKey === k);
     const into = landInto && Date.now() < landInto.until ? landInto : null;
-    if (!reorder && !into) {
+    if (!sameCells && !into) {
       before = new Map();
       return;
     }
-    for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
-      const key = el.dataset.cellKey!;
-      const from = before.get(key);
-      if (!from) {
-        // The dropped device, arriving in its chain: from the drop to here.
-        if (into && el !== into.node && key.includes(`|${into.sig}|`)) {
-          for (const a of el.getAnimations()) a.cancel();
-          const to = el.getBoundingClientRect();
-          const sx = to.width ? into.rect.width / to.width : 1;
-          const sy = to.height ? into.rect.height / to.height : 1;
-          el.animate(
-            [
-              { transformOrigin: '0 0', transform: `translate(${into.rect.left - to.left}px, ${into.rect.top - to.top}px) scale(${sx}, ${sy})` },
-              { transformOrigin: '0 0', transform: 'none' }
-            ],
-            { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
-          );
-          landInto = null;
-        }
-        continue;
+    flipChildren(chainEl, before, (el, key) => {
+      // The dropped device, arriving in its chain: from the drop to here.
+      if (into && el !== into.node && key.includes(`|${into.sig}|`)) {
+        flyFrom(el, into.rect);
+        landInto = null;
       }
-      for (const a of el.getAnimations()) a.cancel();
-      const to = el.getBoundingClientRect();
-      const dx = from.left - to.left;
-      const dy = from.top - to.top;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
-      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
-        duration: 180,
-        easing: 'cubic-bezier(0.2, 0, 0, 1)'
-      });
-    }
+    });
     before = new Map();
     // Its slot moved under it: keep the dragged cell under the finger
     // before this frame paints.
@@ -955,7 +800,7 @@
       if (into.key !== d.into?.key || into.after !== d.into?.after || d.to !== d.from) drag = { ...d, to: d.from, into };
       return;
     }
-    const to = clampChainIndex({ from: d.from, to: topAt(at), count: d.base.length, instrument: d.instrument });
+    const to = clampChainIndex({ from: d.from, to: topAt(expanded.tops, at), count: d.base.length, instrument: d.instrument });
     if ((to !== null && to !== d.to) || d.into) drag = { ...d, to: to ?? d.to, into: null };
   }
 
@@ -997,16 +842,7 @@
     const from = node.getBoundingClientRect();
     node.style.transform = '';
     void tick().then(() => {
-      if (!node.isConnected) return;
-      for (const a of node.getAnimations()) a.cancel();
-      const to = node.getBoundingClientRect();
-      const dx = from.left - to.left;
-      const dy = from.top - to.top;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-      node.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
-        duration: 180,
-        easing: 'cubic-bezier(0.2, 0, 0, 1)'
-      });
+      if (node.isConnected) slideFrom(node, from);
     });
   }
 
@@ -1263,7 +1099,7 @@
           if (pressInHead && isPowered(cell) && cell.kind !== 'instrument') togglePower(cell);
           else open(cell, pressInControl);
         },
-        onStart: (info) => dragStart(cell, topAt(position), info),
+        onStart: (info) => dragStart(cell, topAt(expanded.tops, position), info),
         onMove: dragMove,
         onEnd: dragEnd
       }}
