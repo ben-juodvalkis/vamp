@@ -28,6 +28,7 @@
 import { SvelteMap } from 'svelte/reactivity';
 import { holdSwapError, dropSwapError } from './swapErrors';
 import { logger } from '$lib/utils/logger';
+import { parseClipPath } from '$lib/utils/livePaths';
 
 export const SIMILAR_LIMIT = 24;
 export const CLIP_SWAP_FILE_ADDRESS = '/looping/v3/clip/swap_file';
@@ -81,8 +82,8 @@ interface Deps {
 
 /** `tracks/N/slots/M/clip` → its track, its slot and the slot's scene. */
 export function slotOfClip(clipPath: string): { trackPath: string; slotPath: string; scene: number } | null {
-	const match = /^(tracks\/\d+)\/slots\/(\d+)\/clip$/.exec(clipPath);
-	return match ? { trackPath: match[1], slotPath: `${match[1]}/slots/${match[2]}`, scene: Number(match[2]) } : null;
+	const ref = parseClipPath(clipPath);
+	return ref ? { trackPath: ref.trackPath, slotPath: ref.slotPath, scene: ref.sceneIndex } : null;
 }
 
 function fileName(path: string): string {

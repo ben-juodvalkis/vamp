@@ -49,6 +49,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import { parsePadPath } from '$lib/utils/padPaths';
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
+import { parseSlotPath } from '$lib/utils/livePaths';
 import { reconcileEcho, resetParamArming } from './paramArming.svelte';
 import { clearHeldEtags } from '$lib/api/handlers/stateFullEtagStore';
 import { handleClipNotesChanged } from '$lib/services/clipNotesService';
@@ -1284,12 +1285,12 @@ function paramAt(paramPath: string): ParamRecord | undefined {
  * @returns `true` when a slot was updated.
  */
 export function applyClipLifecycle(slotPath: string, created: boolean): boolean {
-	const match = /^(tracks\/\d+)\/slots\/(\d+)$/.exec(slotPath);
-	if (!match) {
+	const slot = parseSlotPath(slotPath);
+	if (!slot) {
 		logger.debug('applyClipLifecycle: malformed slotPath', { slotPath });
 		return false;
 	}
-	const trackPath = match[1];
+	const trackPath = slot.trackPath;
 	const track = tracks.get(trackPath);
 	if (!track) {
 		logger.debug('applyClipLifecycle: unknown trackPath', { slotPath });

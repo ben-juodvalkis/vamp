@@ -44,6 +44,7 @@ import { prepareForPreset, type PrepareResult } from './trackPreparation';
 import { recentInstrumentsStore } from '$lib/stores/v6/recentInstrumentsStore.svelte';
 import { requestSample } from './clipSampleService';
 import { logger } from '$lib/utils/logger';
+import { regularTrackIndexOf, trackOf } from '$lib/utils/livePaths';
 import { getClipContext } from './clipContext';
 
 // Re-exports: transpose / pitch / device-parameter ops live in
@@ -393,14 +394,14 @@ export async function loadCaptureIntoSimpler(
  * it was initialized and every page load was a 500 (2026-09-30).
  */
 async function showNewSimpler(devicePath: string): Promise<void> {
-	const match = /^tracks\/(\d+)\//.exec(devicePath);
-	if (!match) return;
+	const trackIndex = regularTrackIndexOf(trackOf(devicePath) ?? '');
+	if (trackIndex === null) return;
 	const [{ instrumentDisplayCoordinator }, { selectTrackByIndex }] = await Promise.all([
 		import('./instrumentDisplayCoordinator.svelte'),
 		import('$lib/components/v6/tracks/composables/useTrackData.svelte')
 	]);
 	instrumentDisplayCoordinator.requestInstrumentView();
-	await selectTrackByIndex(Number(match[1]));
+	await selectTrackByIndex(trackIndex);
 }
 
 /**

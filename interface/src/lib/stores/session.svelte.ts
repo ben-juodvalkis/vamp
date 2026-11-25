@@ -12,6 +12,7 @@
 
 import type { TimeSignature } from '$lib/domain/live-objects.js';
 import { logger } from '$lib/utils/logger';
+import { parseClipPath, regularTrackIndexOf } from '$lib/utils/livePaths';
 import { getRootNoteName, getScaleName, getScaleIndex } from '$lib/data/scales';
 import {
   DEFAULT_LAUNCH_QUANTIZATION,
@@ -49,15 +50,14 @@ let _pendingIsPlaying: boolean | null = null;
 let _pendingTempo: number | null = null;
 let _groove = $state(0.0);
 
-// ROW 6.9 (2026-04-21): track list derived from v3Store.tracks — the
+// ROW 6.9 (2026-04-21): track count derived from v3Store.tracks — the
 // state/full T-records are the single source of truth. Regular tracks
 // are keyed `tracks/<N>`; master and returns/<N> are excluded because
-// `_trackCount` historically mirrored LOM's `live_set.tracks` count.
-const TRACK_PATH_RE = /^tracks\/(\d+)$/;
+// it mirrors LOM's `live_set.tracks` count.
 const _trackCount = $derived.by(() => {
   let count = 0;
   for (const key of v3Store.tracks.keys()) {
-    if (TRACK_PATH_RE.test(key)) count++;
+    if (regularTrackIndexOf(key) !== null) count++;
   }
   return count;
 });
@@ -474,10 +474,8 @@ export function handleFocusedClipPath(path: string): void {
   if (normalized === null) {
     _cachedFocusedClipIndices = null;
   } else {
-    const m = normalized.match(/^tracks\/(\d+)\/slots\/(\d+)\/clip$/);
-    _cachedFocusedClipIndices = m
-      ? { track: parseInt(m[1], 10), scene: parseInt(m[2], 10) }
-      : null;
+    const ref = parseClipPath(normalized);
+    _cachedFocusedClipIndices = ref ? { track: ref.trackIndex, scene: ref.sceneIndex } : null;
   }
 
   // Clear scalar property + groove stores on any focus change (including → null).
