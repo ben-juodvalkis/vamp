@@ -28,8 +28,10 @@
 	data-debug="chain-chip"
 	use:press={{ onPress: () => void addEffectToChain(fx), touchAction: 'none', stopPropagation: true, disabled: passive }}
 >
-	{#if glyph}<span class="chip-glyph"><EffectGlyph strokes={glyph} /></span>{/if}
-	<span class="chip-name">{label}</span>
+	<span class="chip-body">
+		{#if glyph}<span class="chip-glyph"><EffectGlyph strokes={glyph} /></span>{/if}
+		<span class="chip-name">{label}</span>
+	</span>
 </button>
 
 <style>
@@ -39,7 +41,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 6px;
 		padding: 2px 4px;
 		container-type: inline-size;
 		/* Not on the chain yet, so an outline where a device on it is a
@@ -62,37 +63,55 @@
 		background: color-mix(in srgb, var(--chip-ink) 30%, var(--secondary));
 		color: var(--foreground);
 	}
-	/* The picture in the family's colour, the name plain beside it. */
+	/* The icon over the name, on every screen: the icon is what a glance
+	   finds, so it leads, and a chip reads the same on the iPad and the
+	   phone. The name is one line under it. */
+	.chip-body {
+		width: 100%;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 3px;
+	}
+	/* The icon in the family's colour; the name plain. */
 	.chip-glyph {
 		flex: none;
 		display: flex;
-		width: 20px;
-		height: 20px;
-		color: color-mix(in srgb, var(--chip-ink) 75%, var(--foreground));
+		width: 26px;
+		height: 26px;
+		color: color-mix(in srgb, var(--chip-ink) 78%, var(--foreground));
+	}
+	.palette-chip.hot .chip-glyph,
+	.palette-chip:active .chip-glyph {
+		color: var(--foreground);
 	}
 	.chip-glyph :global(svg) {
 		width: 100%;
 		height: 100%;
+		overflow: visible;
 	}
-	/* A chip too narrow for both keeps the name. */
-	@container (max-width: 96px) {
-		.chip-glyph {
-			display: none;
-		}
-	}
-	/* A long name (Drum Buss, Pitch Hack) wraps to two lines, between words. */
 	.chip-name {
+		display: block;
 		max-width: 100%;
 		min-width: 0;
 		font-size: 0.8125rem;
 		font-weight: 600;
 		letter-spacing: 0.005em;
-		line-height: 1.1;
-		white-space: normal;
+		line-height: 1.15;
+		white-space: nowrap;
 		overflow: hidden;
-		display: -webkit-box;
-		-webkit-box-orient: vertical;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
+		text-overflow: ellipsis;
+	}
+	/* A narrow chip (the phone): a smaller icon and name. */
+	@container (max-width: 96px) {
+		.chip-glyph {
+			width: 22px;
+			height: 22px;
+		}
+		.chip-name {
+			font-size: 0.6875rem;
+		}
 	}
 </style>
