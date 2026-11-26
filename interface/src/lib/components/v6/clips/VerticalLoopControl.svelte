@@ -26,8 +26,10 @@
 
 	// Constants
 	const MIN_LOOP_LENGTH_BEATS = 0.001;
-	/** A drag moves the brace half as far as the finger travels. */
-	const DRAG_SENSITIVITY = 0.5;
+	/** A drag moves the brace as far as the finger travels (full sensitivity,
+	 *  the user, 2026-11-25; half from 2026-10-26, when it shared its row
+	 *  with Q). */
+	const DRAG_SENSITIVITY = 1;
 
 	// Use store values with $derived for automatic reactivity
 	let loopStart = $derived(clipPropertiesStore.loopStart);
@@ -209,9 +211,9 @@
 		dragMoved = true;
 
 		const rect = trackRef.getBoundingClientRect();
-		// Half sensitivity (the user, 2026-10-26): the brace is half the row
-		// since it shares it with Q, so a drag across twice its height
-		// covers the clip, as one across the whole row did.
+		// Full sensitivity (the user, 2026-11-25): a drag across the brace's
+		// height covers the clip. It was half from 2026-10-26, while the
+		// brace shared its row with Q; it has had its own since 2026-11-05.
 		const deltaBeats = ((deltaY * DRAG_SENSITIVITY) / rect.height) * totalRange;
 
 		let newStart = loopStart;
