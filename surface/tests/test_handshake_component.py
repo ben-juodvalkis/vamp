@@ -282,7 +282,7 @@ def test_accept_hook_fires_after_accept_emit(component, emits):
     hs, _gen = component
     calls: list[str] = []
 
-    def hook():
+    def hook(session_id=None, client_etag=None):
         # Capture the ordering: emits should already contain the accept
         # reply by the time we're invoked — the UI sees accept *then*
         # state/full on the wire.
@@ -303,7 +303,7 @@ def test_accept_hook_fires_on_every_accept(component, emits):
     hs, _gen = component
     count = [0]
 
-    def hook():
+    def hook(session_id=None, client_etag=None):
         count[0] += 1
 
     hs.set_state_full_on_accept(hook)

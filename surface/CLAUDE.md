@@ -734,16 +734,24 @@ per root: User Library + each Place), making preset lookups O(1)
 after the first miss. This eliminates the multi-second freeze the
 per-call descent previously caused on heavy User Libraries.
 
-**LOM identity is `_live_ptr`-based, never `is`-based.** Live's v3
-framework hands out a fresh Python wrapper per attribute read, so
-`song.view.selected_track is song.tracks[i]` always returns False
-even when both reference the same LOM track. Compare via
-`_safe_int_id(obj)` (`components/LOMListeners.py:1352`) — same
-pattern `ExclusiveArmComponent._same_track` and
-`path_resolver.same_lom_handle` (`:763`) use. Prefer
-`same_lom_handle` for a plain "are these the same LOM object?"
-check; it is the shared public helper. ADR-350 documents the
-production bug this gotcha caused in `TrackPrepareComponent`.
+**LOM identity is `_live_ptr`-based, never `is`-based.** Live hands out
+a fresh Python wrapper on every read — two reads of the same track,
+device or scene are two objects (measured on Live 13.0b26, 2026-11-25;
+live-api-measurements.md "Object identity") — so `is` and `id()` never
+match across reads. Key a map by `_common.safe_int_id(obj)` (also
+importable as `LOMListeners._safe_int_id`) and compare with
+`path_resolver.same_lom_handle`, the one shared helper. ADR-350
+documents the production bug this caused in `TrackPrepareComponent`;
+until 2026-11-25 `LOMListeners` still keyed its track and device maps by
+`id()`, so every `tracks_changed` rebound every track, and
+`SelectedTrackComponent` never found the selected scene.
+
+**The song's undo step has one owner.** Live's undo steps do not nest
+(live-api-measurements.md "Song"), so every component opens and closes
+one through `component_util.begin_undo_step` / `end_undo_step`, never
+`song.begin_undo_step()` directly: a begin while a step is open joins
+it, and only the outermost end reaches Live. A gesture made during a
+similar-sound swap is then part of the swap's one step.
 
 The historical `/looping/v3/track/{create_audio,create_midi,
 ensure_devices}` wires were retired in the same change, and
@@ -1347,7 +1355,7 @@ properties `vm.fx1`, `vm.fx2`, `vm.fxType`, `vm.attack`, `vm.decay`,
 - **One undo step per gesture, explicitly.** Live records every cell
   write as its own undo step (measured; the Phase 0 note that a
   handler's writes coalesce was wrong — only same-parameter writes
-  merge), so `flush` opens `song.begin_undo_step()` on a gesture's first
+  merge), so `flush` opens the song's undo step (`component_util.begin_undo_step`; inside a swap's open step it joins it) on a gesture's first
   apply and closes it 300 ms after the last (`GESTURE_UNDO_IDLE_MS`,
   re-armed per pass, closed on disconnect).
 - **`vm.members` — the census (Milestone 1b, 2026-09-07).** A read-only

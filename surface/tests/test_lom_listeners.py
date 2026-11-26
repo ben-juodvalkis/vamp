@@ -989,29 +989,158 @@ def test_listener_attaches_when_song_tracks_rewraps_each_read():
     assert path == "tracks/0/devices/0/params/0"
 
 
-def test_same_lom_track_helper_behaviour():
-    """``_same_lom_track`` helper: None-safe, identity fast path, id fallback."""
-    from components.LOMListeners import _same_lom_track
+def test_same_lom_handle_matches_fresh_track_wrappers():
+    """``path_resolver.same_lom_handle``, which ``_track_segment_for`` uses
+    (it absorbed ``LOMListeners._same_lom_track``): None-safe, identity fast
+    path, LOM-id fallback."""
+    from components.path_resolver import same_lom_handle
 
     canon = make_track(100, [])
     other = make_track(101, [])
 
     # None-safety
-    assert _same_lom_track(None, canon) is False
-    assert _same_lom_track(canon, None) is False
-    assert _same_lom_track(None, None) is False
+    assert same_lom_handle(None, canon) is False
+    assert same_lom_handle(canon, None) is False
+    assert same_lom_handle(None, None) is False
 
     # Identity fast path
-    assert _same_lom_track(canon, canon) is True
+    assert same_lom_handle(canon, canon) is True
 
     # Id fallback: two wrappers with the same _live_ptr
     a = _FreshWrapperTrack(canon)
     b = _FreshWrapperTrack(canon)
     assert a is not b
-    assert _same_lom_track(a, b) is True
+    assert same_lom_handle(a, b) is True
 
     # Different LOM tracks
-    assert _same_lom_track(canon, other) is False
+    assert same_lom_handle(canon, other) is False
+
+
+# --- fresh wrappers for every read (measured, Live 13.0b26, 2026-11-25) ----
+#
+# Two reads of ``song.tracks[0]``, ``track.devices[0]`` or ``song.scenes[0]``
+# held at once are distinct Python objects (``object.__eq__`` answered
+# NotImplemented for each pair; live-api-measurements.md). The bookkeeping
+# maps used to be keyed by ``id()``, so every ``tracks_changed`` read every
+# track as departed and dropped every parameter listener in the song, and a
+# device walked twice got a second parameters-listener.
+
+
+class _CountingTrack(StubTrack):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.removes = 0
+
+    def remove_devices_listener(self, cb):
+        self.removes += 1
+        super().remove_devices_listener(cb)
+
+
+class _CountingParam(StubParam):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.removes = 0
+
+    def remove_value_listener(self, cb):
+        self.removes += 1
+        super().remove_value_listener(cb)
+
+
+class _ParamsListenedDevice(StubDevice):
+    """A device with a ``parameters`` observation, counting attaches."""
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.params_listeners = []
+
+    def add_parameters_listener(self, cb):
+        self.params_listeners.append(cb)
+
+    def remove_parameters_listener(self, cb):
+        self.params_listeners.remove(cb)
+
+
+class _FreshDevice:
+    """A fresh wrapper around one canonical device, per read."""
+
+    def __init__(self, canonical):
+        self._canonical = canonical
+        self._live_ptr = canonical._live_ptr
+        self.id = canonical.id
+        self.name = canonical.name
+        self.class_name = canonical.class_name
+
+    @property
+    def parameters(self):
+        return self._canonical.parameters
+
+    def add_parameters_listener(self, cb):
+        self._canonical.add_parameters_listener(cb)
+
+    def remove_parameters_listener(self, cb):
+        self._canonical.remove_parameters_listener(cb)
+
+
+class _FreshDevicesTrack(_CountingTrack):
+    @property
+    def devices(self):
+        return [_FreshDevice(d) for d in self._devices]
+
+
+def _fresh_song():
+    p_a = _CountingParam(pid=3001)
+    p_b = _CountingParam(pid=3002)
+    dev_a = _ParamsListenedDevice(did=2001, params=[p_a])
+    dev_b = _ParamsListenedDevice(did=2002, params=[p_b])
+    dev_b2 = _ParamsListenedDevice(did=2003, params=[_CountingParam(pid=3003)])
+    t_a = _FreshDevicesTrack(tid=1001, devices=[dev_a])
+    t_b = _FreshDevicesTrack(tid=1002, devices=[dev_b, dev_b2])
+    song = _FreshWrapperSong(canonical_tracks=[t_a, t_b])
+    return song, (t_a, t_b), (dev_a, dev_b, dev_b2), (p_a, p_b)
+
+
+def test_tracks_changed_with_fresh_wrappers_keeps_every_track_bound():
+    song, (t_a, t_b), _devs, (p_a, p_b) = _fresh_song()
+    fires = []
+    reg = LOMListeners(song=song, on_structural_change=lambda: fires.append(1))
+
+    song._tracks_listener()  # a tracks_changed that changed nothing
+
+    assert fires == [1]
+    # No track read as departed: nothing detached, nothing re-attached.
+    assert t_a.removes == 0 and t_b.removes == 0
+    assert p_a.removes == 0 and p_b.removes == 0
+    assert p_a.has_value_listener() and p_b.has_value_listener()
+    reg.disconnect()
+
+
+def test_fresh_device_wrappers_get_one_parameters_listener_each():
+    song, (t_a, _t_b), (dev_a, dev_b, dev_b2), _ = _fresh_song()
+    reg = LOMListeners(song=song)
+    # Walk again through fresh wrappers: a tracks_changed and a devices
+    # change both revisit every device.
+    song._tracks_listener()
+    t_a._devices_listener()
+
+    assert len(dev_a.params_listeners) == 1
+    assert len(dev_b.params_listeners) == 1
+    assert len(dev_b2.params_listeners) == 1
+    reg.disconnect()
+    assert dev_a.params_listeners == [] and dev_b.params_listeners == []
+
+
+def test_removing_a_device_keeps_other_devices_parameters_listeners():
+    """ADR-004's plug-in hydration: a device leaving track B must not
+    drop the parameters-listener of a device that stays, on either track."""
+    song, (_t_a, t_b), (dev_a, dev_b, dev_b2), _ = _fresh_song()
+    reg = LOMListeners(song=song)
+
+    t_b.set_devices([dev_b])
+
+    assert len(dev_a.params_listeners) == 1
+    assert len(dev_b.params_listeners) == 1
+    assert dev_b2.params_listeners == []
+    reg.disconnect()
 
 
 # --- stale-handle error classifier ----------------------------------------
@@ -1451,10 +1580,10 @@ def test_post_add_reconciler_bookkeeping_dropped_when_its_own_track_loses_the_de
     scheduler = _ManualScheduler()
     reg = LOMListeners(song=song, schedule_delayed=scheduler)
     track.set_devices([plugin])
-    assert id(plugin) in reg._post_add_reconciler_epochs
+    assert 540 in reg._post_add_reconciler_epochs
     track.set_devices([])
-    assert id(plugin) not in reg._post_add_reconciler_epochs
-    assert id(plugin) not in reg._post_add_track_of
+    assert 540 not in reg._post_add_reconciler_epochs
+    assert 540 not in reg._post_add_track_of
     reg.disconnect()
 
 

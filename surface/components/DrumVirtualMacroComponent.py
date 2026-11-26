@@ -249,7 +249,7 @@ from . import drum_vm_values
 from .drum_vm_edits import EditAbsorbMixin
 from .drum_vm_pitch import PitchMixin
 from .DrumPadChainComponent import PadChainWatcher
-from .component_util import first_time, safe_emit
+from .component_util import begin_undo_step, end_undo_step, first_time, safe_emit
 from .path_resolver import PAD_NOTE_MAX, find_drum_pad, same_lom_handle
 
 logger = logging.getLogger("looping")
@@ -873,10 +873,12 @@ class DrumVirtualMacroComponent(EditAbsorbMixin, PitchMixin):
     def _open_undo_step(self) -> None:
         if self._song is None or self._undo_open:
             return
-        try:
-            self._song.begin_undo_step()
-        except _LOM_ERRORS as e:
-            self._warn_once("song", "begin_undo_step", "begin_undo_step raised: %s" % e)
+        # The song's shared step (component_util): inside a swap's open
+        # step this joins it rather than splitting it.
+        if not begin_undo_step(
+            "DrumVirtualMacroComponent", self._song,
+            warn=lambda e: self._warn_once("song", "begin_undo_step", "begin_undo_step raised: %s" % e),
+        ):
             return
         self._undo_open = True
 
@@ -919,10 +921,10 @@ class DrumVirtualMacroComponent(EditAbsorbMixin, PitchMixin):
         if not self._undo_open:
             return
         self._undo_open = False
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            self._warn_once("song", "end_undo_step", "end_undo_step raised: %s" % e)
+        end_undo_step(
+            "DrumVirtualMacroComponent", self._song, True,
+            warn=lambda e: self._warn_once("song", "end_undo_step", "end_undo_step raised: %s" % e),
+        )
 
     @staticmethod
     def _known(function: str) -> bool:

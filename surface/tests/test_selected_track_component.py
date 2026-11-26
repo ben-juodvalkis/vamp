@@ -1137,8 +1137,8 @@ def test_relative_volume_wire_address_stable():
 
 
 class _StubScene:
-    """Minimal stand-in for ``Live.Scene``. Identity-distinct objects;
-    the component matches by ``is``, so plain Python identity works."""
+    """Minimal stand-in for ``Live.Scene``. Identity-distinct objects,
+    with no LOM id: ``same_lom_handle``'s ``is`` fast path matches them."""
 
     def __init__(self, name: str = ""):
         self.name = name
@@ -1219,6 +1219,36 @@ def test_scene_change_emits_index_immediately(
     ]
     # No scheduler activity — scene fires commit inline.
     assert scheduler.pending_count == 0
+
+
+class _FreshScene:
+    """A fresh wrapper per read around one LOM scene: what Live hands out
+    (measured on Live 13.0b26, 2026-11-25), equal only by ``_live_ptr``."""
+
+    def __init__(self, live_ptr: int):
+        self._live_ptr = live_ptr
+
+
+def test_scene_index_matches_a_fresh_wrapper_by_lom_identity(
+    captured_emits, state_full_calls, scheduler,
+):
+    """``view.selected_scene`` is never the same Python object as any
+    entry of ``song.scenes``; ``is`` found no index, so no
+    ``selected_scene`` ever went out on the rig."""
+    t0 = StubTrack(tid=100, name="t0")
+    scenes = [_FreshScene(500 + i) for i in range(3)]
+    song = SelStubSong(
+        tracks=[t0],
+        selected_track=t0,
+        scenes=scenes,
+        selected_scene=_FreshScene(502),
+    )
+
+    comp = _make_component(song, captured_emits, state_full_calls, scheduler)
+    assert comp._selected_scene_index == 2
+
+    song.view.set_selected_scene(_FreshScene(501))
+    assert captured_emits == [(V3_SELECTED_SCENE_ADDRESS, [1])]
 
 
 def test_scene_change_to_unknown_suppresses_emit(

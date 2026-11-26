@@ -102,7 +102,8 @@ from __future__ import annotations
 import logging
 from typing import Callable, Iterator, Optional, Tuple
 
-from ._common import is_stale_handle_error, safe_remove
+from ._common import is_stale_handle_error, safe_int_id, safe_remove
+from .path_resolver import same_lom_handle
 
 # Surface profiler. Hooks are no-ops unless LOOPING_SURFACE_PROFILE=1.
 try:
@@ -169,11 +170,11 @@ class LOMListeners:
 
         # Current-epoch map for the delayed post-add reconciler. Each
         # ``_on_track_devices_changed`` device-add bumps a global
-        # monotonic counter, stores it against ``id(device)``, and
+        # monotonic counter, stores it against the device's LOM key (``_lom_key``), and
         # captures the same counter in the scheduled closure. When the
         # closure fires it only acts if its captured epoch still equals
         # what's stored for that device — so a racing re-add of the
-        # same Python object invalidates earlier pending reconcilers.
+        # same device invalidates earlier pending reconcilers.
         #
         # Keeping a *monotonic* counter (not per-device increments)
         # matters: when a device is removed the entry is cleared, and
@@ -185,13 +186,13 @@ class LOMListeners:
         self._post_add_epoch_counter: int = 0
 
         # Snapshot of param count captured at device-add time, keyed by
-        # ``id(device)``. The delayed reconciler compares the
+        # the device's LOM key. The delayed reconciler compares the
         # post-hydration count against this snapshot; only fires
         # structural-change on a genuine increase.
         self._post_add_param_count_snapshot: dict[int, int] = {}
 
-        # Which track scheduled each pending reconcile, ``id(device)`` →
-        # ``id(track)``, so a devices change on one track prunes only the
+        # Which track scheduled each pending reconcile, device key →
+        # track key, so a devices change on one track prunes only the
         # entries that track lost and leaves another track's pending
         # reconcile alone.
         self._post_add_track_of: dict[int, int] = {}
@@ -235,13 +236,16 @@ class LOMListeners:
         # sets. They are populated from LOM walks and discarded on
         # teardown; no handler ever reads them to answer a wire query.
 
-        # Per-track devices-listener. Key is ``id(track)`` (Python
-        # identity, not LOM id) because the detach needs the exact
-        # callback reference we attached and the Track object is what
-        # we own a listener on.
+        # Per-track devices-listener. Key is the track's LOM key
+        # (``_lom_key``: the masked ``_live_ptr``), never Python
+        # ``id()``: Live hands out a fresh wrapper on every read of
+        # ``song.tracks`` (measured on Live 13.0b26, 2026-11-25), so an
+        # ``id()`` key made every ``tracks_changed`` read every track as
+        # departed. The value keeps the wrapper the listener was attached
+        # through, which the detach uses.
         self._track_device_listeners: dict[int, Tuple[object, Callable]] = {}
 
-        # Last-seen device wire-ids per track, keyed by ``id(track)``.
+        # Last-seen device wire-ids per track, keyed by the track's LOM key.
         # Populated during the initial walk and on every per-track
         # devices change; used to diff add/remove events.
         self._last_device_ids_per_track: dict[int, set[int]] = {}
@@ -266,8 +270,8 @@ class LOMListeners:
         # captures. Kept in step by ``recompute_param_paths``.
         self._param_paths: dict[int, str] = {}
 
-        # Per-device parameters-list listener bookkeeping. Key is
-        # ``id(device)``; value is ``(device, callback)``.
+        # Per-device parameters-list listener bookkeeping. Key is the
+        # device's LOM key; value is ``(device, callback)``.
         #
         # Why this exists: plugin devices (``AuPluginDevice`` /
         # ``PluginDevice``) populate ``device.parameters`` lazily. When
@@ -449,12 +453,11 @@ class LOMListeners:
         # Track order may have changed under every bound listener.
         self.recompute_param_paths()
 
-        # Snapshot the current set of tracks (master + regulars). Key
-        # by ``id(track)`` — Python identity, which is what
-        # ``_track_device_listeners`` / ``_last_device_ids_per_track``
-        # key on.
+        # Snapshot the current set of tracks (master + regulars), keyed
+        # by LOM identity like ``_track_device_listeners`` /
+        # ``_last_device_ids_per_track``: these are fresh wrappers.
         current_tracks = list(self._iter_all_tracks())
-        current_ids = {id(t) for t in current_tracks}
+        current_ids = {_lom_key(t) for t in current_tracks}
 
         # Detach listeners for tracks that are no longer present.
         departed = [
@@ -481,7 +484,7 @@ class LOMListeners:
 
         # Attach listeners for any new track.
         for track in current_tracks:
-            if id(track) not in self._track_device_listeners:
+            if _lom_key(track) not in self._track_device_listeners:
                 self._bind_track(track, fire_added_for_existing=False)
 
         if self._on_structural_change is not None:
@@ -529,7 +532,7 @@ class LOMListeners:
                     track, e,
                 )
             else:
-                self._track_device_listeners[id(track)] = (
+                self._track_device_listeners[_lom_key(track)] = (
                     track, _on_this_track_devices,
                 )
 
@@ -562,7 +565,7 @@ class LOMListeners:
                         "LOMListeners: on_device_added raised for "
                         "device=%r: %s", device, e, exc_info=True,
                     )
-        self._last_device_ids_per_track[id(track)] = device_ids
+        self._last_device_ids_per_track[_lom_key(track)] = device_ids
 
     def _on_track_devices_changed(self, track) -> None:
         """Per-track ``devices`` listener.
@@ -579,7 +582,7 @@ class LOMListeners:
         self.recompute_param_paths()
 
         before_ids = self._last_device_ids_per_track.get(
-            id(track), set(),
+            _lom_key(track), set(),
         )
         devices_now = list(self._safe_devices(track))
         after_ids: set[int] = set()
@@ -616,8 +619,8 @@ class LOMListeners:
         # Only this track's entries: a key another track scheduled is not
         # in ``devices_now`` by construction, and dropping it cancelled
         # that track's pending reconcile.
-        live_device_keys = {id(d) for d in devices_now}
-        tkey = id(track)
+        live_device_keys = {_lom_key(d) for d in devices_now}
+        tkey = _lom_key(track)
         for dkey in [
             k for k, owner in self._post_add_track_of.items()
             if owner == tkey and k not in live_device_keys
@@ -626,7 +629,7 @@ class LOMListeners:
             self._post_add_reconciler_epochs.pop(dkey, None)
             self._post_add_param_count_snapshot.pop(dkey, None)
 
-        self._last_device_ids_per_track[id(track)] = after_ids
+        self._last_device_ids_per_track[tkey] = after_ids
 
         # Fire remove then add so a device *swap* — same slot, same
         # chain_idx — is observed as "old gone, new arrived" rather
@@ -749,7 +752,7 @@ class LOMListeners:
         """
         if self._schedule_delayed is None:
             return
-        dkey = id(device)
+        dkey = _lom_key(device)
         params_now = self._safe_params(device)
         try:
             initial_count = len(params_now) if params_now is not None else 0
@@ -759,7 +762,7 @@ class LOMListeners:
         self._post_add_epoch_counter += 1
         epoch = self._post_add_epoch_counter
         self._post_add_reconciler_epochs[dkey] = epoch
-        self._post_add_track_of[dkey] = id(track)
+        self._post_add_track_of[dkey] = _lom_key(track)
 
         def _reconcile(d=device, t=track, captured_epoch=epoch,
                        captured_initial=initial_count):
@@ -768,7 +771,7 @@ class LOMListeners:
             # Epoch check — if another add cycle raced ahead, let the
             # newer scheduling win. The later callback will re-examine
             # the current state.
-            if self._post_add_reconciler_epochs.get(id(d)) != captured_epoch:
+            if self._post_add_reconciler_epochs.get(_lom_key(d)) != captured_epoch:
                 return
             # Verify the device is still in its track. On a preset-swap
             # device-level (vs. plugin-internal preset change) the
@@ -840,10 +843,11 @@ class LOMListeners:
         emitter's walk, which calls ``_attach_value_listeners_for_device``
         on every device, including this one).
 
-        Dedup by ``id(device)`` — the same Python object shouldn't get
-        two listeners even if the LOM walk visits it twice.
+        Dedup by the device's LOM key: a walk hands back a fresh wrapper
+        for a device already listened to, and a second listener would
+        fire the structural change twice.
         """
-        dkey = id(device)
+        dkey = _lom_key(device)
         if dkey in self._device_parameters_listeners:
             return
         add = getattr(device, "add_parameters_listener", None)
@@ -1046,7 +1050,7 @@ class LOMListeners:
             # song survives.
             for t in self._iter_all_tracks():
                 for device in self._safe_devices(t):
-                    keep_device_keys.add(id(device))
+                    keep_device_keys.add(_lom_key(device))
                     for param in self._safe_params(device):
                         pid = _safe_int_id(param)
                         if pid is not None:
@@ -1056,7 +1060,7 @@ class LOMListeners:
                 did = _safe_int_id(device)
                 if did is None or did in departed_device_ids:
                     continue
-                keep_device_keys.add(id(device))
+                keep_device_keys.add(_lom_key(device))
                 for param in self._safe_params(device):
                     pid = _safe_int_id(param)
                     if pid is not None:
@@ -1065,10 +1069,10 @@ class LOMListeners:
             # obviously not owned by a device that just left *this*
             # track, so we keep them.
             for t in self._iter_all_tracks():
-                if t is track:
+                if same_lom_handle(t, track):
                     continue
                 for device in self._safe_devices(t):
-                    keep_device_keys.add(id(device))
+                    keep_device_keys.add(_lom_key(device))
                     for param in self._safe_params(device):
                         pid = _safe_int_id(param)
                         if pid is not None:
@@ -1152,13 +1156,13 @@ class LOMListeners:
         slash-joined.
         """
         master = self._safe_master_track()
-        if master is not None and _same_lom_track(track, master):
+        if master is not None and same_lom_handle(track, master):
             return "master"
         tracks = self._safe_tracks_list()
         if tracks is None:
             return None
         for idx, t in enumerate(tracks):
-            if _same_lom_track(t, track):
+            if same_lom_handle(t, track):
                 return "tracks/%d" % idx
         return None
 
@@ -1351,92 +1355,22 @@ class LOMListeners:
 # import it from this module.
 _is_stale_handle_error = is_stale_handle_error
 
+# ``_safe_int_id`` moved to ``_common.safe_int_id`` (2026-11-25) so
+# ``path_resolver.same_lom_handle`` can use it without importing this
+# module; the name stays importable from here for its many callers.
+_safe_int_id = safe_int_id
 
-def _safe_int_id(live_object) -> Optional[int]:
-    """Read a stable LOM identity for ``live_object`` as an OSC-safe int32.
 
-    The ``ableton.v3`` framework wraps raw LOM objects (Track, Device,
-    etc.) and does *not* expose ``.id`` on those wrappers — only the
-    underlying LOM pointer as ``_live_ptr``. Lower-level objects like
-    ``DeviceParameter`` still expose ``.id`` directly. See
-    ``BrowserProbe._chain_device_ids`` for the prior-art precedent of
-    using ``_live_ptr`` as the stable identity.
+def _lom_key(live_object) -> int:
+    """The key LOMListeners' bookkeeping maps use for a track or device.
 
-    Resolution order:
-
-    1. ``_live_ptr`` — v3 wrapper's LOM pointer, stable across
-       renames/reorders. First choice for Track/Device/Chain.
-    2. ``.id`` — native LOM property, still present on
-       ``DeviceParameter`` and anything unwrapped.
-    3. ``None`` — genuine unresolvable; caller must skip.
-
-    We do NOT fall back to Python's built-in ``id()`` because that's
-    process-address-based and would make two calls on the same LOM
-    object *unrelated* to LOM identity (e.g., different Python
-    wrapper instances for the same LOM track). LOM identity is the
-    whole reason walk-based resolution works at all; using ``id()``
-    would silently break the "stable across reorders" invariant that
-    v2 addressing depends on.
-
-    OSC-safe masking: LOM pointer values can exceed int32 on 64-bit
-    macOS. We mask to 31 bits so OSC ``'i'`` emit doesn't overflow.
-    Masking preserves identity: two reads on the same LOM object
-    return the same masked value.
-
-    Used by:
-    - ``LOMListeners`` itself for device-id bookkeeping during the
-      add/remove diff in ``_on_track_devices_changed``.
-    - ``MutationComponent.on_param_value_changed`` to compute the v2
-      wire pid from the parameter the listener handed it.
-    - ``DevicesComponent`` v2/legacy write handlers' inline LOM walk
-      (matches a wire pid against ``_safe_int_id(param)``).
-    - ``StateFullComponent`` to label tree entries with their v2
-      wire ids.
+    ``safe_int_id`` (LOM identity), because Live hands out a fresh
+    Python wrapper on every read: measured on Live 13.0b26 (2026-11-25),
+    two reads of ``song.tracks[0]``, ``track.devices[0]`` or
+    ``song.scenes[0]`` held at once are distinct objects, so ``id()``
+    never matched across walks (docs/reference/live-api-measurements.md).
+    Python ``id()`` only for an object with no LOM identity at all (a
+    test stub), which then cannot be confused across walks either way.
     """
-    raw = getattr(live_object, "_live_ptr", None)
-    if raw is None:
-        try:
-            raw = live_object.id
-        except Exception as e:
-            logger.warning(
-                "_safe_int_id: %r has no _live_ptr and .id raised %s: %s",
-                live_object, type(e).__name__, e,
-            )
-            return None
-    if raw is None:
-        return None
-    try:
-        return int(raw) & 0x7FFFFFFF
-    except (TypeError, ValueError):
-        return None
-
-
-def _same_lom_track(a, b) -> bool:
-    """Return True if ``a`` and ``b`` refer to the same LOM track.
-
-    Live's ``song.tracks`` can return fresh Python wrapper instances on
-    each read — two walks over ``song.tracks`` yield objects that
-    compare unequal under ``is`` even though they represent the same
-    underlying LOM track. This breaks identity comparisons like
-    ``track is other`` in ``_track_segment_for``:
-    the track that ``_iter_all_tracks`` yields is already a different
-    wrapper from the one ``_safe_tracks_list`` returns a moment later.
-
-    We compare by ``_safe_int_id`` (masked ``_live_ptr``), which is the
-    stable identity used everywhere else in the walker. ``is`` is kept
-    as a fast path for two reasons: (1) test stubs share Python
-    identity and don't always expose ``_live_ptr``; (2) when Live *does*
-    hand back the same wrapper, we skip the id read.
-
-    Returns False if either object is None or neither identity form
-    matches — callers treat that as "not the same track".
-    """
-    if a is None or b is None:
-        return False
-    if a is b:
-        return True
-    aid = _safe_int_id(a)
-    bid = _safe_int_id(b)
-    if aid is None or bid is None:
-        return False
-    return aid == bid
+    key = safe_int_id(live_object)
+    return id(live_object) if key is None else key

@@ -55,10 +55,7 @@ from typing import Optional
 
 logger = logging.getLogger("looping")
 
-try:
-    from .LOMListeners import _safe_int_id as _lom_safe_int_id
-except ImportError:
-    _lom_safe_int_id = None
+from ._common import safe_int_id as _lom_safe_int_id
 
 
 # --- error codes (closed-enum, per [04 §7.2]) -----------------------------
@@ -1042,7 +1039,7 @@ def _slot_holds(slot, clip) -> bool:
     Python proxy, so ``slot.clip is song.view.detail_clip`` returns
     False even when both point at the same underlying clip. We compare
     by ``_live_ptr`` (LOM pointer), mirroring the
-    ``LOMListeners._same_lom_track`` pattern. Guarded against the
+    comparison :func:`same_lom_handle` makes. Guarded against the
     Live-12 RuntimeError that can come from inside torn-down slots.
     """
     try:
@@ -1059,12 +1056,12 @@ def _slot_holds(slot, clip) -> bool:
 
 def lom_id(obj) -> Optional[int]:
     """The stable identity :func:`same_lom_handle` compares —
-    ``LOMListeners._safe_int_id`` (``_live_ptr`` first, ``.id`` second,
+    ``_common.safe_int_id`` (``_live_ptr`` first, ``.id`` second,
     masked to int32) — or ``None`` when the object has neither. The one
     id helper for callers that key a set on it (the loader's "which device
     is new" snapshots used to carry their own copy — code review,
     2026-09-12)."""
-    if obj is None or _lom_safe_int_id is None:
+    if obj is None:
         return None
     return _lom_safe_int_id(obj)
 
@@ -1083,8 +1080,6 @@ def same_lom_handle(a, b) -> bool:
         return False
     if a is b:
         return True
-    if _lom_safe_int_id is None:
-        return False
     aid = _lom_safe_int_id(a)
     bid = _lom_safe_int_id(b)
     if aid is None or bid is None:

@@ -7,7 +7,7 @@ pytest and fails inside Live (surface/CLAUDE.md).
 """
 
 import logging
-from typing import Tuple
+from typing import Optional, Tuple
 
 logger = logging.getLogger("looping")
 
@@ -113,3 +113,82 @@ class WarnOnce:
 
     def clear(self) -> None:
         self._seen.clear()
+
+
+def safe_int_id(live_object) -> Optional[int]:
+    """Read a stable LOM identity for ``live_object`` as an OSC-safe int32.
+
+    The ``ableton.v3`` framework wraps raw LOM objects (Track, Device,
+    etc.) and does *not* expose ``.id`` on those wrappers — only the
+    underlying LOM pointer as ``_live_ptr``. Lower-level objects like
+    ``DeviceParameter`` still expose ``.id`` directly. See
+    ``BrowserProbe._chain_device_ids`` for the prior-art precedent of
+    using ``_live_ptr`` as the stable identity.
+
+    Resolution order:
+
+    1. ``_live_ptr`` — v3 wrapper's LOM pointer, stable across
+       renames/reorders. First choice for Track/Device/Chain.
+    2. ``.id`` — native LOM property, still present on
+       ``DeviceParameter`` and anything unwrapped.
+    3. ``None`` — genuine unresolvable; caller must skip.
+
+    We do NOT fall back to Python's built-in ``id()`` because that's
+    process-address-based and would make two calls on the same LOM
+    object *unrelated* to LOM identity (e.g., different Python
+    wrapper instances for the same LOM track). LOM identity is the
+    whole reason walk-based resolution works at all; using ``id()``
+    would silently break the "stable across reorders" invariant that
+    v2 addressing depends on.
+
+    OSC-safe masking: LOM pointer values can exceed int32 on 64-bit
+    macOS. We mask to 31 bits so OSC ``'i'`` emit doesn't overflow.
+    Masking preserves identity: two reads on the same LOM object
+    return the same masked value.
+
+    Used by:
+    - ``LOMListeners`` itself for device-id bookkeeping during the
+      add/remove diff in ``_on_track_devices_changed``.
+    - ``MutationComponent.on_param_value_changed`` to compute the v2
+      wire pid from the parameter the listener handed it.
+    - ``DevicesComponent`` v2/legacy write handlers' inline LOM walk
+      (matches a wire pid against ``_safe_int_id(param)``).
+    - ``StateFullComponent`` to label tree entries with their v2
+      wire ids.
+    """
+    raw = getattr(live_object, "_live_ptr", None)
+    if raw is None:
+        try:
+            raw = live_object.id
+        except Exception as e:
+            logger.warning(
+                "safe_int_id: %r has no _live_ptr and .id raised %s: %s",
+                live_object, type(e).__name__, e,
+            )
+            return None
+    if raw is None:
+        return None
+    try:
+        return int(raw) & 0x7FFFFFFF
+    except (TypeError, ValueError):
+        return None
+
+
+def read_all_notes(clip):
+    """Every MIDI note in ``clip``: ``(notes, None)``, or ``(None, exc)``
+    when the LOM raised.
+
+    ``Clip.get_all_notes_extended`` takes no arguments. Measured on Live
+    13.0b26 (2026-11-25): the bare call returns the clip's
+    ``MidiNoteVector``; ``(0, 128, 0.0, length)`` raises
+    ``Boost.Python.ArgumentError`` ("did not match C++ signature
+    get_all_notes_extended(TPyHandle<AClip>)"). That ranged form belongs to
+    ``get_notes_extended(from_pitch, pitch_span, from_time, time_span)``.
+    Every reader used to try the ranged form first and fall back on the
+    ``TypeError``, so the fallback was the path every read took
+    (docs/reference/live-api-measurements.md, "Clip").
+    """
+    try:
+        return clip.get_all_notes_extended(), None
+    except LOM_ERRORS as e:
+        return None, e

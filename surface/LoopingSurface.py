@@ -201,6 +201,7 @@ from .components.SimplerLoadComponent import (
     V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS,
 )
 from .components.GenerationComponent import GenerationComponent
+from .components.component_util import reset_undo_steps, run_guarded_steps
 from .components.GrooveComponent import (
     GrooveComponent,
     V3_CLIP_GROOVE_SET_BASE_ADDRESS,
@@ -831,6 +832,11 @@ class LoopingSurface(ControlSurface):
         # (``_own``). Set before the transport so a surface that bails
         # out below still tears down cleanly.
         self._components = []
+        # The song's undo owner counts held levels per song across every
+        # component (``component_util``). A fresh instance starts at zero:
+        # one torn down mid-gesture must not leave a level that keeps every
+        # later begin from reaching Live.
+        reset_undo_steps()
 
         # Phase 1: bind OSC transport. Bail-out if the port is taken.
         constants = load_constants()
@@ -1066,17 +1072,32 @@ class LoopingSurface(ControlSurface):
         # so without a piggyback re-emit the strip stays blank until
         # the next LOM change (e.g. recording flip). Mirrors the
         # `playhead.emit_on_accept()` call inside `_emit_on_accept_chain`.
+        def _accept_seed(attr):
+            """A step calling ``self.<attr>.emit_on_accept()``, skipped when
+            that component was never built."""
+            def step():
+                component = getattr(self, attr, None)
+                if component is not None:
+                    component.emit_on_accept()
+            return step
+
+        def _presence_mark_alive():
+            presence = getattr(self, "_server_presence_component", None)
+            if presence is not None:
+                presence.mark_alive()
+
         def _emit_on_resync_chain(session_id=None, client_etag=None):
             # Same split as the accept chain: the ETag can suppress the
             # tree, never the playhead re-seed — that emit exists
             # precisely because state/full does not carry those fields,
-            # so it is needed *more* on an ETag hit, not less.
-            self._v3_state_full_component.emit_on_resync(
-                session_id=session_id, client_etag=client_etag,
-            )
-            playhead = getattr(self, "_playhead_component", None)
-            if playhead is not None:
-                playhead.emit_on_accept()
+            # so it is needed *more* on an ETag hit, not less. Each step
+            # is guarded on its own (``run_guarded_steps``).
+            run_guarded_steps("LoopingSurface resync", (
+                ("state/full", lambda: self._v3_state_full_component.emit_on_resync(
+                    session_id=session_id, client_etag=client_etag,
+                )),
+                ("playhead", _accept_seed("_playhead_component")),
+            ))
         self._devices_component.set_state_full_on_resync(
             _emit_on_resync_chain,
         )
@@ -1110,95 +1131,52 @@ class LoopingSurface(ControlSurface):
             # leave the reconnecting UI with a correct tree and a blank
             # clip strip.
             #
-            # A handshake accept only happens because the server sent a
-            # hello — proof it's alive right now. Stamp presence first so
-            # the ExclusiveArm accept-seed below (and any immediately
-            # following selection change) sees the server as present,
-            # even if the first post-restart bridge heartbeat hasn't
-            # landed yet. This is what makes set-load / Live-restart
-            # recovery instant rather than heartbeat-cadence-delayed.
-            presence = getattr(self, "_server_presence_component", None)
-            if presence is not None:
-                presence.mark_alive()
-            self._v3_state_full_component.emit_on_accept(
-                session_id=session_id, client_etag=client_etag,
-            )
-            self._session_component.emit_on_accept()
-            # SessionSettingsComponent (2026-04-22): re-seed
-            # ``auto_arm`` + ``move_volume_knob`` so a reconnecting UI
-            # picks up the current surface-side toggle state.
-            session_settings = getattr(
-                self, "_session_settings_component", None,
-            )
-            if session_settings is not None:
-                session_settings.emit_on_accept()
-            # PR-5e1: re-emit clip/focused + 6 focused-clip property
-            # values so a cold-start UI gets seeded. Mirrors the
-            # SessionComponent pattern from PR-5d. Guarded for the
-            # early-wire case where ClipPropertiesComponent hasn't
-            # been constructed yet (emit_on_accept runs on handshake
-            # accept, which the surface only reaches after full
-            # construction, but the guard is cheap and matches the
-            # defensive style of the session re-emit).
-            clip_props = getattr(
-                self, "_clip_properties_component", None,
-            )
-            if clip_props is not None:
-                clip_props.emit_on_accept()
-            # M3 (clip-view-mirror): re-poke notes/changed for the focused
-            # clip so a cold-start UI pulls the rich note channel even
-            # though it has no focus-change event to trigger on.
-            clip_notes = getattr(self, "_clip_notes_component", None)
-            if clip_notes is not None:
-                clip_notes.emit_on_accept()
-            # Phase 7 PR-7d: SelectedTrackComponent re-emits the
-            # current selected_track path so a cold-start UI sees
-            # the selection without waiting for the next LOM fire.
-            # Bypasses the coalesce — accept is a one-shot seed.
-            # Defensive guard mirrors clip_props above.
-            selected_track = getattr(
-                self, "_selected_track_component", None,
-            )
-            if selected_track is not None:
-                selected_track.emit_on_accept()
-            # The blue hand (2026-10-25): where Live's appointed device is,
-            # so a reconnecting UI marks it without waiting for a move.
-            device_commands = getattr(self, "_device_commands_component", None)
-            if device_commands is not None:
-                device_commands.emit_on_accept()
-            # ExclusiveArmComponent seed: arm the currently-selected
-            # regular track on handshake accept. Master/return
-            # selections skip silently. Symmetric guard to the
-            # selected-track case above.
-            exclusive_arm = getattr(
-                self, "_exclusive_arm_component", None,
-            )
-            if exclusive_arm is not None:
-                exclusive_arm.emit_on_accept()
-            # PR-5e2: groove pool has no UI-visible state of its own
-            # (emit_on_accept is a no-op — kept for symmetry), but
-            # GrooveComponent re-emits has_groove + 5 amount values
-            # for the currently-focused clip. Same defensive guard
-            # as clip_props above — emit_on_accept fires after full
-            # construction, but the guard is cheap.
-            pool = getattr(self, "_groove_pool_component", None)
-            if pool is not None:
-                pool.emit_on_accept()
-            groove = getattr(self, "_groove_component", None)
-            if groove is not None:
-                groove.emit_on_accept()
-            # ADR-361: re-seed playing-clip strip state on reconnect.
-            # state/full carries slot/clip name/length but NOT
-            # file_path / loop_start / loop_end / looping / is_audio_clip
-            # — those live only on PlayheadComponent's playing_slot
-            # emit. Without this, the UI's TrackClipView strip stays
-            # blank on stationary-state reconnects (LOM listeners only
-            # fire on actual changes; the dedup added in ADR-361
-            # would suppress them anyway). emit_on_accept clears the
-            # dedup cache and re-walks every track.
-            playhead = getattr(self, "_playhead_component", None)
-            if playhead is not None:
-                playhead.emit_on_accept()
+            # Every step is guarded on its own (``run_guarded_steps``):
+            # one seed that raises must not skip the selected track, the
+            # arm and the playhead after it (code review, 2026-11-25).
+            # The component lookups are lazy (``_accept_seed``) because the
+            # chain runs on handshake accept, after full construction, and
+            # a component that was never built is skipped.
+            run_guarded_steps("LoopingSurface accept", (
+                # A handshake accept only happens because the server sent
+                # a hello — proof it's alive right now. Stamp presence
+                # first so the ExclusiveArm accept-seed below (and any
+                # immediately following selection change) sees the server
+                # as present, even if the first post-restart bridge
+                # heartbeat hasn't landed yet. This is what makes set-load
+                # / Live-restart recovery instant rather than
+                # heartbeat-cadence-delayed.
+                ("presence", _presence_mark_alive),
+                ("state/full", lambda: self._v3_state_full_component.emit_on_accept(
+                    session_id=session_id, client_etag=client_etag,
+                )),
+                # PR-5d: state/full is track-scoped and carries no
+                # song-scoped session attrs (metronome, loop, signature,
+                # scale…); a UI connecting after init missed the seeds.
+                ("session", lambda: self._session_component.emit_on_accept()),
+                # auto_arm + move_volume_knob and the other toggles.
+                ("session settings", _accept_seed("_session_settings_component")),
+                # PR-5e1: clip/focused + the focused clip's properties.
+                ("clip properties", _accept_seed("_clip_properties_component")),
+                # M3: re-poke notes/changed so a cold-start UI pulls the
+                # rich note channel with no focus change to trigger it.
+                ("clip notes", _accept_seed("_clip_notes_component")),
+                # PR-7d: the selected_track path, bypassing the coalesce.
+                ("selected track", _accept_seed("_selected_track_component")),
+                # The blue hand (2026-10-25): Live's appointed device.
+                ("device commands", _accept_seed("_device_commands_component")),
+                # Arm the selected regular track (master/return skip).
+                ("exclusive arm", _accept_seed("_exclusive_arm_component")),
+                # PR-5e2: the pool's seed is a no-op kept for symmetry;
+                # the groove re-emits has_groove + the amounts.
+                ("groove pool", _accept_seed("_groove_pool_component")),
+                ("groove", _accept_seed("_groove_component")),
+                # ADR-361: the playing-clip strip state (file_path, loop
+                # points, looping, is_audio_clip) rides only the
+                # playing_slot emit; emit_on_accept clears its dedup cache
+                # and re-walks every track.
+                ("playhead", _accept_seed("_playhead_component")),
+            ))
         self._handshake_component.set_state_full_on_accept(
             _emit_on_accept_chain,
         )

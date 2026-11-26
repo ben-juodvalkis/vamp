@@ -66,3 +66,57 @@ def test_one_raising_component_does_not_strand_the_rest(monkeypatch):
     surface.disconnect()
     assert lom._disconnected, "a raise mid-walk left LOMListeners attached"
     assert surface._sequencer_component is None
+
+
+_ACCEPT_SEEDS = (
+    "_session_component",
+    "_session_settings_component",
+    "_clip_properties_component",
+    "_clip_notes_component",
+    "_selected_track_component",
+    "_device_commands_component",
+    "_exclusive_arm_component",
+    "_groove_pool_component",
+    "_groove_component",
+    "_playhead_component",
+)
+
+
+def _record_seeds(monkeypatch, surface, ran, raising=()):
+    for attr in _ACCEPT_SEEDS:
+        def seed(_a=attr):
+            ran.append(_a)
+            if _a in raising:
+                raise RuntimeError("seed failed")
+        monkeypatch.setattr(getattr(surface, attr), "emit_on_accept", seed)
+
+
+def test_one_raising_accept_seed_does_not_skip_the_rest(monkeypatch):
+    """Code review, 2026-11-25: one raising ``emit_on_accept`` used to skip
+    every later seed (selected track, arm, playhead)."""
+    surface, _udp = build_surface(monkeypatch)
+    ran, trees = [], []
+    _record_seeds(monkeypatch, surface, ran, raising=("_session_component",))
+    monkeypatch.setattr(
+        surface._v3_state_full_component, "emit_on_accept",
+        lambda session_id=None, client_etag=None: trees.append((session_id, client_etag)),
+    )
+
+    surface._handshake_component._on_accept_state_full(session_id="s1", client_etag=7)
+
+    assert trees == [("s1", 7)]
+    assert ran == list(_ACCEPT_SEEDS)
+
+
+def test_a_raising_resync_tree_still_reseeds_the_playhead(monkeypatch):
+    surface, _udp = build_surface(monkeypatch)
+    ran = []
+    _record_seeds(monkeypatch, surface, ran)
+
+    def boom(session_id=None, client_etag=None):
+        raise RuntimeError("publish failed")
+
+    monkeypatch.setattr(surface._v3_state_full_component, "emit_on_resync", boom)
+    surface._devices_component._state_full_on_resync(session_id="s1", client_etag=None)
+
+    assert ran == ["_playhead_component"]

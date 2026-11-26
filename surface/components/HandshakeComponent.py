@@ -322,10 +322,11 @@ class HandshakeComponent:
 
         ``session_id`` / ``client_etag`` carry the 3.5.0 ETag context
         so the publisher can answer "you already have this" instead of
-        re-shipping the tree. Passed positionally through a hook whose
-        older form took no arguments, so the call is guarded — a
-        surface wired to a pre-3.5.0 publisher degrades to a full send
-        rather than a TypeError on the control thread.
+        re-shipping the tree. The hook takes both as keywords. There is
+        no retry without them (code review, 2026-11-25): a ``TypeError``
+        retry also caught one raised *inside* the hook and re-ran the
+        whole accept chain without the ETag, re-emitting every seed that
+        had already gone out. The chain guards each of its own steps.
         """
         hook = self._on_accept_state_full
         if hook is None:
@@ -336,12 +337,7 @@ class HandshakeComponent:
             )
             return
         try:
-            try:
-                hook(session_id=session_id, client_etag=client_etag)
-            except TypeError:
-                # Hook predates the ETag arguments (older publisher, or
-                # a test double). Full send is the safe answer.
-                hook()
+            hook(session_id=session_id, client_etag=client_etag)
         except Exception as e:
             logger.error(
                 "HandshakeComponent: post-accept state-delivery hook "

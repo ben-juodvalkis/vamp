@@ -60,6 +60,7 @@ except ImportError:  # pytest imports these flat — see osc_transport.py
     from V3StateFullComponent import extract_etag
 
 from ._common import LOM_ERRORS
+from .component_util import begin_undo_step, end_undo_step
 from .LOMListeners import _safe_int_id
 from .path_resolver import ResolveStatus, resolve_device, resolve_param
 
@@ -384,8 +385,7 @@ class DevicesComponent:
             for parameter, value in writes:
                 self._write(parameter, value, where="device-params", param_id=None)
         finally:
-            if began:
-                self._end_undo_step()
+            end_undo_step("DevicesComponent", self._song, began)
         logger.info(
             "device/params/set %s: %d written, %d already held, %d skipped",
             path, len(writes), len(values) - len(writes) - unknown, unknown,
@@ -393,19 +393,9 @@ class DevicesComponent:
         return None
 
     def _begin_undo_step(self) -> bool:
-        """Open an undo step; ``False`` when Live refused or has none."""
-        try:
-            self._song.begin_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("DevicesComponent: begin_undo_step raised %s: %s", type(e).__name__, e)
-            return False
-        return True
-
-    def _end_undo_step(self) -> None:
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("DevicesComponent: end_undo_step raised %s: %s", type(e).__name__, e)
+        """The song's shared undo step (``component_util``); ``False`` when
+        Live refused or has none."""
+        return begin_undo_step("DevicesComponent", self._song)
 
     # --- /looping/v3/param/query ------------------------------------------
 
@@ -490,15 +480,13 @@ class DevicesComponent:
         if remaining and isinstance(remaining[0], str) and remaining[0]:
             session_id = remaining[0]
 
+        # No retry without the ETag on a TypeError: it also caught one
+        # raised inside the chain and re-ran it (HandshakeComponent's
+        # ``_kick_state_delivery`` has the same rule).
         try:
-            try:
-                self._state_full_on_resync(
-                    session_id=session_id, client_etag=client_etag,
-                )
-            except TypeError:
-                # Callback predates the ETag arguments (older publisher
-                # or a test double). A full send is the safe answer.
-                self._state_full_on_resync()
+            self._state_full_on_resync(
+                session_id=session_id, client_etag=client_etag,
+            )
         except Exception as e:
             logger.error(
                 "DevicesComponent.handle_v3_state_resync: resync callback "

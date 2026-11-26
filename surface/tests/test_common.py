@@ -95,3 +95,38 @@ def test_warn_once(caplog):
     assert ("tracks/0", "cap") in warned
     warned.clear()
     assert ("tracks/0", "cap") not in warned
+
+
+class _LiveShapedClip:
+    """``get_all_notes_extended`` as Live 13.0b26 has it (measured
+    2026-11-25): the bare call answers, any argument raises Boost's
+    ArgumentError, a ``TypeError``."""
+
+    def __init__(self, notes=(), raises=None):
+        self.notes = list(notes)
+        self.raises = raises
+        self.calls = []
+
+    def get_all_notes_extended(self, *args):
+        self.calls.append(args)
+        if args:
+            raise TypeError("did not match C++ signature: get_all_notes_extended(TPyHandle<AClip>)")
+        if self.raises is not None:
+            raise self.raises
+        return list(self.notes)
+
+
+def test_read_all_notes_makes_the_bare_call_only():
+    from components._common import read_all_notes
+
+    clip = _LiveShapedClip(notes=["n1", "n2"])
+    assert read_all_notes(clip) == (["n1", "n2"], None)
+    assert clip.calls == [()]
+
+
+def test_read_all_notes_reports_a_raise():
+    from components._common import read_all_notes
+
+    err = RuntimeError("torn down")
+    notes, got = read_all_notes(_LiveShapedClip(raises=err))
+    assert notes is None and got is err

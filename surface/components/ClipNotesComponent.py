@@ -84,7 +84,7 @@ from typing import Callable, List, Optional, Tuple
 
 from . import path_resolver
 from .detail_clip import DetailClipWatch, focus_path
-from ._common import LOM_ERRORS, coerce_str
+from ._common import LOM_ERRORS, coerce_str, read_all_notes
 from .component_util import emit_error, first_time, parse_int_arg, safe_emit
 from .path_resolver import ResolveStatus
 from .clip_notes_codec import (  # noqa: F401  (re-exported: the tests import these from here)
@@ -1184,32 +1184,9 @@ class ClipNotesComponent:
 
     def _try_read_notes_extended(self, clip):
         """Read every note: ``(raw, None)``, or ``(None, exc)`` when the LOM
-        raised.
-
-        ``get_all_notes_extended(0, 128, 0, length)`` is the canonical
-        full-clip query (matches the M4L behaviour and the audio-extent
-        trick AbletonOSC uses); a missing length falls back to 1<<14 beats,
-        which exceeds any real clip. Older Live builds expose only the
-        no-arg form, as do the test stubs, so a ``TypeError`` from the
-        ranged call falls back to it. ``TypeError`` is also in
-        ``_LOM_ERRORS`` (``Boost.Python.ArgumentError`` on a torn-down
-        handle); the arity clause comes first on purpose, so a wrong-arity
-        raise is retried rather than read as a tear-down. Keep this order:
-        changing it needs a rig check.
-        """
-        try:
-            length = float(getattr(clip, "length", 0.0)) or float(1 << 14)
-        except _LOM_ERRORS:
-            length = float(1 << 14)
-        try:
-            return clip.get_all_notes_extended(0, 128, 0.0, length), None
-        except TypeError:
-            try:
-                return clip.get_all_notes_extended(), None
-            except _LOM_ERRORS as e:
-                return None, e
-        except _LOM_ERRORS as e:
-            return None, e
+        raised. ``_common.read_all_notes``: the bare call, the one form
+        Live accepts (measured on the rig, 2026-11-25)."""
+        return read_all_notes(clip)
 
     def _replace_clip_notes(self, clip, notes: List[dict]) -> None:
         """Atomically replace every note in ``clip`` with ``notes``.

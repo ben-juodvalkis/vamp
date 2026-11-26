@@ -71,6 +71,7 @@ import logging
 
 from . import path_resolver
 from ._common import LOM_ERRORS, coerce_str as _coerce_str
+from .component_util import begin_undo_step, end_undo_step
 from .drum_vm_functions import DRUM_RACK_CLASS_NAME
 from .key_detect import (
     BAND_NO_KEY,
@@ -683,11 +684,7 @@ class KeyDetectComponent:
         opened = False
         self._writing = True
         try:
-            try:
-                song.begin_undo_step()
-                opened = True
-            except _LOM_ERRORS as e:
-                logger.warning("KeyDetect: begin_undo_step raised: %s", e)
+            opened = begin_undo_step("KeyDetect", song)  # the song's shared step
             if stamp is not None:
                 try:
                     stamp.root_note = root
@@ -707,11 +704,7 @@ class KeyDetectComponent:
                 logger.warning("KeyDetect: writing %s raised: %s", key_name((root, scale)), e)
         finally:
             self._writing = False
-            if opened:
-                try:
-                    song.end_undo_step()
-                except _LOM_ERRORS as e:
-                    logger.warning("KeyDetect: end_undo_step raised: %s", e)
+            end_undo_step("KeyDetect", song, opened)
         after = self._current_key()
         self._last_seen = after
         if after != (root, scale):

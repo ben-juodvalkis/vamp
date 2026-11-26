@@ -432,8 +432,12 @@ class SelectedTrackComponent:
         except _LOM_ERRORS as e:
             self._warn_once("song.scenes", "read", e)
             return None
+        # LOM identity, not ``is``: every read of ``song.scenes`` and of
+        # ``view.selected_scene`` is a fresh wrapper (measured on Live
+        # 13.0b26, 2026-11-25), so ``is`` never matched and no
+        # ``selected_scene`` was ever sent.
         for i, s in enumerate(scenes):
-            if s is scene:
+            if path_resolver.same_lom_handle(s, scene):
                 return i
         return None
 

@@ -210,7 +210,7 @@ import traceback
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from . import sequencer_math as sm
-from ._common import LOM_ERRORS
+from ._common import LOM_ERRORS, read_all_notes
 from .component_util import first_time, safe_class_name
 from .DrumPadChainComponent import PadChainWatcher
 from .drum_vm_resolve import find_track_drum_rack
@@ -1623,15 +1623,15 @@ class SequencerComponent(TemperatureMixin):
         pitch (ADR-435): ``get_notes_extended(pitch, 1, …)`` where the
         clip offers that form, else the full read filtered; ``whole``
         reads past the pad's scope (its unmute, which must find the ids
-        the kit's Temperature moved off the pad). The full read tries
-        ``get_all_notes_extended`` with arguments first, then bare (older
-        builds and stubs; ClipNotesComponent's idiom). ``None`` when the
-        LOM raised."""
-        try:
-            length = float(getattr(clip, "length", 0.0)) or float(1 << 14)
-        except _LOM_ERRORS:
-            length = float(1 << 14)
+        the kit's Temperature moved off the pad). The full read is
+        ``_common.read_all_notes``, the bare call (the only form Live
+        accepts, measured on the rig 2026-11-25). ``None`` when the LOM
+        raised."""
         if inst.pad_note is not None and not whole:
+            try:
+                length = float(getattr(clip, "length", 0.0)) or float(1 << 14)
+            except _LOM_ERRORS:
+                length = float(1 << 14)
             try:
                 return clip.get_notes_extended(inst.pad_note, 1, 0.0, length)
             except (TypeError, AttributeError):
@@ -1639,16 +1639,9 @@ class SequencerComponent(TemperatureMixin):
             except RuntimeError as e:
                 self._warn_once(inst.device_path, "notes_read", "get_notes_extended raised: %s" % e)
                 return None
-        try:
-            vec = clip.get_all_notes_extended(0, 128, 0.0, length)
-        except TypeError:
-            try:
-                vec = clip.get_all_notes_extended()
-            except _LOM_ERRORS as e:
-                self._warn_once(inst.device_path, "notes_read", "get_all_notes_extended raised: %s" % e)
-                return None
-        except _LOM_ERRORS as e:
-            self._warn_once(inst.device_path, "notes_read", "get_all_notes_extended raised: %s" % e)
+        vec, err = read_all_notes(clip)
+        if err is not None:
+            self._warn_once(inst.device_path, "notes_read", "get_all_notes_extended raised: %s" % err)
             return None
         if inst.pad_note is not None and not whole and vec is not None:
             vec = [n for n in vec if self._note_pitch(n) == inst.pad_note]
