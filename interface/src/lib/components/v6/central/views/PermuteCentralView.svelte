@@ -103,15 +103,17 @@
 </script>
 
 <!--
-  10 equal columns: mute-len | mute-steps | mute-rate (row 1)
+  10 equal columns, 2 | 6 | 2:
+                    mute-len | mute-steps | mute-rate (row 1)
                     ───────── seam ─────────
                     pitch-len | pitch-steps | pitch-rate (row 3)
 
-  The step block is 8 columns wide whatever the length: it holds as many
+  The step block is 6 columns wide whatever the length: it holds as many
   cells as the row's length, 2..16 (ADR-443), so at 16 each cell is half
   the width it has at 8. Length and rate are scrub tabs, a cell per value
-  (2026-11-25; knobs from 2026-11-09): Length 2..16 three across, Rate
-  8 bars..1/16 two across, each under its name.
+  (2026-11-25; knobs from 2026-11-09), two columns each, taken from the
+  steps: Length 2..16 five across, Rate four across (bars over
+  fractions), each under its name, the chosen cell lit in the row's ink.
 
   Two sequencers, one per row, sharing a grid. They run at their own
   lengths and their own rates and only their ink said so; the seam between
@@ -119,13 +121,13 @@
 -->
 <div class="h-full w-full p-(--central-inset) grid-layout" data-permute-scope={scope?.note ?? undefined}>
 	<!-- Mute length — col 1, row 1 -->
-	<div class="ctrl-cell" data-layout-box style="grid-column: 1; grid-row: 1;">
+	<div class="ctrl-cell" data-layout-box style="grid-column: 1 / 3; grid-row: 1;">
 		<span class="tab-name">Mute length</span>
 		<ScrubTabs
 			options={LENGTHS}
 			selected={muteLength - MIN_LENGTH}
 			onSelect={(_, n) => setMuteLength(n)}
-			cols={3}
+			cols={5}
 			tint={muteColor}
 			ghost={!device}
 			label={(n) => `Mute length ${n} steps`}
@@ -138,13 +140,13 @@
 	</div>
 
 	<!-- Mute rate — col 10, row 1 -->
-	<div class="ctrl-cell" data-layout-box style="grid-column: 10; grid-row: 1;">
+	<div class="ctrl-cell" data-layout-box style="grid-column: 9 / 11; grid-row: 1;">
 		<span class="tab-name">Mute rate</span>
 		<ScrubTabs
 			options={RATE_LABELS}
 			selected={muteRateIndex}
 			onSelect={(i) => setMuteRate(i)}
-			cols={2}
+			cols={4}
 			tint={muteColor}
 			ghost={!device}
 			label={(r) => `Mute rate ${r}`}
@@ -170,13 +172,13 @@
 	</div>
 
 	<!-- Pitch length — col 1, row 3 -->
-	<div class="ctrl-cell" data-layout-box style="grid-column: 1; grid-row: 3;">
+	<div class="ctrl-cell" data-layout-box style="grid-column: 1 / 3; grid-row: 3;">
 		<span class="tab-name">Pitch length</span>
 		<ScrubTabs
 			options={LENGTHS}
 			selected={pitchLength - MIN_LENGTH}
 			onSelect={(_, n) => setPitchLength(n)}
-			cols={3}
+			cols={5}
 			tint={pitchColor}
 			ghost={!device}
 			label={(n) => `Pitch length ${n} steps`}
@@ -189,13 +191,13 @@
 	</div>
 
 	<!-- Pitch rate — col 10, row 3 -->
-	<div class="ctrl-cell" data-layout-box style="grid-column: 10; grid-row: 3;">
+	<div class="ctrl-cell" data-layout-box style="grid-column: 9 / 11; grid-row: 3;">
 		<span class="tab-name">Pitch rate</span>
 		<ScrubTabs
 			options={RATE_LABELS}
 			selected={pitchRateIndex}
 			onSelect={(i) => setPitchRate(i)}
-			cols={2}
+			cols={4}
 			tint={pitchColor}
 			ghost={!device}
 			label={(r) => `Pitch rate ${r}`}
@@ -249,14 +251,14 @@
 	}
 
 
-	/* col 1=length, 2-9=steps, 10=rate */
+	/* cols 1-2=length, 3-8=steps, 9-10=rate */
 	.grid-mute-steps {
-		grid-column: 2 / 10;
+		grid-column: 3 / 9;
 		grid-row: 1;
 	}
 
 	.grid-pitch-steps {
-		grid-column: 2 / 10;
+		grid-column: 3 / 9;
 		grid-row: 3;
 	}
 
@@ -272,6 +274,14 @@
 	}
 	.ctrl-cell > :global(.scrub-tabs) {
 		flex: 1 1 0;
+	}
+	/* The chosen length or rate lights in its row's ink (the user,
+	   2026-11-25): orange for mute, blue for pitch, so each tab says
+	   which sequencer it sets. The house tab lights ON's white, pinned
+	   with !important by the Hybrid skin (ADR-544), so this matches it. */
+	.ctrl-cell :global(.seg-grid .device-segment.active) {
+		background: var(--btn-tint) !important;
+		color: var(--on-fg) !important;
 	}
 	.tab-name {
 		text-align: center;
