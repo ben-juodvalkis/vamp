@@ -77,9 +77,21 @@ struct AppConfig {
         // config/ from a clone, Application Support when installed.
         let configDir = installedPaths(constantsAt: url)?.dataDir("config") ?? url.deletingLastPathComponent()
         let local = configDir.appendingPathComponent("constants.local.json")
-        if let localData = try? Data(contentsOf: local),
-           let overlay = try? JSONSerialization.jsonObject(with: localData) as? [String: Any] {
-            json = merged(json, overlay)
+        // No file is no overlay. A file that is there but unreadable or not
+        // a JSON object is said in the log: the bridge refuses to start on
+        // one (`loadConstants` throws), and an app quietly running on the
+        // tracked defaults meanwhile would point at the wrong ports.
+        if FileManager.default.fileExists(atPath: local.path) {
+            do {
+                let localData = try Data(contentsOf: local)
+                if let overlay = try JSONSerialization.jsonObject(with: localData) as? [String: Any] {
+                    json = merged(json, overlay)
+                } else {
+                    NSLog("[Vamp for Mac] %@ is not a JSON object; using constants.json alone", local.path)
+                }
+            } catch {
+                NSLog("[Vamp for Mac] could not read %@ (%@); using constants.json alone", local.path, error.localizedDescription)
+            }
         }
 
         let secret = loadSecret(in: configDir)

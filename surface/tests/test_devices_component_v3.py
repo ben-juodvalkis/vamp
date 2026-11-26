@@ -378,7 +378,7 @@ def test_v3_query_after_disconnect_silent(component, emits):
 
 def test_v3_resync_invokes_callback(component):
     called = []
-    component.set_state_full_on_resync(lambda: called.append(True))
+    component.set_state_full_on_resync(lambda **_: called.append(True))
     component.handle_v3_state_resync(args=(), source_addr=None)
     assert called == [True]
 
@@ -389,7 +389,7 @@ def test_v3_resync_no_callback_is_noop(component, emits):
 
 
 def test_v3_resync_callback_error_swallowed(component):
-    def bad():
+    def bad(**_):
         raise RuntimeError("boom")
     component.set_state_full_on_resync(bad)
     # Should not raise.
@@ -398,7 +398,7 @@ def test_v3_resync_callback_error_swallowed(component):
 
 def test_v3_resync_after_disconnect_noop(component):
     called = []
-    component.set_state_full_on_resync(lambda: called.append(True))
+    component.set_state_full_on_resync(lambda **_: called.append(True))
     component.disconnect()
     component.handle_v3_state_resync(args=(), source_addr=None)
     assert called == []

@@ -75,7 +75,12 @@ vi.mock('$lib/services/clipContext', () => ({
 }));
 
 vi.mock('$lib/stores/session.svelte', () => ({
+	onSelectedTrackChange: () => () => {},
 	session: {
+		selectedTrackIndex: 0,
+		selectTrackOptimistically(i: number) {
+			this.selectedTrackIndex = i;
+		},
 		get focusedClipPath() {
 			return 'tracks/0/slots/0/clip';
 		}

@@ -15,6 +15,7 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
+import { toFiniteNumber } from './oscTypeHelpers';
 import { applyPermuteStep } from '$lib/stores/v3/permuteSteps.svelte';
 import type { PermuteStepKind } from '$lib/stores/v3/permuteSteps.svelte';
 
@@ -35,19 +36,10 @@ export function handleV3PermuteStep(address: string, args: OSCArg[]): void {
 		logger.warn('v3 permute step unknown kind', { devicePath, kind });
 		return;
 	}
-	const step = toNumber(args[2]);
+	const step = toFiniteNumber(args[2]);
 	if (step === null) {
 		logger.warn('v3 permute step non-numeric step', { devicePath, kind, args });
 		return;
 	}
 	applyPermuteStep(devicePath, kind as PermuteStepKind, step);
-}
-
-function toNumber(v: OSCArg): number | null {
-	if (typeof v === 'number') return v;
-	if (typeof v === 'string') {
-		const n = Number(v);
-		return Number.isFinite(n) ? n : null;
-	}
-	return null;
 }

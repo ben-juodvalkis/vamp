@@ -79,7 +79,10 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Callable, Dict, List
+
+from .component_util import first_time, safe_emit
+from .listener_bag import ListenerBag
 
 logger = logging.getLogger("looping")
 
@@ -125,24 +128,17 @@ class MetersComponent:
         # master; keys are disjoint (tracks/<N> vs. "master").
         self._last_emit: Dict[str, float] = {}
 
-        # Detach records — flat list of every track-side listener we
-        # attached. Each record is ``(track, remove_method_name, cb,
-        # track_path)`` where ``track`` is the wrapper we attached on,
-        # ``cb`` is the shared L/R callback, and ``track_path`` is for
-        # debug logging. Same shape TrackMetadataComponent uses (issue
-        # #399 / ADR-350): ``id(track)`` is not stable across
-        # ``song.tracks`` reads, so we hold detach refs by storing the
-        # actual wrapper rather than its identity.
-        self._track_listeners: List[
-            Tuple[Any, str, Callable[[], None], str]
-        ] = []
+        # Detach records for every track-side listener we attached, each
+        # on the wrapper we attached on and tagged with its track path
+        # (issue #399 / ADR-350): ``id(track)`` is not stable across
+        # ``song.tracks`` reads, so we hold the wrapper, not its identity.
+        self._track_listeners = ListenerBag("MetersComponent", remove_level=logging.DEBUG)
 
         # Master listener bookkeeping: the same callback is attached
         # to both L and R listeners.
         self._master = None
         self._master_cb: Callable[[], None] = None  # type: ignore[assignment]
-        self._master_attached_left = False
-        self._master_attached_right = False
+        self._master_listeners = ListenerBag("MetersComponent", remove_level=logging.DEBUG)
 
         # (key, context) → True once WARNING has been logged, so a
         # RuntimeError inside a high-rate listener doesn't flood
@@ -157,8 +153,7 @@ class MetersComponent:
             "MetersComponent ready: %d track-side listener records "
             "(2 per regular track, L+R), master=%s",
             len(self._track_listeners),
-            "bound" if (self._master_attached_left
-                        and self._master_attached_right) else "unavailable",
+            "bound" if len(self._master_listeners) == 2 else "unavailable",
         )
 
     # --- structural-change hook -------------------------------------------
@@ -186,41 +181,17 @@ class MetersComponent:
         if self._disconnected:
             return
 
-        for track, remove_method_name, cb, path in self._track_listeners:
-            self._safe_remove_listener(track, remove_method_name, cb, path)
         self._track_listeners.clear()
 
         self._bind_all_tracks()
 
         # Prune stale last-emit entries. Master key is preserved.
-        live_keys = {path for _track, _rm, _cb, path
-                     in self._track_listeners}
+        live_keys = set(self._track_listeners.tags())
         live_keys.add(_MASTER_KEY)
         for key in list(self._last_emit.keys()):
             if key not in live_keys:
                 del self._last_emit[key]
 
-    def _safe_remove_listener(
-        self, target, remove_method_name: str, cb: Callable, path: str,
-    ) -> None:
-        """Call ``target.<remove_method_name>(cb)``, swallow LOM errors.
-
-        Live tears down C++-side listeners when the LOM handle leaves
-        the song, in which case the Python remove call raises
-        ``Boost.Python.ArgumentError`` (a ``TypeError`` subclass) or
-        ``RuntimeError``. Either is benign — we wanted detach, the C++
-        side already did it.
-        """
-        remove = getattr(target, remove_method_name, None)
-        if not callable(remove):
-            return
-        try:
-            remove(cb)
-        except (RuntimeError, AttributeError, TypeError) as e:
-            logger.debug(
-                "MetersComponent: %s on %s raised: %s",
-                remove_method_name, path, e,
-            )
 
     # --- listener attach / detach -----------------------------------------
 
@@ -241,23 +212,14 @@ class MetersComponent:
         onto ``_track_listeners`` so the rebind path can detach.
         """
         cb = self._make_track_listener(track=track, path=track_path)
-        for method_name in ("add_output_meter_left_listener",
-                            "add_output_meter_right_listener"):
-            add = getattr(track, method_name, None)
-            if not callable(add):
-                self._warn_once(
+        for attr in ("output_meter_left", "output_meter_right"):
+            self._track_listeners.add(
+                track, attr, cb, tag=track_path,
+                on_error=lambda e: self._warn_once(track_path, "attach", e),
+                on_missing=lambda attr=attr: self._warn_once(
                     track_path, "attach-missing",
-                    AttributeError("no %s on track" % method_name),
-                )
-                continue
-            try:
-                add(cb)
-            except (RuntimeError, AttributeError) as e:
-                self._warn_once(track_path, "attach", e)
-                continue
-            remove_method_name = "remove_" + method_name[len("add_"):]
-            self._track_listeners.append(
-                (track, remove_method_name, cb, track_path),
+                    AttributeError("no add_%s_listener on track" % attr),
+                ),
             )
 
     def _bind_master(self) -> None:
@@ -277,37 +239,16 @@ class MetersComponent:
         cb = self._make_master_listener()
         self._master_cb = cb
 
-        add_left = getattr(
-            self._master, "add_output_meter_left_listener", None,
-        )
-        if callable(add_left):
-            try:
-                add_left(cb)
-                self._master_attached_left = True
-            except (RuntimeError, AttributeError) as e:
-                self._warn_once(_MASTER_KEY, "master-attach-left", e)
-        else:
-            self._warn_once(
-                _MASTER_KEY, "master-attach-left-missing",
-                AttributeError(
-                    "no add_output_meter_left_listener on master_track",
+        for side in ("left", "right"):
+            attr = "output_meter_%s" % side
+            self._master_listeners.add(
+                self._master, attr, cb, tag=_MASTER_KEY,
+                on_error=lambda e, side=side: self._warn_once(
+                    _MASTER_KEY, "master-attach-%s" % side, e,
                 ),
-            )
-
-        add_right = getattr(
-            self._master, "add_output_meter_right_listener", None,
-        )
-        if callable(add_right):
-            try:
-                add_right(cb)
-                self._master_attached_right = True
-            except (RuntimeError, AttributeError) as e:
-                self._warn_once(_MASTER_KEY, "master-attach-right", e)
-        else:
-            self._warn_once(
-                _MASTER_KEY, "master-attach-right-missing",
-                AttributeError(
-                    "no add_output_meter_right_listener on master_track",
+                on_missing=lambda side=side, attr=attr: self._warn_once(
+                    _MASTER_KEY, "master-attach-%s-missing" % side,
+                    AttributeError("no add_%s_listener on master_track" % attr),
                 ),
             )
 
@@ -389,9 +330,7 @@ class MetersComponent:
                 (path, float(left), float(right)),
             )
 
-        if self._master is not None and (
-            self._master_attached_left or self._master_attached_right
-        ):
+        if self._master is not None and self._master_listeners:
             try:
                 left = self._master.output_meter_left
                 right = self._master.output_meter_right
@@ -437,23 +376,15 @@ class MetersComponent:
     def _safe_emit(self, address: str, payload: tuple) -> None:
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning(
-                "MetersComponent: emit %s failed: %s", address, e,
-            )
+        safe_emit("MetersComponent", self._emit, address, payload)
 
     def _warn_once(self, key: str, context: str, exc: BaseException) -> None:
-        wkey: Tuple[str, str] = (key, context)
-        if wkey in self._warned:
-            return
-        self._warned.add(wkey)
-        logger.warning(
-            "MetersComponent %s: %s access raised %s: %s "
-            "(suppressing further warnings)",
-            key, context, type(exc).__name__, exc,
-        )
+        if first_time(self._warned, (key, context)):
+            logger.warning(
+                "MetersComponent %s: %s access raised %s: %s "
+                "(suppressing further warnings)",
+                key, context, type(exc).__name__, exc,
+            )
 
     # --- lifecycle --------------------------------------------------------
 
@@ -470,37 +401,9 @@ class MetersComponent:
             return
         self._disconnected = True
 
-        for track, remove_method_name, cb, path in self._track_listeners:
-            self._safe_remove_listener(track, remove_method_name, cb, path)
         self._track_listeners.clear()
 
-        if self._master is not None and self._master_cb is not None:
-            if self._master_attached_left:
-                remove = getattr(
-                    self._master, "remove_output_meter_left_listener", None,
-                )
-                if callable(remove):
-                    try:
-                        remove(self._master_cb)
-                    except (RuntimeError, AttributeError) as e:
-                        logger.debug(
-                            "MetersComponent: master remove L raised: %s",
-                            e,
-                        )
-            if self._master_attached_right:
-                remove = getattr(
-                    self._master, "remove_output_meter_right_listener", None,
-                )
-                if callable(remove):
-                    try:
-                        remove(self._master_cb)
-                    except (RuntimeError, AttributeError) as e:
-                        logger.debug(
-                            "MetersComponent: master remove R raised: %s",
-                            e,
-                        )
-        self._master_attached_left = False
-        self._master_attached_right = False
+        self._master_listeners.clear()
         self._master_cb = None  # type: ignore[assignment]
 
         self._last_emit.clear()

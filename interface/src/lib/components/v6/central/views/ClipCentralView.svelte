@@ -65,52 +65,32 @@ import { logger } from '$lib/utils/logger';
 	let trackScheme = $derived(selectedTrackScheme() ?? CLIP_FALLBACK_SCHEME);
 	let trackTint = $derived(trackScheme.primary);
 
-	function halveLoopFromEnd() {
+	/**
+	 * Halve the focused clip's loop, keeping one end where it is: `'start'`
+	 * keeps the start (the end moves in), `'end'` keeps the end.
+	 */
+	function halveLoop(keep: 'start' | 'end') {
 		const clipPath = requireFocusedClip();
 		if (!clipPath) return;
-		const loopStart = clipPropertiesStore.loopStart;
-		const loopEnd = clipPropertiesStore.loopEnd;
-		const newEnd = loopStart + (loopEnd - loopStart) / 2;
-		setClipLoopEnd(clipPath, newEnd);
-	}
-
-	function halveLoopFromStart() {
-		const clipPath = requireFocusedClip();
-		if (!clipPath) return;
-		const loopStart = clipPropertiesStore.loopStart;
-		const loopEnd = clipPropertiesStore.loopEnd;
-		const newStart = loopEnd - (loopEnd - loopStart) / 2;
-		setClipLoopStart(clipPath, newStart);
+		const { loopStart, loopEnd } = clipPropertiesStore;
+		const half = (loopEnd - loopStart) / 2;
+		if (keep === 'start') setClipLoopEnd(clipPath, loopStart + half);
+		else setClipLoopStart(clipPath, loopEnd - half);
 	}
 
 	let warpMode = $derived(clipPropertiesStore.warpMode);
 	let instrumentType = $derived(currentInstrumentStore.type);
 
-	async function handleTransposeUp() {
+	// A rack instrument transposes by its device (the Drum Rack's `vm.pitch`,
+	// an Instrument Rack's macro); everything else, audio included, by the clip.
+	async function transpose(dir: 'up' | 'down') {
+		const byDevice =
+			trackType !== 'audio' && (instrumentType === 'drumrack' || instrumentType === 'instrument-rack');
 		try {
-			if (trackType === 'audio') {
-				await transposeClipUp();
-			} else if (instrumentType === 'drumrack' || instrumentType === 'instrument-rack') {
-				await transposeDeviceUp();
-			} else {
-				await transposeClipUp();
-			}
+			if (byDevice) await (dir === 'up' ? transposeDeviceUp() : transposeDeviceDown());
+			else await (dir === 'up' ? transposeClipUp() : transposeClipDown());
 		} catch (error) {
-			logger.error('Transpose up failed:', { component: 'ClipCentralView', error });
-		}
-	}
-
-	async function handleTransposeDown() {
-		try {
-			if (trackType === 'audio') {
-				await transposeClipDown();
-			} else if (instrumentType === 'drumrack' || instrumentType === 'instrument-rack') {
-				await transposeDeviceDown();
-			} else {
-				await transposeClipDown();
-			}
-		} catch (error) {
-			logger.error('Transpose down failed:', { component: 'ClipCentralView', error });
+			logger.error(`Transpose ${dir} failed:`, { component: 'ClipCentralView', error });
 		}
 	}
 
@@ -534,14 +514,14 @@ import { logger } from '$lib/utils/logger';
 				<div class="stacked-btns">
 					<div class="btn-cell">
 						<button
-							use:press={{ onPress: () => handleTransposeUp(), disabled: !hasTranspose }}
+							use:press={{ onPress: () => transpose('up'), disabled: !hasTranspose }}
 							disabled={!hasTranspose}
 							class="btn btn-well btn-action fam-quant"
 						>+12</button>
 					</div>
 					<div class="btn-cell">
 						<button
-							use:press={{ onPress: () => handleTransposeDown(), disabled: !hasTranspose }}
+							use:press={{ onPress: () => transpose('down'), disabled: !hasTranspose }}
 							disabled={!hasTranspose}
 							class="btn btn-well btn-action fam-quant"
 						>−12</button>
@@ -579,7 +559,7 @@ import { logger } from '$lib/utils/logger';
 			<div class="stacked-btns">
 				<div class="btn-cell">
 					<button
-						use:press={{ onPress: () => halveLoopFromStart(), disabled: !hasClip }}
+						use:press={{ onPress: () => halveLoop('end'), disabled: !hasClip }}
 						disabled={!hasClip}
 						class="btn btn-well btn-action fam-quant"
 						aria-label="Clip left"
@@ -589,7 +569,7 @@ import { logger } from '$lib/utils/logger';
 				</div>
 				<div class="btn-cell">
 					<button
-						use:press={{ onPress: () => halveLoopFromEnd(), disabled: !hasClip }}
+						use:press={{ onPress: () => halveLoop('start'), disabled: !hasClip }}
 						disabled={!hasClip}
 						class="btn btn-well btn-action fam-quant"
 						aria-label="Clip right"

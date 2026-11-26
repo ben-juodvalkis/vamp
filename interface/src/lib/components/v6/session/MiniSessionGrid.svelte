@@ -41,9 +41,10 @@
     import { session } from '$lib/stores/session.svelte';
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
-    import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
-    import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+    import { trackInkFor } from '$lib/utils/trackInkFor';
     import { press } from '$lib/actions/press';
+    import { boxSize } from '$lib/actions/boxSize';
+    import { sessionRowPitch } from '$lib/utils/sessionRowPitch';
     import {
         selectSlot,
         actOnSlot,
@@ -72,7 +73,7 @@
     const trackPath = $derived(`tracks/${trackIndex}`);
     const record = $derived(hasTrack ? v3Store.tracks.get(trackPath) : undefined);
     const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Main'));
-    const ink = $derived(trackInk(rgbToHex(record?.color ?? 0x808080), paintModeReactive()));
+    const ink = $derived(trackInkFor(hasTrack ? trackPath : null));
     const isGroup = $derived(hasTrack && clipStateStore.isGroupTrack(trackIndex));
 
     // ---- Row pitch ------------------------------------------------------
@@ -81,7 +82,6 @@
     // (2026-10-24, the user's call: level with the strips' mute buttons
     // beside it), so the pitch is the clip rows' own box divided by the
     // rows drawn, the stop row's height already out of it.
-    let gridBoxEl = $state<HTMLDivElement | null>(null);
     let gridBoxHeightPx = $state(0);
 
     /**
@@ -95,20 +95,8 @@
      */
     let stopPressed = $state(false);
     const renderedRows = $derived(sceneWindowStore.renderedRows);
-    const rowPitchPx = $derived(renderedRows > 0 ? gridBoxHeightPx / renderedRows : 0);
-
-    $effect(() => {
-        const el = gridBoxEl;
-        if (!el || typeof ResizeObserver === 'undefined') return;
-        const measure = () => {
-            const h = el.getBoundingClientRect().height;
-            if (h > 0) gridBoxHeightPx = h;
-        };
-        measure();
-        const ro = new ResizeObserver(measure);
-        ro.observe(el);
-        return () => ro.disconnect();
-    });
+    // The stop button sits outside the measured box, so no extra row.
+    const rowPitchPx = $derived(sessionRowPitch(gridBoxHeightPx, renderedRows, 0));
 
     // ---- The window chores SceneRail owns in session mode ---------------
     //
@@ -154,7 +142,7 @@
             class="mini-body"
             style={rowPitchPx > 0 ? `--session-row-h: ${rowPitchPx}px;` : ''}
         >
-            <div class="mini-grid" bind:this={gridBoxEl}>
+            <div class="mini-grid" use:boxSize={{ keepLastNonZero: true, onSize: (h) => (gridBoxHeightPx = h) }}>
                 <SlotGrid
                     {trackPath}
                     trackColor={ink}

@@ -39,6 +39,7 @@ function wsSecret(): string {
 import { createWebSocketServer } from '../../../../bridge/transport/WebSocketServer.js';
 import { createTotalMixLink } from '../../../../bridge/handlers/totalmixLink.js';
 import { createFeatureRegistry } from '../../../../bridge/utils/features.js';
+import constants from '$config/constants.json';
 
 let teardown: (() => void) | null = null;
 afterEach(() => {
@@ -54,7 +55,7 @@ interface Harness {
 }
 
 function startServer(features: unknown = null, captureRecorder: unknown = null): Promise<Harness> {
-	const link = createTotalMixLink();
+	const link = createTotalMixLink({ config: constants.osc.totalmix });
 	const sentToRecorder: unknown[] = [];
 	const errors: Error[] = [];
 

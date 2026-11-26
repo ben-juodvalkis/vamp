@@ -37,11 +37,23 @@ export function toString(arg: OSCArg): string {
 }
 
 /**
- * Parameter entry (retained for downstream consumers that still
- * import this type from '$lib/api/handlers')
+ * An OSCArg as a finite number, or null when it is not one. For values
+ * where 0 is meaningful and junk must be told apart from it (meters,
+ * levels, step positions).
  */
-export interface ParameterEntry {
-	deviceId: number;
-	paramIndex: number;
-	value: number;
+export function toFiniteNumber(v: OSCArg): number | null {
+	if (typeof v === 'number') return v;
+	if (typeof v === 'string') {
+		const n = Number(v);
+		return Number.isFinite(n) ? n : null;
+	}
+	return null;
+}
+
+/** An OSCArg as a boolean: nonzero, `true`, `'1'` or `'true'`. */
+export function toBool(v: OSCArg): boolean {
+	if (typeof v === 'boolean') return v;
+	if (typeof v === 'number') return v !== 0;
+	if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
+	return Boolean(v);
 }

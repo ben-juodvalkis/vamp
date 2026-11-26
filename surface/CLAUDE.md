@@ -13,12 +13,13 @@
   `from .key_detect import …`). The absolute `from components.x import` form
   passes pytest, because the tests put the surface root on `sys.path`, and
   fails inside Live, which loads the package relatively.
-- A protocol bump changes six literals in one commit:
-  `DebugComponent.PROTOCOL_VERSION`, `SurfaceHelloComponent.PROTOCOL_VERSION`,
-  `HandshakeComponent.SUPPORTED_VERSIONS` (prepend), the UI's
+- A protocol bump changes four literals in one commit:
+  `HandshakeComponent.SUPPORTED_VERSIONS` (prepend; `DebugComponent` and
+  `SurfaceHelloComponent` derive `PROTOCOL_VERSION` from its head), the UI's
   `v3Handshake.ts` `UI_SUPPORTED_VERSIONS`, and the screenshot mock's
   `scripts/shot/scene.mjs` `PROTOCOL_VERSION` and `scripts/shot/capture.mjs`
-  `UI_SUPPORTED_VERSIONS`. Then grep for the old version string.
+  `UI_SUPPORTED_VERSIONS`. Then grep for the old version string (the
+  tests pin it too).
 
 Python Control Surface is the sole live backend bridging the
 SvelteKit interface to Ableton Live's internal API. The last legacy
@@ -202,10 +203,10 @@ inside `resetForSurfaceRestart` / `resetTree` rather than at each call
 site, and by recording an ETag only after a bundle applies cleanly.
 
 Version constants that must move together:
-`HandshakeComponent.SUPPORTED_VERSIONS`,
-`DebugComponent.PROTOCOL_VERSION`,
-`SurfaceHelloComponent.PROTOCOL_VERSION`, and the UI's
-`UI_SUPPORTED_VERSIONS`. 3.5.0 was the **first bump that is not an
+`HandshakeComponent.SUPPORTED_VERSIONS` (whose head
+`DebugComponent.PROTOCOL_VERSION` and
+`SurfaceHelloComponent.PROTOCOL_VERSION` are derived from since
+2026-11-25) and the UI's `UI_SUPPORTED_VERSIONS`. 3.5.0 was the **first bump that is not an
 arity change**, and for one release the UI advertised two versions
 because it could decode a 3.4.0 surface's bundles exactly as well.
 3.6.0 took it back to one — see below.
@@ -733,16 +734,24 @@ per root: User Library + each Place), making preset lookups O(1)
 after the first miss. This eliminates the multi-second freeze the
 per-call descent previously caused on heavy User Libraries.
 
-**LOM identity is `_live_ptr`-based, never `is`-based.** Live's v3
-framework hands out a fresh Python wrapper per attribute read, so
-`song.view.selected_track is song.tracks[i]` always returns False
-even when both reference the same LOM track. Compare via
-`_safe_int_id(obj)` (`components/LOMListeners.py:1352`) — same
-pattern `ExclusiveArmComponent._same_track` and
-`path_resolver.same_lom_handle` (`:763`) use. Prefer
-`same_lom_handle` for a plain "are these the same LOM object?"
-check; it is the shared public helper. ADR-350 documents the
-production bug this gotcha caused in `TrackPrepareComponent`.
+**LOM identity is `_live_ptr`-based, never `is`-based.** Live hands out
+a fresh Python wrapper on every read — two reads of the same track,
+device or scene are two objects (measured on Live 13.0b26, 2026-11-25;
+live-api-measurements.md "Object identity") — so `is` and `id()` never
+match across reads. Key a map by `_common.safe_int_id(obj)` (also
+importable as `LOMListeners._safe_int_id`) and compare with
+`path_resolver.same_lom_handle`, the one shared helper. ADR-350
+documents the production bug this caused in `TrackPrepareComponent`;
+until 2026-11-25 `LOMListeners` still keyed its track and device maps by
+`id()`, so every `tracks_changed` rebound every track, and
+`SelectedTrackComponent` never found the selected scene.
+
+**The song's undo step has one owner.** Live's undo steps do not nest
+(live-api-measurements.md "Song"), so every component opens and closes
+one through `component_util.begin_undo_step` / `end_undo_step`, never
+`song.begin_undo_step()` directly: a begin while a step is open joins
+it, and only the outermost end reaches Live. A gesture made during a
+similar-sound swap is then part of the swap's one step.
 
 The historical `/looping/v3/track/{create_audio,create_midi,
 ensure_devices}` wires were retired in the same change, and
@@ -1109,8 +1118,12 @@ CC map on the Move ch 1: 71/72 above, 75–78 TotalMix
 `components/DrumVirtualMacroComponent.py` owns the whole-kit gesture on
 a `DrumGroupDevice` (split on 2026-09-10 into `drum_vm_functions.py` — the
 vocabulary and the function table — `drum_vm_state.py` — the records —
-and `drum_vm_resolve.py` — the guarded LOM reads — with every name still
-importable from the component module). The Drum Rack central view's seven controls no
+and `drum_vm_resolve.py` — the guarded LOM reads and the kit walk,
+`build_members` — and on 2026-11-25 further into `drum_vm_values.py` (the
+value conversions), `drum_vm_pitch.py` (the pitch fan-out) and
+`drum_vm_edits.py` (absorbing hand edits), the last two mixins the
+component inherits, with every name still importable from the component
+module). The Drum Rack central view's seven controls no
 longer write rack macros by index; they read and write the **computed**
 properties `vm.fx1`, `vm.fx2`, `vm.fxType`, `vm.attack`, `vm.decay`,
 `vm.start`, `vm.pitch` on the ordinary property channel
@@ -1129,7 +1142,7 @@ properties `vm.fx1`, `vm.fx2`, `vm.fxType`, `vm.attack`, `vm.decay`,
   `InstrumentGroupDevice` around two Sampler chains, the parameters the
   seven bind macro-held inside; the Drum Rack's own macros named but
   **unmapped**, so Live cannot drive them either) gets one function per
-  macro **name** its pad racks carry: `_resolve_rack_macros` reads each
+  macro **name** its pad racks carry: `resolve_rack_macros` reads each
   rack's `parameters` minus `Device On` / `Chain Selector` (by name,
   never position; sixteen slots; default `Macro N` / `.` / `-` names
   dropped — `is_empty_macro_name`), builds `macro.<name>` functions in
@@ -1342,7 +1355,7 @@ properties `vm.fx1`, `vm.fx2`, `vm.fxType`, `vm.attack`, `vm.decay`,
 - **One undo step per gesture, explicitly.** Live records every cell
   write as its own undo step (measured; the Phase 0 note that a
   handler's writes coalesce was wrong — only same-parameter writes
-  merge), so `flush` opens `song.begin_undo_step()` on a gesture's first
+  merge), so `flush` opens the song's undo step (`component_util.begin_undo_step`; inside a swap's open step it joins it) on a gesture's first
   apply and closes it 300 ms after the last (`GESTURE_UNDO_IDLE_MS`,
   re-armed per pass, closed on disconnect).
 - **`vm.members` — the census (Milestone 1b, 2026-09-07).** A read-only

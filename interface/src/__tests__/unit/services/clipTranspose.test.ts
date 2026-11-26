@@ -45,7 +45,12 @@ const { mockSessionState } = vi.hoisted(() => ({
 }));
 
 vi.mock('$lib/stores/session.svelte', () => ({
+	onSelectedTrackChange: () => () => {},
 	session: {
+		selectedTrackIndex: 0,
+		selectTrackOptimistically(i: number) {
+			this.selectedTrackIndex = i;
+		},
 		get focusedClipPath() {
 			return mockSessionState.focusedClipPath;
 		}

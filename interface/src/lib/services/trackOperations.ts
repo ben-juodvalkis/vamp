@@ -23,15 +23,10 @@
  * at whatever device happens to occupy that chain index on the copy.
  */
 
-import { send } from '$lib/api/simpleClient';
-import {
-    addOscMessageListener,
-    removeOscMessageListener,
-    type OscBusMessage
-} from '$lib/api/connection/oscMessageBus';
+import { oscRequest, nextRequestId } from '$lib/api/connection/oscRequest';
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
-import { generateRequestId, parseTrackIndex } from '$lib/services/trackPreparation';
+import { parseTrackIndex } from '$lib/services/trackPreparation';
 import { resetParamsToDefaultsForDevice } from '$lib/stores/v6/sequencerStore.svelte';
 import { logger } from '$lib/utils/logger';
 
@@ -82,57 +77,39 @@ function duplicateTrack(
 	sourceTrackPath: string,
 	clearClips: boolean
 ): Promise<DuplicateTrackResult> {
-	const requestId = generateRequestId();
+	const requestId = nextRequestId('track');
 	logger.debug('duplicateTrack: sending', {
 		component: 'trackOperations', requestId, sourceTrackPath, clearClips
 	});
 
-	return new Promise<DuplicateTrackResult>((resolve, reject) => {
-		let settled = false;
-		const settle = (fn: () => void) => {
-			if (settled) return;
-			settled = true;
-			removeOscMessageListener(handler);
-			clearTimeout(timer);
-			fn();
-		};
-
-		const handler = (msg: OscBusMessage) => {
-			if (!msg || !msg.address || !msg.args) return;
-			if (msg.address !== DUPLICATE_ACK_ADDRESS && msg.address !== DUPLICATE_NACK_ADDRESS) return;
-			if (msg.args[0] !== requestId) return;
-
-			if (msg.address === DUPLICATE_ACK_ADDRESS) {
-				const newTrackPath = String(msg.args[1] ?? '');
+	return oscRequest<DuplicateTrackResult>({
+		address: DUPLICATE_ADDRESS,
+		requestId,
+		args: [sourceTrackPath, clearClips ? 1 : 0],
+		replies: [DUPLICATE_ACK_ADDRESS, DUPLICATE_NACK_ADDRESS],
+		timeoutMs: DUPLICATE_TIMEOUT_MS,
+		onReply: (address, args) => {
+			if (address === DUPLICATE_ACK_ADDRESS) {
+				const newTrackPath = String(args[1] ?? '');
 				const newTrackIndex = parseTrackIndex(newTrackPath);
 				if (newTrackIndex < 0) {
-					settle(() => reject(new Error(
-						`duplicateTrack: malformed trackPath in ack: ${newTrackPath}`
-					)));
-					return;
+					return { error: new Error(`duplicateTrack: malformed trackPath in ack: ${newTrackPath}`) };
 				}
 				logger.debug('duplicateTrack: ack', {
 					component: 'trackOperations', requestId, newTrackPath
 				});
-				settle(() => resolve({ newTrackPath, newTrackIndex }));
-			} else {
-				const code = String(msg.args[1] ?? '');
-				const detail = String(msg.args[2] ?? '');
-				logger.warn('duplicateTrack: nack', {
-					component: 'trackOperations', requestId, code, detail
-				});
-				settle(() => reject(new Error(`duplicateTrack ${code}: ${detail}`)));
+				return { value: { newTrackPath, newTrackIndex } };
 			}
-		};
-
-		addOscMessageListener(handler);
-		send(DUPLICATE_ADDRESS, [requestId, sourceTrackPath, clearClips ? 1 : 0]);
-
-		const timer = setTimeout(() => {
-			settle(() => reject(new Error(
-				`duplicateTrack timeout (${DUPLICATE_TIMEOUT_MS}ms) for ${sourceTrackPath}`
-			)));
-		}, DUPLICATE_TIMEOUT_MS);
+			const code = String(args[1] ?? '');
+			const detail = String(args[2] ?? '');
+			logger.warn('duplicateTrack: nack', {
+				component: 'trackOperations', requestId, code, detail
+			});
+			return { error: new Error(`duplicateTrack ${code}: ${detail}`) };
+		},
+		onTimeout: () => ({
+			error: new Error(`duplicateTrack timeout (${DUPLICATE_TIMEOUT_MS}ms) for ${sourceTrackPath}`)
+		})
 	});
 }
 
@@ -194,38 +171,23 @@ async function waitForNewTrackReady(
  * when the members span more than one existing group.
  */
 export function commitGroupGesture(members: GroupMember[]): Promise<void> {
-	const requestId = generateRequestId();
+	const requestId = nextRequestId('track');
 	logger.debug('groupGesture.commit: sending', { component: 'trackOperations', requestId, members });
 
-	return new Promise<void>((resolve, reject) => {
-		let settled = false;
-		const settle = (fn: () => void) => {
-			if (settled) return;
-			settled = true;
-			removeOscMessageListener(handler);
-			clearTimeout(timer);
-			fn();
-		};
-
-		const handler = (msg: OscBusMessage) => {
-			if (!msg || msg.address !== GROUP_REPLY_ADDRESS || !msg.args) return;
-			if (msg.args[0] !== requestId) return;
-			if (Number(msg.args[1]) === 1) {
-				settle(resolve);
-				return;
-			}
-			const code = String(msg.args[2] ?? 'group-failed');
-			const detail = String(msg.args[3] ?? '');
+	return oscRequest<void>({
+		address: GROUP_ADDRESS,
+		requestId,
+		args: [JSON.stringify(members)],
+		replies: [GROUP_REPLY_ADDRESS],
+		timeoutMs: GROUP_TIMEOUT_MS,
+		onReply: (_address, args) => {
+			if (Number(args[1]) === 1) return { value: undefined };
+			const code = String(args[2] ?? 'group-failed');
+			const detail = String(args[3] ?? '');
 			logger.warn('groupGesture.commit: refused', { component: 'trackOperations', code, detail });
-			settle(() => reject(new Error(`groupGesture.commit ${code}: ${detail}`)));
-		};
-
-		addOscMessageListener(handler);
-		send(GROUP_ADDRESS, [requestId, JSON.stringify(members)]);
-
-		const timer = setTimeout(() => {
-			settle(() => reject(new Error(`groupGesture.commit timeout (${GROUP_TIMEOUT_MS}ms)`)));
-		}, GROUP_TIMEOUT_MS);
+			return { error: new Error(`groupGesture.commit ${code}: ${detail}`) };
+		},
+		onTimeout: () => ({ error: new Error(`groupGesture.commit timeout (${GROUP_TIMEOUT_MS}ms)`) })
 	});
 }
 

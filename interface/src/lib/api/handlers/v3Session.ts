@@ -2,10 +2,9 @@
  * v3 Session handler (PR-5d)
  *
  * Consumes `/looping/v3/session/<attr>` fires from the Python Control
- * Surface and dispatches them into `session.svelte.ts` via the existing
- * `handleSessionUpdate` / `handleRootNoteUpdate` / `handleScaleNameUpdate`
- * / `handleScaleModeUpdate` helpers — the same ones that used to
- * consume the M4L `/looping/session/*` and `/looping/song/*` fires.
+ * Surface and calls the session store's setters (`handleTempoUpdate`,
+ * `handleTransportUpdate`, `handleLoopUpdate`, `handleRootNoteUpdate` …)
+ * directly.
  *
  * Wire (see Looping's documentation/archive/m4l-to-python-v3/phase-5-plan.md §3.5):
  *   /looping/v3/session/is_playing      [0|1]
@@ -39,7 +38,14 @@
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
 import {
-	handleSessionUpdate,
+	handleTempoUpdate,
+	handleTransportUpdate,
+	handleSessionRecordUpdate,
+	handleTimeSignatureUpdate,
+	handleSongTimeUpdate,
+	handleLoopUpdate,
+	handleMetronomeUpdate,
+	handleGrooveUpdate,
 	handleRootNoteUpdate,
 	handleScaleNameUpdate,
 	handleScaleModeUpdate,
@@ -150,7 +156,6 @@ export function handleV3Session(address: string, args: OSCArg[]): void {
 		logger.warn('v3 session missing args', { address, args });
 		return;
 	}
-	const ts = Date.now();
 	const raw = args[0];
 
 	switch (address) {
@@ -168,42 +173,24 @@ export function handleV3Session(address: string, args: OSCArg[]): void {
 				logger.warn('v3 session song_time: bad value', { raw });
 				return;
 			}
-			handleSessionUpdate({ type: 'current-time', beats, timestamp: ts });
+			handleSongTimeUpdate(beats);
 			return;
 		}
 
 		case V3_SESSION_IS_PLAYING_ADDRESS:
-			handleSessionUpdate({
-				type: 'transport',
-				isPlaying: toNumber(raw) === 1,
-				timestamp: ts
-			});
+			handleTransportUpdate(toNumber(raw) === 1);
 			return;
 
 		case V3_SESSION_METRONOME_ADDRESS:
-			handleSessionUpdate({
-				type: 'metronome',
-				enabled: toNumber(raw) === 1,
-				timestamp: ts
-			});
+			handleMetronomeUpdate(toNumber(raw) === 1);
 			return;
 
 		case V3_SESSION_SESSION_RECORD_ADDRESS:
-			handleSessionUpdate({
-				type: 'session-record',
-				isRecording: toNumber(raw) === 1,
-				timestamp: ts
-			});
+			handleSessionRecordUpdate(toNumber(raw) === 1);
 			return;
 
 		case V3_SESSION_LOOP_ADDRESS:
-			handleSessionUpdate({
-				type: 'loop',
-				isLooping: toNumber(raw) === 1,
-				loopStart: session.loopStart,
-				loopEnd: session.loopEnd,
-				timestamp: ts
-			});
+			handleLoopUpdate(toNumber(raw) === 1, session.loopStart, session.loopEnd);
 			return;
 
 		case V3_SESSION_LOOP_START_ADDRESS: {
@@ -212,49 +199,23 @@ export function handleV3Session(address: string, args: OSCArg[]): void {
 			// Live's LOM is (start, length) — convert at the boundary.
 			const loopStart = toNumber(raw);
 			const loopLength = session.loopEnd - session.loopStart;
-			handleSessionUpdate({
-				type: 'loop',
-				isLooping: session.isLooping,
-				loopStart,
-				loopEnd: loopStart + loopLength,
-				timestamp: ts
-			});
+			handleLoopUpdate(session.isLooping, loopStart, loopStart + loopLength);
 			return;
 		}
 
 		case V3_SESSION_LOOP_LENGTH_ADDRESS: {
 			const loopLength = toNumber(raw);
 			const loopStart = session.loopStart;
-			handleSessionUpdate({
-				type: 'loop',
-				isLooping: session.isLooping,
-				loopStart,
-				loopEnd: loopStart + loopLength,
-				timestamp: ts
-			});
+			handleLoopUpdate(session.isLooping, loopStart, loopStart + loopLength);
 			return;
 		}
 
 		case V3_SESSION_SIGNATURE_NUM_ADDRESS:
-			handleSessionUpdate({
-				type: 'time-signature',
-				timeSignature: {
-					numerator: toNumber(raw),
-					denominator: session.timeSignature.denominator
-				},
-				timestamp: ts
-			});
+			handleTimeSignatureUpdate(toNumber(raw), session.timeSignature.denominator);
 			return;
 
 		case V3_SESSION_SIGNATURE_DEN_ADDRESS:
-			handleSessionUpdate({
-				type: 'time-signature',
-				timeSignature: {
-					numerator: session.timeSignature.numerator,
-					denominator: toNumber(raw)
-				},
-				timestamp: ts
-			});
+			handleTimeSignatureUpdate(session.timeSignature.numerator, toNumber(raw));
 			return;
 
 		case V3_SESSION_SCALE_ROOT_ADDRESS:
@@ -286,17 +247,13 @@ export function handleV3Session(address: string, args: OSCArg[]): void {
 				pitchClasses: toNumber(args[6]),
 				reasons: toString(args[7]),
 				applied: toNumber(args[8]) === 1,
-				at: ts
+				at: Date.now()
 			});
 			return;
 		}
 
 		case V3_SESSION_GROOVE_AMOUNT_ADDRESS:
-			handleSessionUpdate({
-				type: 'groove',
-				amount: toNumber(raw),
-				timestamp: ts
-			});
+			handleGrooveUpdate(toNumber(raw));
 			return;
 
 		case V3_SESSION_CLIP_TRIGGER_QUANT_ADDRESS:
@@ -320,11 +277,7 @@ export function handleV3Session(address: string, args: OSCArg[]): void {
 			return;
 
 		case LEGACY_SESSION_TEMPO_ADDRESS:
-			handleSessionUpdate({
-				type: 'tempo',
-				bpm: toNumber(raw),
-				timestamp: ts
-			});
+			handleTempoUpdate(toNumber(raw));
 			return;
 	}
 }

@@ -28,7 +28,7 @@ Browser (WS:8081) ↔ enhanced-osc-bridge.js ↔ UDP Ports ↔ Python Surface / 
 - `transport/UDPPortManager.js` - Creates and manages UDP port pairs. `createUDPPorts` builds only the endpoints its config carries (the orchestrator leaves a switched-off feature's out); setup, open and close walk the ports it built rather than naming them, so a gated endpoint needs no guard in each
 - `utils/features.js` - **Feature switches** (general-release audit §7b). Reads `constants.features` once at startup — only an explicit `true` is on; a missing switch, `false` or a non-boolean is off, and an unknown key or a non-boolean is logged. Tracks each enabled feature's `available` + `reason` (set by whoever can see the subsystem) and emits `change` only when one moves. Published as `/bridge/features [json]` — see Liveness below. `docs/reference/toggles.md` has the table of switches and what each does off
 - `transport/WebSocketServer.js` - WebSocket server and client lifecycle. Intercepts `/bridge/client_log` messages and mirrors them into `logs/bridge.log`.
-- `routing/messageRouter.js` - Routes OSC messages between endpoints based on address patterns
+- `routing/messageRouter.js` - Routes OSC messages between endpoints based on address patterns. Reads no config: `createWebSocketServer` hands it `osc.backendScope` (`configureRouting`) and the `osc.webSocket.auth` block to its own gate (`configureAuth`), both from the one config the orchestrator loads; a test configures them itself. Unconfigured, nothing routes (one error line) and the gate is on
 - *(`routing/RouterRegistry.js` was deleted in audit item 33's sibling, item 32. It held a per-client pattern-subscription table whose dispatcher, `route()`, had **zero callers** — so it compiled a regex per subscription, held a socket per client, and filtered nothing. Every client already receives every frame via the broadcast path. The only thing in the repo that ever sent `type: 'subscribe'` was the perf harness.)*
 - `handlers/pairingRelay.js` - **Pairing's way to the screens and Live (ADR-491).** The interface server owns pairing; it POSTs each request and outcome to `/pairing` on this server's HTTP port (`config.httpRoutes`), taken only from loopback with the WebSocket secret as a bearer token, since the port is on every interface. A request goes out as `/bridge/pairing` to authenticated clients (the Allow banner, never the code) and `/looping/v3/session/show_message` to the surface (Live's status bar, with the code); an outcome closes the banners and clears the line.
 - `utils/logger.js` - Node.js logging (use this, not console.log)
@@ -132,8 +132,9 @@ The bridge + browser cooperate to detect and recover from the common "iPad Safar
   off, `totalmixLink` is null — no link, no 9003 socket (their
   entries are left out of `OSC_CONFIG`), no inbound sources, no bootstrap,
   no TotalMix config read and no TotalMix log line. Neither handler reads
-  constants.json at `require` any more: the orchestrator passes the
-  `osc.totalmix*` blocks in (a test may omit them and get the file's), and
+  constants.json at all: the orchestrator passes the
+  `osc.totalmix*` blocks in (a test passes its own; `createTotalMixLink`
+  throws without one), and
   on with a block missing logs one error and reports the feature
   unavailable instead of dying at startup. **Available** = the mixer has
   answered since the bridge started — the bootstrap's `onReply` (any OSC

@@ -43,8 +43,10 @@ PATTERNS=(
   "vite preview"
 )
 
-# Reserved ports.
-#   3000 interface dev · 8081 OSC bridge WS · 8889 iPad preview · 8890 status
+# Reserved ports, read from the config (constants.local.json laid over it):
+#   http.interfacePort (3000) interface dev · osc.webSocket.port (8081) OSC
+#   bridge WS · padLink.pagePort (8889) iPad preview · http.statusPagePort
+#   (8890) status. The defaults stand in only when node cannot read it.
 #
 # 9001/9002 (Max4Live), 11001 (AbletonOSC) and 7400/7401 + 7500/7501 (the
 # Omnisphere/NI preset servers) left this list 2026-09-23, with the patterns
@@ -70,7 +72,14 @@ PATTERNS=(
 # 8890, whoever's (general-release plan.md §2). A listener that belongs to
 # something else is named and left alone, and the start after this reports
 # the port in use.
-PORTS="3000,8081,8889,8890"
+PORTS=$(cd "$REPO_ROOT" && node -e '
+const c = require("./interface/bridge/utils/constants").loadConstants();
+console.log([c.http.interfacePort, c.osc.webSocket.port, c.padLink.pagePort, c.http.statusPagePort].join(","));
+' 2>/dev/null) || PORTS=""
+case $PORTS in
+  *[0-9],*[0-9],*[0-9],*[0-9]) ;;
+  *) PORTS="3000,8081,8889,8890" ;;
+esac
 
 # `-sTCP:LISTEN` keeps the sweep to servers. Without it `lsof -i:<list>` also
 # returns every *client* holding a socket to one of these ports, so the old

@@ -3,8 +3,10 @@
  * (general-release audit §5.3, 2026-09-23).
  *
  * Both routes live on the interface server, which listens on 0.0.0.0 so the
- * iPad can reach it, and neither sits behind the WebSocket's HMAC gate. Before
- * this, `sample-peaks` opened any absolute path a LAN host named — `/etc`,
+ * iPad can reach it. They sit behind the pairing gate (ADR-491,
+ * `hooks.server.ts`) now, but not with pairing off, and a paired device is
+ * still no reason to read the whole disk. Before this, `sample-peaks`, then
+ * outside every gate, opened any absolute path a LAN host named — `/etc`,
  * `~/.ssh` — and answered 404 / 415 / 413 by what was there: an existence and
  * size oracle over the whole disk, and a decode of any large file on the event
  * loop that serves every waveform.

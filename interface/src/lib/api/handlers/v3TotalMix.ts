@@ -17,6 +17,7 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
+import { toFiniteNumber } from './oscTypeHelpers';
 import { applyTotalMix, applyTotalMixMeters } from '$lib/stores/v3/totalmix.svelte';
 
 const V3_TOTALMIX_PREFIX = '/looping/v3/totalmix/';
@@ -25,7 +26,7 @@ const V3_TOTALMIX_PREFIX = '/looping/v3/totalmix/';
 export const V3_TOTALMIX_METERS_ADDRESS = '/looping/v3/totalmix_meters';
 
 export function handleV3TotalMixMeters(args: OSCArg[]): void {
-	const frame = args.map(toNumber);
+	const frame = args.map(toFiniteNumber);
 	if (frame.some((db) => db === null)) {
 		logger.warn('v3 totalmix meters non-numeric frame', { args });
 		return;
@@ -43,19 +44,10 @@ export function handleV3TotalMix(address: string, args: OSCArg[]): void {
 		logger.warn('v3 totalmix missing channel', { address });
 		return;
 	}
-	const db = toNumber(args[0]);
+	const db = toFiniteNumber(args[0]);
 	if (db === null) {
 		logger.warn('v3 totalmix non-numeric level', { channel, args });
 		return;
 	}
 	applyTotalMix(channel, db);
-}
-
-function toNumber(v: OSCArg): number | null {
-	if (typeof v === 'number') return v;
-	if (typeof v === 'string') {
-		const n = Number(v);
-		return Number.isFinite(n) ? n : null;
-	}
-	return null;
 }

@@ -6,6 +6,8 @@
   import { MIN_SEND_INTERVAL_MS } from '$lib/utils/sliderThrottle';
   import { fitText } from '$lib/utils/fitText';
   import { hzToCurveX } from '$lib/utils/instrumentFilterCurves';
+  import { drag, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
+  import { isTap, pastSlop, relativeXY } from './padGesture';
 
   interface Props {
     xValue?: number;
@@ -75,14 +77,12 @@
   }: Props = $props();
 
   let isDragging = $state(false);
-  let container: HTMLDivElement;
 
-  // Local state for smooth interaction
+  // The shown dot: the props, overridden by the finger while it drags. Only
+  // re-synced when not dragging, so a quantized echo from Live does not
+  // jump the dot under the finger.
   let localX = $state(xValue);
   let localY = $state(yValue);
-
-  // Sync from props (props only change on track switch, not during drag - no observers!)
-  // But ONLY sync when not dragging to prevent quantized OSC values from jumping the visual
   $effect(() => {
     if (!isDragging) {
       localX = xValue;
@@ -90,14 +90,10 @@
     }
   });
 
-  // Relative mode state - track initial positions
-  let initialTouchX = $state(0);
-  let initialTouchY = $state(0);
-  let initialDotX = $state(0);
-  let initialDotY = $state(0);
-
-  // Cache bounding rect for absolute positioning
-  let cachedRect: DOMRect | null = null;
+  // The dot and time at touch-down, for the relative drag and the tap rule.
+  let initialDotX = 0;
+  let initialDotY = 0;
+  let downAt = 0;
 
   // Frame-synchronized XY throttle (handles both X and Y together).
   // The rAF loop self-terminates each frame after sending pending values; new
@@ -185,129 +181,69 @@
 
   onDestroy(cancelXYThrottle);
 
-  // Tap detection state
-  let tapStartTime = $state(0);
-  let tapStartX = $state(0);
-  let tapStartY = $state(0);
-  const TAP_TIME_THRESHOLD = 200; // ms
-  const TAP_MOVEMENT_THRESHOLD = 5; // pixels
+  // Whether the press has passed the tap slop: until it does, nothing is
+  // written, so a tap (or finger wobble on one) never moves the dot.
+  let hasMoved = false;
 
-  // Track whether intentional movement has occurred (for tap vs drag detection)
-  let hasMoved = $state(false);
-
-  function handlePointerDown(event: PointerEvent) {
-    event.preventDefault(); // Prevent scrolling and default behavior
-    isDragging = true;
-    hasMoved = false; // Reset movement tracking for tap detection
-
-    // Cache bounding rect for performance during drag
-    cachedRect = container.getBoundingClientRect();
-
-    container.setPointerCapture(event.pointerId);
-
-    // Store initial touch position and current dot position for relative mode
-    initialTouchX = event.clientX;
-    initialTouchY = event.clientY;
-    initialDotX = localX;
-    initialDotY = localY;
-
-    // Store tap detection data
-    tapStartTime = Date.now();
-    tapStartX = event.clientX;
-    tapStartY = event.clientY;
-
-    // DON'T start RAF throttle or update position here - wait for intentional movement
-    // This ensures taps (pointerdown → pointerup with no move) don't fire onInteraction
-  }
-
-  function handlePointerMove(event: PointerEvent) {
-    if (!isDragging) return;
-    event.preventDefault(); // Prevent scrolling during drag
-
-    // Only treat as intentional drag if movement exceeds tap threshold
-    // This ensures taps don't accidentally trigger onInteraction due to finger wobble
-    if (!hasMoved) {
-      const moveX = Math.abs(event.clientX - tapStartX);
-      const moveY = Math.abs(event.clientY - tapStartY);
-      if (moveX < TAP_MOVEMENT_THRESHOLD && moveY < TAP_MOVEMENT_THRESHOLD) {
-        return; // Ignore micro-movements
+  /**
+   * The drag (ADR-427): `use:drag` owns the pointer, so a second finger on
+   * the pad neither drives the dot nor ends the first finger's drag.
+   */
+  const padDrag = {
+    commit: 'immediate' as const,
+    binding: 'capture' as const,
+    onStart: ({ event }: DragInfo) => {
+      event?.preventDefault();
+      isDragging = true;
+      hasMoved = false;
+      initialDotX = localX;
+      initialDotY = localY;
+      downAt = performance.now();
+    },
+    onMove: ({ dx, dy, width, height }: DragInfo) => {
+      if (!hasMoved) {
+        if (!pastSlop(dx, dy)) return;
+        hasMoved = true;
+        startXYThrottle();
       }
-      hasMoved = true;
-      startXYThrottle();
+      const { x, y } = relativeXY({
+        startX: initialDotX,
+        startY: initialDotY,
+        dx,
+        dy,
+        width,
+        height,
+        sensitivity,
+        yTop
+      });
+      // Update local state immediately for visual feedback
+      localX = x;
+      localY = y;
+      // Queue for frame-synchronized send; sendXYFrame self-terminates, so
+      // each new movement re-arms it.
+      xyPendingX = x;
+      xyPendingY = y;
+      scheduleXYFrame();
+    },
+    onEnd: ({ dx, dy, reason }: DragEndInfo) => {
+      isDragging = false;
+      // Unmounted mid-drag: onDestroy cancels the throttle without a flush.
+      if (reason === 'teardown') return;
+      if (reason === 'up' && isTap(dx, dy, performance.now() - downAt)) onTap?.();
+      // Where the finger left the pad, before the flush clears it.
+      const releaseX = xyPendingX !== null ? xyPendingX : localX;
+      const releaseY = xyPendingY !== null ? xyPendingY : localY;
+      flushXYThrottle();
+      onRelease?.(releaseX, releaseY);
     }
-
-    updatePositionRelative(event);
-  }
-
-  function handlePointerUp(event: PointerEvent) {
-    isDragging = false;
-    container.releasePointerCapture(event.pointerId);
-
-    // Check for tap detection
-    const tapDuration = Date.now() - tapStartTime;
-    const tapMovementX = Math.abs(event.clientX - tapStartX);
-    const tapMovementY = Math.abs(event.clientY - tapStartY);
-    const isTap = tapDuration < TAP_TIME_THRESHOLD &&
-                  tapMovementX < TAP_MOVEMENT_THRESHOLD &&
-                  tapMovementY < TAP_MOVEMENT_THRESHOLD;
-
-    // If it's a tap and we have an onTap handler, call it
-    if (isTap && onTap) {
-      onTap();
-    }
-
-    // Clear cached rect
-    cachedRect = null;
-
-    // Store current values for release callback before they get cleared
-    const releaseX = xyPendingX !== null ? xyPendingX : localX;
-    const releaseY = xyPendingY !== null ? xyPendingY : localY;
-
-    // Flush throttle to send final values
-    flushXYThrottle();
-
-    // Call release callback (for operations that should only happen on release)
-    if (onRelease) {
-      onRelease(releaseX, releaseY);
-    }
-  }
-
-  function updatePositionRelative(event: PointerEvent) {
-    if (!cachedRect) return;
-
-    // Calculate finger movement delta in pixels
-    const fingerDeltaX = event.clientX - initialTouchX;
-    const fingerDeltaY = event.clientY - initialTouchY;
-
-    // Convert pixel delta to normalized coordinates (0-1)
-    const deltaX = (fingerDeltaX / cachedRect.width) * sensitivity[0];
-    const deltaY = (-fingerDeltaY / (cachedRect.height * yTop)) * sensitivity[1]; // Invert Y (up = positive)
-
-    // Apply delta to initial dot position and clamp to bounds
-    const x = Math.max(0, Math.min(1, initialDotX + deltaX));
-    const y = Math.max(0, Math.min(1, initialDotY + deltaY));
-
-    // Update local state immediately for visual feedback
-    localX = x;
-    localY = y;
-
-    // Queue for frame-synchronized send
-    xyPendingX = x;
-    xyPendingY = y;
-    // Re-arm rAF — sendXYFrame self-terminates so each new movement must schedule.
-    scheduleXYFrame();
-  }
+  };
 </script>
 
 <div class="device-xy">
   <div
     class="xy-container"
     class:ghost={isGhost}
-    bind:this={container}
-    onpointerdown={handlePointerDown}
-    onpointermove={handlePointerMove}
-    onpointerup={handlePointerUp}
-    onpointercancel={handlePointerUp}
+    use:drag={padDrag}
     role="slider"
     tabindex="0"
     aria-label="{title}: X {(localX * 100).toFixed(0)}%, Y {(localY * 100).toFixed(0)}%"
@@ -391,11 +327,6 @@
     border-radius: var(--radius-sm);
     cursor: crosshair;
     overflow: hidden;
-    /* The drag is ours on both axes. Without this a touch here computes
-       `auto` (the nearest ancestor scroller resets the chain), so Chromium
-       claims the pan a few px in and fires pointercancel — the drag stops.
-       preventDefault on pointerdown does not prevent a touch pan. */
-    touch-action: none;
     transition: border-color 0.2s ease, background-color 0.2s ease;
   }
 

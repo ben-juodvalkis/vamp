@@ -1,22 +1,12 @@
 /**
- * closeout-0a tests — `selectedTrackStore.handleTrackSelected`.
- *
- * Covers the narrow writer of `_trackIndex` introduced by
- * closeout-0a so that track selection keeps working after
- * closeout-2 deletes `handleDeviceList`. Two cases:
- *
- * 1. Direct method call updates `trackIndex` + `selectedTrackPath`.
- * 2. End-to-end via `handleV3SelectedTrack` — the Python Surface
- *    `/looping/v3/selected_track` path drives the same narrow
- *    writer (PR-7d pr7d-7 retired the M4L branch).
- *
- * @see Looping's documentation/archive/m4l-to-python-v3/phase-5-checklist.md
- *   Row `closeout-0a-track-selection-bridge`.
+ * The selected track has one owner: `session.selectedTrackIndex`, with its
+ * optimistic write and stale-echo latch. `selectedTrackStore.trackIndex`
+ * reads it, and the track-change side effects (FX grid reset, param arms,
+ * the `track-changed` window event) run once per real change — never for
+ * an echo the latch drops.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Module-scope mocks ------------------------------------------------
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({
 	send: vi.fn()
@@ -37,70 +27,95 @@ vi.mock('$lib/services/instrumentService', () => ({
 	}
 }));
 
-vi.mock('$lib/stores/v6/slotRegistry.svelte', () => ({
-	slotRegistry: {
-		resetForTrackChange: vi.fn(),
-		getAllSlots: vi.fn(() => new Map()),
-		getPositionForDeviceType: vi.fn(() => null),
-		getDeviceTypeForPosition: vi.fn(() => null)
-	}
-}));
+const { resetParamArmingSpy } = vi.hoisted(() => ({ resetParamArmingSpy: vi.fn() }));
+vi.mock('$lib/stores/v3/paramArming.svelte', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/stores/v3/paramArming.svelte')>();
+	return {
+		...actual,
+		resetParamArming: () => {
+			resetParamArmingSpy();
+			actual.resetParamArming();
+		}
+	};
+});
 
-vi.mock('$lib/stores/session.svelte', () => ({
-	handleSessionUpdate: vi.fn(),
-	handleTrackListUpdate: vi.fn(),
-	handleRootNoteUpdate: vi.fn(),
-	handleScaleNameUpdate: vi.fn()
-}));
-
-import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
+import { session, handleTrackSelectionUpdate } from '$lib/stores/session.svelte';
 import { handleV3SelectedTrack } from '$lib/api/handlers/v3SelectedTrack';
 
-describe('selectedTrackStore.handleTrackSelected (closeout-0a)', () => {
+/** Put the selection at `index` with nothing pending. */
+function settleAt(index: number): void {
+	selectedTrackStore.selectTrackLocally(index);
+	handleTrackSelectionUpdate(index);
+}
+
+describe('selected track: one source of truth', () => {
+	const changes: number[] = [];
+	const onChange = (e: Event) => changes.push((e as CustomEvent).detail.trackIndex);
+	let fxReset: ReturnType<typeof vi.spyOn>;
+
 	beforeEach(() => {
-		vi.clearAllMocks();
-		// Reset the singleton to track 0 via the narrow setter.
-		selectedTrackStore.handleTrackSelected(0);
+		settleAt(0);
+		changes.length = 0;
+		resetParamArmingSpy.mockClear();
+		fxReset = vi.spyOn(fxGrid, 'resetForTrackChange');
+		window.addEventListener('track-changed', onChange);
 	});
 
-	it('updates trackIndex and selectedTrackPath', () => {
-		expect(selectedTrackStore.trackIndex).toBe(0);
+	afterEach(() => {
+		window.removeEventListener('track-changed', onChange);
+		fxReset.mockRestore();
+	});
 
-		selectedTrackStore.handleTrackSelected(3);
-
+	it('selectTrackLocally moves both readers at once', () => {
+		selectedTrackStore.selectTrackLocally(3);
+		expect(session.selectedTrackIndex).toBe(3);
 		expect(selectedTrackStore.trackIndex).toBe(3);
 		expect(selectedTrackStore.selectedTrackPath).toBe('tracks/3');
 	});
 
-	it('is a no-op when trackIndex is unchanged', () => {
-		// Go to 5 first.
-		selectedTrackStore.handleTrackSelected(5);
-		expect(selectedTrackStore.trackIndex).toBe(5);
+	it('runs the track-change side effects once per real change', () => {
+		selectedTrackStore.selectTrackLocally(5);
+		// The confirming echo and a repeat are not changes.
+		handleV3SelectedTrack(['tracks/5']);
+		selectedTrackStore.selectTrackLocally(5);
+		expect(changes).toEqual([5]);
+		expect(fxReset).toHaveBeenCalledTimes(1);
+		expect(resetParamArmingSpy).toHaveBeenCalledTimes(1);
+	});
 
-		// Re-dispatch 5 — should not re-enter side effects. The setter
-		// returns early, so trackIndex stays 5 and no observable state
-		// changes. We assert the stable value.
-		selectedTrackStore.handleTrackSelected(5);
-		expect(selectedTrackStore.trackIndex).toBe(5);
-		expect(selectedTrackStore.selectedTrackPath).toBe('tracks/5');
+	it('a late echo for A after a quick A→B tap changes nothing', () => {
+		selectedTrackStore.selectTrackLocally(1); // A
+		selectedTrackStore.selectTrackLocally(2); // B
+		changes.length = 0;
+		fxReset.mockClear();
+		resetParamArmingSpy.mockClear();
+
+		handleV3SelectedTrack(['tracks/1']); // A's echo, late
+
+		expect(selectedTrackStore.trackIndex).toBe(2);
+		expect(session.selectedTrackIndex).toBe(2);
+		expect(changes).toEqual([]);
+		expect(fxReset).not.toHaveBeenCalled();
+		expect(resetParamArmingSpy).not.toHaveBeenCalled();
+	});
+
+	it('the deprecated handleTrackSelected is a no-op after selectTrackOptimistically', () => {
+		session.selectTrackOptimistically(4);
+		selectedTrackStore.handleTrackSelected(4);
+		expect(changes).toEqual([4]);
 	});
 
 	it('handles master selection (trackIndex === -1)', () => {
-		selectedTrackStore.handleTrackSelected(-1);
+		selectedTrackStore.selectTrackLocally(-1);
 		expect(selectedTrackStore.trackIndex).toBe(-1);
 		expect(selectedTrackStore.selectedTrackPath).toBe('master');
 	});
 
-	it('dispatching /looping/v3/selected_track drives selectedTrackStore._trackIndex (end-to-end)', () => {
-		// PR-7d pr7d-7: the M4L `/looping/track/selected` branch was
-		// retired; the Python Surface now owns selection via the v3
-		// handler. This pins that the v3 handler drives the same
-		// narrow writer.
-		expect(selectedTrackStore.trackIndex).toBe(0);
-
+	it('a Live-initiated selection drives the store (end-to-end)', () => {
 		handleV3SelectedTrack(['tracks/7']);
-
 		expect(selectedTrackStore.trackIndex).toBe(7);
 		expect(selectedTrackStore.selectedTrackPath).toBe('tracks/7');
+		expect(changes).toEqual([7]);
 	});
 });

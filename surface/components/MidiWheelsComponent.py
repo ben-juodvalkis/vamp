@@ -58,12 +58,14 @@ import logging
 import time
 from typing import Callable, Dict, Optional, Tuple
 
+from ._common import LOM_ERRORS
+from .component_util import begin_undo_step, end_undo_step
 from .drum_vm_functions import GESTURE_UNDO_IDLE_MS
 
 from . import live_library
 logger = logging.getLogger("looping")
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 _WRITE_ERRORS: Tuple[type, ...] = _LOM_ERRORS + (ValueError,)
 
 V3_WHEELS_PITCH_ADDRESS = "/looping/v3/wheels/pitch"
@@ -438,10 +440,7 @@ class MidiWheelsComponent:
     def _open_undo_step(self) -> None:
         if self._undo_open:
             return
-        try:
-            self._song.begin_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("MidiWheelsComponent: begin_undo_step raised: %s", e)
+        if not begin_undo_step("MidiWheelsComponent", self._song):  # the song's shared step
             return
         self._undo_open = True
 
@@ -481,10 +480,7 @@ class MidiWheelsComponent:
         if not self._undo_open:
             return
         self._undo_open = False
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("MidiWheelsComponent: end_undo_step raised: %s", e)
+        end_undo_step("MidiWheelsComponent", self._song, True)
 
     # --- lifecycle --------------------------------------------------------
 

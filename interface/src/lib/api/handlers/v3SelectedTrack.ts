@@ -2,9 +2,12 @@
  * v3 selected-track handler (PR-7d pr7d-6, 2026-04-19).
  *
  * Consumes `/looping/v3/selected_track [trackPath:string]` from the
- * Python Control Surface's `SelectedTrackComponent`. Parses the
- * canonical path and updates `selectedTrackStore._trackIndex` via
- * the narrow writer `handleTrackSelected`.
+ * Python Control Surface's `SelectedTrackComponent`, parses the
+ * canonical path and hands the index to the session store's
+ * `handleTrackSelectionUpdate` — the one owner of the selected track.
+ * It drops a stale echo while an optimistic selection is in flight and
+ * runs the track-change side effects (FX grid reset, param arms, the
+ * `track-changed` event) once, on a real change.
  *
  * Path mapping:
  *
@@ -22,8 +25,8 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
-import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-import { handleSessionUpdate } from '$lib/stores/session.svelte';
+import { handleTrackSelectionUpdate } from '$lib/stores/session.svelte';
+import { trackIndexOf } from '$lib/utils/livePaths';
 
 export const V3_SELECTED_TRACK_ADDRESS = '/looping/v3/selected_track';
 
@@ -34,7 +37,7 @@ export function handleV3SelectedTrack(args: OSCArg[]): void {
 	}
 
 	const trackPath = typeof args[0] === 'string' ? args[0] : String(args[0]);
-	const trackIndex = parseTrackPath(trackPath);
+	const trackIndex = trackIndexOf(trackPath);
 	if (trackIndex === null) {
 		logger.debug('v3 selected_track ignored for unknown path shape', {
 			trackPath
@@ -42,24 +45,5 @@ export function handleV3SelectedTrack(args: OSCArg[]): void {
 		return;
 	}
 
-	selectedTrackStore.handleTrackSelected(trackIndex);
-	handleSessionUpdate({
-		type: 'track-selection',
-		trackIndex,
-		timestamp: Date.now()
-	});
-}
-
-/**
- * Map a canonical v3 trackPath to the numeric index
- * `selectedTrackStore` uses internally. Returns `null` for shapes
- * the UI doesn't yet represent (returns tracks, any other string).
- */
-function parseTrackPath(trackPath: string): number | null {
-	if (trackPath === 'master') return -1;
-	if (trackPath.startsWith('tracks/')) {
-		const n = Number(trackPath.slice('tracks/'.length));
-		return Number.isInteger(n) && n >= 0 ? n : null;
-	}
-	return null;
+	handleTrackSelectionUpdate(trackIndex);
 }

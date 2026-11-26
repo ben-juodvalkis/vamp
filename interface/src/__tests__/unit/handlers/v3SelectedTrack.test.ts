@@ -4,9 +4,8 @@
  * `/looping/v3/selected_track [trackPath]` — emit from
  * `SelectedTrackComponent` on the Python surface. Parses the
  * canonical path (`tracks/<N>` | `master`) and forwards the numeric
- * index to `selectedTrackStore.handleTrackSelected` (the same
- * narrow writer the M4L `/looping/track/selected` branch already
- * drives).
+ * index to the session store's `handleTrackSelectionUpdate`, which
+ * `selectedTrackStore.trackIndex` reads.
  *
  * Pins:
  * - path → index mapping for `tracks/<N>` and `master`
@@ -37,33 +36,19 @@ vi.mock('$lib/services/instrumentService', () => ({
 	}
 }));
 
-vi.mock('$lib/stores/v6/slotRegistry.svelte', () => ({
-	slotRegistry: {
-		resetForTrackChange: vi.fn(),
-		getAllSlots: vi.fn(() => new Map()),
-		getPositionForDeviceType: vi.fn(() => null),
-		getDeviceTypeForPosition: vi.fn(() => null)
-	}
-}));
-
-vi.mock('$lib/stores/session.svelte', () => ({
-	handleSessionUpdate: vi.fn(),
-	handleTrackListUpdate: vi.fn(),
-	handleRootNoteUpdate: vi.fn(),
-	handleScaleNameUpdate: vi.fn()
-}));
-
 import {
 	handleV3SelectedTrack,
 	V3_SELECTED_TRACK_ADDRESS
 } from '$lib/api/handlers/v3SelectedTrack';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+import { handleTrackSelectionUpdate } from '$lib/stores/session.svelte';
 
 describe('handleV3SelectedTrack (pr7d-6)', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Reset the singleton to track 0 via the narrow setter.
-		selectedTrackStore.handleTrackSelected(0);
+		// Settle the selection at track 0 with nothing pending.
+		selectedTrackStore.selectTrackLocally(0);
+		handleTrackSelectionUpdate(0);
 	});
 
 	it('exposes the focused address as a module constant', () => {
@@ -82,7 +67,7 @@ describe('handleV3SelectedTrack (pr7d-6)', () => {
 		expect(selectedTrackStore.selectedTrackPath).toBe('master');
 	});
 
-	it('is idempotent on repeat (handleTrackSelected short-circuits)', () => {
+	it('is idempotent on repeat', () => {
 		handleV3SelectedTrack(['tracks/3']);
 		expect(selectedTrackStore.trackIndex).toBe(3);
 		handleV3SelectedTrack(['tracks/3']);

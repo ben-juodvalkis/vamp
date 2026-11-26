@@ -40,20 +40,17 @@
 const dgram = require('dgram');
 const osc = require('osc');
 
-/**
- * constants.json, loaded when a bootstrap runs rather than when this file is
- * required: the bridge requires it whatever its `totalmix` switch says, and a
- * config with that switch off carries no TotalMix blocks at all (general-
- * release audit §7b). The bridge passes its own blocks; this serves the tests.
- */
-const loadConstants = () => require('../../../config/constants.json');
+// The `osc.totalmixLegacy` block and `osc.totalmix.silenceDb` always come
+// from the caller (the bridge's merged config, or a test's own). This module
+// reads no config file: its old fallback to the raw tracked constants.json
+// skipped this Mac's constants.local.json.
 
 /**
  * channel → { bus, slot, expectName }, minus the `_`-prefixed doc keys.
  *
- * @param {Object} [legacy] the `osc.totalmixLegacy` block
+ * @param {Object} legacy the `osc.totalmixLegacy` block
  */
-function legacyReads(legacy = loadConstants().osc.totalmixLegacy) {
+function legacyReads(legacy) {
     return Object.fromEntries(
         Object.entries(legacy.reads).filter(([key]) => !key.startsWith('_'))
     );
@@ -66,10 +63,10 @@ function legacyReads(legacy = loadConstants().osc.totalmixLegacy) {
  * -300 so the seeded value is in the same units as everything downstream.
  *
  * @param {string} text e.g. "-19.2 dB", "0.0 dB", "-oo"
- * @param {number} [silenceDb] `osc.totalmix.silenceDb`
+ * @param {number} silenceDb `osc.totalmix.silenceDb`
  * @returns {number|null} dB, or null when the string isn't one
  */
-function parseDbString(text, silenceDb = loadConstants().osc.totalmix.silenceDb) {
+function parseDbString(text, silenceDb) {
     if (typeof text !== 'string') return null;
     const trimmed = text.trim();
     if (trimmed === '-oo' || trimmed === '-∞') return silenceDb;
@@ -108,8 +105,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 async function bootstrapFromLegacy({
     logger,
-    legacy = loadConstants().osc.totalmixLegacy,
-    silenceDb = loadConstants().osc.totalmix.silenceDb,
+    legacy,
+    silenceDb,
     onReply
 } = {}) {
     const found = {};

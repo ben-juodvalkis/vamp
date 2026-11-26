@@ -35,8 +35,8 @@ export function pairingEnabled(): boolean {
 
 async function notifyBridge(event: PairingEvent): Promise<void> {
 	const secret = resolveSecret();
-	const port = configSection<{ webSocket?: { port?: number } }>('osc').webSocket?.port ?? 8081;
-	if (!secret) return;
+	const port = configSection<{ webSocket?: { port?: number } }>('osc').webSocket?.port;
+	if (!secret || !port) return;
 	try {
 		await fetch(`http://127.0.0.1:${port}/pairing`, {
 			method: 'POST',
@@ -101,5 +101,28 @@ export function trustOf(event: TrustCaller): Trust {
 	return { trusted: false, via: 'none', address };
 }
 
-/** Routes an unpaired device may reach: the pairing flow itself. */
+/**
+ * Routes an unpaired device may reach: the pairing flow itself. These are
+ * SvelteKit route ids (`event.route.id`), which the gate compares, not raw
+ * URL paths; none has a parameter, so each id is also its path.
+ */
 export const OPEN_PAIRING_ROUTES = ['/api/pair/state', '/api/pair/request', '/api/pair/status', '/api/pair/code'];
+
+/**
+ * Whether the pairing gate covers a request: by the route SvelteKit matched
+ * (`event.route.id`), or for none, by its decoded path. See hooks.server.ts.
+ */
+export function gatedApiRoute(routeId: string | null | undefined, pathname: string): boolean {
+	if (routeId) return routeId.startsWith('/api/') && !OPEN_PAIRING_ROUTES.includes(routeId);
+	return decodedPath(pathname).startsWith('/api/');
+}
+
+function decodedPath(pathname: string): string {
+	let path = pathname;
+	try {
+		path = decodeURIComponent(pathname);
+	} catch {
+		// Malformed escapes: judge the raw path, lower-cased below.
+	}
+	return path.replace(/\/+/g, '/').toLowerCase();
+}

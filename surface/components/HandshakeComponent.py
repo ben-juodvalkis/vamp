@@ -119,6 +119,12 @@ V3_ERROR_ADDRESS = "/looping/v3/error"
 # 2026-11-12 adds 3.13.0 (ADR-529): rack chains on the wire — the path
 # grammar's ``…/chains/<i>/devices/<j>``, the ``chain_devices`` row and the
 # ``rack-chain`` scoped tree. A 3.12.0 surface answers path-not-supported.
+# The head is this surface's protocol version: ``DebugComponent`` and
+# ``SurfaceHelloComponent`` derive ``PROTOCOL_VERSION`` from it, so a bump
+# prepends here and nowhere else surface-side. The tail is accepted for
+# clients that never read the tree (the Swift menubar advertises 3.3.0);
+# a pre-3.6.0 client that wants ``state/full`` cannot be served at any
+# floor (surface/CLAUDE.md, "state/full is one message"). Don't trim it.
 SUPPORTED_VERSIONS: tuple = (
     "3.13.0", "3.12.0", "3.11.0", "3.10.0", "3.9.0", "3.8.0", "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0", "3.2.0", "3.1.0", "3.0.0",
 )
@@ -316,10 +322,11 @@ class HandshakeComponent:
 
         ``session_id`` / ``client_etag`` carry the 3.5.0 ETag context
         so the publisher can answer "you already have this" instead of
-        re-shipping the tree. Passed positionally through a hook whose
-        older form took no arguments, so the call is guarded — a
-        surface wired to a pre-3.5.0 publisher degrades to a full send
-        rather than a TypeError on the control thread.
+        re-shipping the tree. The hook takes both as keywords. There is
+        no retry without them (code review, 2026-11-25): a ``TypeError``
+        retry also caught one raised *inside* the hook and re-ran the
+        whole accept chain without the ETag, re-emitting every seed that
+        had already gone out. The chain guards each of its own steps.
         """
         hook = self._on_accept_state_full
         if hook is None:
@@ -330,12 +337,7 @@ class HandshakeComponent:
             )
             return
         try:
-            try:
-                hook(session_id=session_id, client_etag=client_etag)
-            except TypeError:
-                # Hook predates the ETag arguments (older publisher, or
-                # a test double). Full send is the safe answer.
-                hook()
+            hook(session_id=session_id, client_etag=client_etag)
         except Exception as e:
             logger.error(
                 "HandshakeComponent: post-accept state-delivery hook "
@@ -344,34 +346,6 @@ class HandshakeComponent:
             )
 
     # --- session management ----------------------------------------------
-
-    def active_session_ids(self) -> List[str]:
-        """Return the list of currently-active session ids.
-
-        Used by diagnostics; not on the hot path. ``_evict_stale_sessions``
-        is called first so only live sessions show.
-        """
-        self._evict_stale_sessions()
-        return list(self._sessions.keys())
-
-    def touch(self, session_id: str) -> bool:
-        """Mark a session active; returns ``False`` if the id is unknown.
-
-        Called by the other v3 handlers (``DevicesComponent.handle_set_param_v3``
-        etc.) when they observe an operation that should count as session
-        activity. Keeps a quiet UI from expiring mid-gesture.
-
-        Phase 1 doesn't actually wire this call from DevicesComponent —
-        the 30s timeout is generous enough that gestures won't be
-        affected, and keeping the cross-component call-graph minimal
-        shrinks Phase 1's risk surface. This method exists so Phase 2
-        UI-client work can opt in if needed.
-        """
-        s = self._sessions.get(session_id)
-        if s is None:
-            return False
-        s.last_activity_at = self._now()
-        return True
 
     def _evict_stale_sessions(self) -> None:
         now = self._now()

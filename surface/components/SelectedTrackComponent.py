@@ -86,15 +86,16 @@ is best-effort; a torn-down handle should not crash the surface.
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
+from ._common import coerce_str, LOM_ERRORS
 from . import path_resolver
 from .path_resolver import ResolveStatus
 
 logger = logging.getLogger("looping")
 
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum) -----------------------------------------
@@ -154,15 +155,7 @@ _TRACK_RESOLVE_ERROR_MAP = {
 }
 
 
-def _coerce_str(x) -> str:
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 # --- coalesce window ------------------------------------------------------
@@ -439,8 +432,12 @@ class SelectedTrackComponent:
         except _LOM_ERRORS as e:
             self._warn_once("song.scenes", "read", e)
             return None
+        # LOM identity, not ``is``: every read of ``song.scenes`` and of
+        # ``view.selected_scene`` is a fresh wrapper (measured on Live
+        # 13.0b26, 2026-11-25), so ``is`` never matched and no
+        # ``selected_scene`` was ever sent.
         for i, s in enumerate(scenes):
-            if s is scene:
+            if path_resolver.same_lom_handle(s, scene):
                 return i
         return None
 

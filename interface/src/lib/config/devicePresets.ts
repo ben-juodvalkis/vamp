@@ -68,7 +68,6 @@ export interface DevicePresetConfig {
   expectedClassName: string;
   curveType?: CurveType;
   color: DeviceColorScheme;
-  gridSlot?: boolean;           // NEW: false = virtual slot (default: true)
   /** ADR-400: this device wears the focused TRACK's ink instead of its own
    *  color (utility/gain — "the track's own trim"). `color` stays as the
    *  fallback for contexts with no focused track. Honored by the fx-grid
@@ -228,7 +227,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Compressor',
     expectedClassName: 'Compressor2',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('dynamics')
   },
   gate: {
@@ -236,14 +234,12 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Gate',
     expectedClassName: 'Gate',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('dynamics')
   },
   ott: {
     native: true,
     defaultName: 'Multiband Dynamics',
     expectedClassName: 'MultibandDynamics',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('dynamics')
   },
   squash: {
@@ -251,7 +247,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Glue Compressor',
     expectedClassName: 'GlueCompressor',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('dynamics')
   },
   saturator: {
@@ -268,7 +263,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Roar',
     expectedClassName: 'Roar',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('distortion')
   },
   variation: {
@@ -301,7 +295,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: "Ben's Adaptive Tone Shaper",
     aliases: ['Tone Shaper'],
     expectedClassName: 'MxDeviceAudioEffect',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('filter')       // A tone balancer, the EQ's family
   },
   drum: {
@@ -319,7 +312,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Pedal',
     expectedClassName: 'Pedal',
-    gridSlot: false,                    // Virtual device: no tile; PedalCentralView is its own view
     color: familyScheme('distortion')
   },
   tremolo: {
@@ -338,7 +330,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Auto Pan-Tremolo',
     expectedClassName: 'AutoPan2',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('modulation')
   },
   eq8: {
@@ -347,7 +338,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'EQ Eight',
     expectedClassName: 'Eq8',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('filter')
   },
   delay: {
@@ -356,7 +346,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Delay',
     expectedClassName: 'Delay',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('timeSpace')
   },
   limiter: {
@@ -365,7 +354,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Limiter',
     expectedClassName: 'Limiter',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('dynamics')
   },
   arpeggiator: {
@@ -392,7 +380,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Shifter',
     expectedClassName: 'Shifter',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('distortion')
   },
   redux: {
@@ -400,7 +387,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Redux',
     expectedClassName: 'Redux2',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('distortion')
   },
   reverb: {
@@ -434,7 +420,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'Comb',
     expectedClassName: 'MxDeviceAudioEffect',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('timeSpace')    // A space effect, with Echo and Reverb (user, 2026-11-11; gold from 2026-10-19)
   },
   phaser: {
@@ -442,7 +427,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Phaser',
     expectedClassName: 'PhaserNew',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('modulation')   // Cyclic movement (user, 2026-11-11; rose from 2026-10-19)
   },
   pitchHack: {
@@ -456,7 +440,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('glitch')       // Glitch (user, 2026-11-11)
   },
   glitchLoop: {
@@ -473,7 +456,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'GlitchLoop',
     expectedClassName: 'MxDeviceAudioEffect',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('glitch')       // Glitch (user, 2026-11-11)
   },
   smudge: {
@@ -486,7 +468,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'Blur',
     expectedClassName: 'MxDeviceAudioEffect',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('timeSpace')    // Time and space, with Echo, Reverb and Comb (user, 2026-11-11; Glitch earlier that day, orange from the Saturn tile before)
   },
   // New grid devices to replace saturator slot
@@ -529,7 +510,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Pitch Shift',
     aliases: ['Octave'],
     expectedClassName: 'MxDeviceAudioEffect',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('glitch')       // Glitch, as its folder is (user, 2026-11-11; violet until then)
   },
   grainDelay: {
@@ -540,7 +520,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Grain Delay',
     expectedClassName: 'GrainDelay',
-    gridSlot: false,
     color: familyScheme('timeSpace')
   },
   // Virtual Smudge Device
@@ -570,7 +549,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'Random Octave',
     expectedClassName: 'MidiRandom',
-    gridSlot: false,
     color: familyScheme('pitchSeq')
   },
   velocity: {
@@ -579,7 +557,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Velocity',
     expectedClassName: 'MidiVelocity',
-    gridSlot: false,
     color: familyScheme('pitchSeq')     // A MIDI effect: violet, as they all are (user, 2026-11-11)
   },
   chord: {
@@ -588,7 +565,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Chord',
     expectedClassName: 'MidiChord',
-    gridSlot: false,
     color: familyScheme('pitchSeq')
   },
   chance: {
@@ -604,7 +580,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'Note Chance',
     expectedClassName: 'MxDeviceMidiEffect',
-    gridSlot: false,
     color: familyScheme('pitchSeq')
   },
   wah: {
@@ -615,7 +590,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'Wah',
     expectedClassName: 'AudioEffectGroupDevice',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('guitar')       // The guitar rig (user, 2026-11-11)
   },
   vocal: {
@@ -625,7 +599,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     presetPath: '',
     defaultName: 'Vocal',
     expectedClassName: 'AudioEffectGroupDevice',
-    gridSlot: false,                    // Virtual device
     color: familyScheme('rackVoice')
   }
 };
@@ -669,17 +642,4 @@ export const CONTROL_COLORS: DeviceColorScheme[] = [
 /** Get the macro palette for a control by index (wraps). */
 export function getControlColor(index: number): DeviceColorScheme {
   return CONTROL_COLORS[index % CONTROL_COLORS.length];
-}
-
-// Utility functions for slot classification
-export function getGridSlots(): string[] {
-  return Object.entries(DEVICE_PRESETS)
-    .filter(([_, config]) => config.gridSlot !== false)
-    .map(([key, _]) => key);
-}
-
-export function getVirtualSlots(): string[] {
-  return Object.entries(DEVICE_PRESETS)
-    .filter(([_, config]) => config.gridSlot === false)
-    .map(([key, _]) => key);
 }

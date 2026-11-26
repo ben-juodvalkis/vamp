@@ -61,15 +61,16 @@ rather than crashing the tick, per CLAUDE.md merge-gate rule (9).
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
+from ._common import coerce_str, LOM_ERRORS
 from . import path_resolver
 from .path_resolver import ResolveStatus
 
 logger = logging.getLogger("looping")
 
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum) -----------------------------------------
@@ -104,16 +105,7 @@ _DEVICE_RESOLVE_ERROR_MAP = {
 }
 
 
-def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; ``None`` → ``""``."""
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 class DeviceCommandsComponent:

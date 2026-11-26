@@ -619,6 +619,144 @@ export function computeGroupedGridLayout(c: GroupedGridConstraints): GridLayout 
 	return best ?? { columns: 1, rows: count, scrolls: false, tileWidth: width, tileHeight: height };
 }
 
+// ── The browser stage's grid (folders, presets, a mixed level) ──────────────
+//
+// What `DrillDownBrowser` asks of the solvers above for the screen on show.
+// Pure: the component measures the stage and passes counts.
+
+/**
+ * The browser's tile geometry, on the app's interior ladder: 16 frames a
+ * panel, 8 separates tiles inside one. The component publishes `gap` and
+ * `padding` as custom properties (--grid-gap / --grid-pad) and the header
+ * sizes as --header-h / --section-gap, so the solver and the stylesheet
+ * cannot drift — the packed-band row is only correct while its gap is
+ * EXACTLY the tile gap.
+ */
+export const BROWSER_GRID = {
+	gap: 8,
+	padding: 16,
+	/** Grouped preset sections: header band height and the air between sections. */
+	sectionHeaderH: 44,
+	sectionGap: 16,
+	/**
+	 * The effects screen's folders: a slim label in the folder's own ink over
+	 * its tiles, not a band (user, 2026-10-26: "all the dead space just for
+	 * the folder name").
+	 */
+	fillHeaderH: 22,
+	fillSectionGap: 10,
+	/**
+	 * A stage shorter than this (a phone on its side, ~320px under the bar)
+	 * would fit only two rows of the roomy folder slabs; it takes the folder
+	 * floors down so three or four rows show. The iPad's stage never does.
+	 */
+	shortStagePx: 420
+} as const;
+
+// Comfort constraints: tiles grow to FILL the stage and only scroll once
+// filling would shrink them below the floors. Wider-than-tall reads well, so
+// the target aspect stays at 1.5 for both.
+//
+// FOLDERS keep the roomy floors — folder counts are bounded by catalog
+// structure, so those grids almost always fill the stage anyway and the big
+// slabs are the primary navigation target.
+const FOLDER_COMFORT = { gap: BROWSER_GRID.gap, minTile: 150, minTileHeight: 110, targetAspect: 1.5 };
+// PRESETS use a denser floor: a leaf can hold thousands of patches, and the
+// scarce resource is how many you can scan at once, not how big each one is.
+// ~112×78 still clears the 44px touch target with room to spare, and roughly
+// doubles the tiles onscreen vs the folder floors (more columns AND more rows).
+// 92 (78 before 2026-10-28): room for two rows of tags under a two-line name.
+const PRESET_COMFORT = { gap: BROWSER_GRID.gap, minTile: 112, minTileHeight: 92, targetAspect: 1.5 };
+const SHORT_FOLDER_COMFORT = { gap: BROWSER_GRID.gap, minTile: 120, minTileHeight: 64, targetAspect: 1.5 };
+
+export interface BrowserGridInput {
+	/** The screen on show; `null` for Key mode, which has no tile grid. */
+	screen: ScreenKind | null;
+	stageWidth: number;
+	stageHeight: number;
+	folderCount: number;
+	presetCount: number;
+	/** A mixed level's preset sections' sizes, each under a header. */
+	mixedSections: number[];
+	/** A grouped preset screen's sections; zero or one draws the plain grid. */
+	presetSections: Array<{ count: number; named: boolean }>;
+	/** The effects screen: rows filled (`packFillSections`), slim headers. */
+	fill: boolean;
+}
+
+/** Header height and section gap for a grouped preset screen. */
+export function presetSectionChrome(fill: boolean): { headerH: number; sectionGap: number } {
+	return fill
+		? { headerH: BROWSER_GRID.fillHeaderH, sectionGap: BROWSER_GRID.fillSectionGap }
+		: { headerH: BROWSER_GRID.sectionHeaderH, sectionGap: BROWSER_GRID.sectionGap };
+}
+
+/**
+ * The stage's grid: the column count / tile size that gives the most
+ * comfortable, roughly-square tap targets for what the screen shows. One
+ * system for folders and presets.
+ */
+export function browserGridLayout(input: BrowserGridInput): GridLayout {
+	const { screen, stageWidth, stageHeight, folderCount, presetCount, mixedSections, presetSections, fill } = input;
+	const count =
+		screen === null
+			? 0
+			: screen === 'folders'
+				? folderCount
+				: screen === 'mixed'
+					? folderCount + presetCount
+					: presetCount;
+	if (!count || stageWidth <= 0 || stageHeight <= 0) {
+		return { columns: 2, rows: 1, scrolls: false, tileWidth: 0, tileHeight: 0 };
+	}
+	const width = stageWidth - BROWSER_GRID.padding * 2;
+	const height = stageHeight - BROWSER_GRID.padding * 2;
+	if (screen === 'mixed') {
+		// Folders, then the level's own presets under their header(s): sections
+		// on ONE ruler, at the preset grid's density, so a folder tile and a
+		// preset tile are the same size and share columns.
+		return computeGroupedGridLayout({
+			width,
+			height,
+			groups: [folderCount, ...mixedSections],
+			headerCount: mixedSections.length,
+			headerHeight: BROWSER_GRID.sectionHeaderH,
+			sectionGap: BROWSER_GRID.sectionGap,
+			...PRESET_COMFORT
+		});
+	}
+	if (screen === 'presets' && presetSections.length > 1) {
+		// Sectioned layout: same solver scoring, but rows round up per section
+		// and headers consume fixed chrome — so grouped tiles keep exactly the
+		// plain grid's comfortable proportions (identical cols + height once
+		// the content scrolls, which a flattened folder always does).
+		const chrome = presetSectionChrome(fill);
+		return computeGroupedGridLayout({
+			width,
+			height,
+			groups: presetSections.map((g) => g.count),
+			headerCount: presetSections.filter((g) => g.named).length,
+			// Counted as drawn: small sections share rows (ADR-409), so the
+			// tiles grow into the height the packing frees.
+			headers: presetSections.map((g) => g.named),
+			fill,
+			headerHeight: chrome.headerH,
+			sectionGap: chrome.sectionGap,
+			...PRESET_COMFORT
+		});
+	}
+	return computeGridLayout({
+		width,
+		height,
+		count,
+		...(screen === 'presets'
+			? PRESET_COMFORT
+			: stageHeight < BROWSER_GRID.shortStagePx
+				? SHORT_FOLDER_COMFORT
+				: FOLDER_COMFORT)
+	});
+}
+
 // ── Row windowing (DOM virtualization, ADR-404) ─────────────────────────────
 //
 // The adaptive grid used to render EVERY tile of the current level, so one

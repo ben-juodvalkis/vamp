@@ -1,15 +1,10 @@
 /**
  * Miscellaneous Message Handlers
  *
- * Handles various message types including:
- * - Bridge status messages
- * - Command messages
- * - Init messages
- * - Ping/pong messages
+ * The bridge's own messages (`/bridge/*`) and its command acks (`/cmd/*`).
  */
 
 import { logger } from '$lib/utils/logger';
-import { clearSession } from '$lib/stores/session.svelte';
 import type { OSCArg } from '$lib/types/osc';
 
 /**
@@ -84,26 +79,4 @@ export function handleCommandMessage(address: string, ...args: OSCArg[]): void {
 		return;
 	}
 	logger.debug('Command message received', { address, args });
-}
-
-/**
- * Handle ping/pong messages (connection health)
- */
-export function handlePingPongMessage(address: string, ...args: OSCArg[]): void {
-	if (address === '/pong') {
-		logger.debug('Pong received', { args });
-	}
-}
-
-/**
- * Handle initialization messages from LiveAPI-v5
- */
-export function handleInitMessage(address: string, ...args: OSCArg[]): void {
-	logger.info('Init message received', { address, args });
-
-	if (address === '/init') {
-		logger.info('LiveAPI-v5 initializing - clearing session store');
-		clearSession();
-		logger.info('Session store cleared for fresh LiveAPI-v5 session');
-	}
 }

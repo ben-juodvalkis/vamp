@@ -17,7 +17,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { getRoutingTarget } from '../../../../bridge/routing/messageRouter.js';
+import constants from '$config/constants.json';
+import { configureRouting, getRoutingTarget } from '../../../../bridge/routing/messageRouter.js';
+
+// The router reads no config: the bridge hands it its backendScope, and this
+// test the tracked file's.
+configureRouting(constants.osc.backendScope);
 
 describe('messageRouter prefix matching (backendScope glob)', () => {
 	it('routes an unknown /looping/v2/* address to pythonSurface via the prefix glob', () => {

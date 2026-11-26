@@ -107,12 +107,14 @@ import logging
 import re
 from typing import Callable, NamedTuple, Optional, Tuple
 
+from ._common import LOM_ERRORS
+
 logger = logging.getLogger("looping")
 
 
 # Same tuple shape as ClipPropertiesComponent — ``Boost.Python.ArgumentError``
 # is a ``TypeError`` subclass raised on invalidated C++ handles.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # Live ticks the Groove Pool's "Auto Load Groove" box on the groove loaded

@@ -36,19 +36,12 @@ const BROADCAST_PREFIX = '/looping/v3/totalmix/';
 /** Address the five live signal meters go to WS clients on, as one frame. */
 const METERS_ADDRESS = '/looping/v3/totalmix_meters';
 
-/**
- * `osc.totalmix` from constants.json, read when it is asked for and never
- * when this file is required. The bridge requires this module whatever its
- * `totalmix` switch says, and a config with the switch off carries no TotalMix
- * block at all (general-release audit §7b) — a read at require time took the
- * whole bridge down on exactly that config. The bridge passes its own copy of
- * the block; this default serves the tests.
- *
- * @returns {Object|undefined}
- */
-function readTotalMixConfig() {
-    return require('../../../config/constants.json').osc?.totalmix;
-}
+// The `osc.totalmix` block always comes from the caller: the bridge passes
+// its own (constants.json with constants.local.json laid over it), and tests
+// pass theirs. This module reads no config file. It used to fall back to the
+// raw tracked constants.json, which skipped this Mac's local overlay, and the
+// bridge requires this module whatever its `totalmix` switch says, with a
+// config that carries no TotalMix block at all (general-release audit §7b).
 
 /** The three dB limits the clamp needs, out of one `osc.totalmix` block. */
 function limitsOf(cfg) {
@@ -65,11 +58,11 @@ function limitsOf(cfg) {
  * than at full scale.
  *
  * @param {number} db
- * @param {{minDb: number, maxDb: number, silenceDb: number}} [limits] the
- *   link's own; constants.json's when omitted
+ * @param {{minDb: number, maxDb: number, silenceDb: number}} limits the
+ *   link's own (`osc.totalmix`'s minDb, maxDb and silenceDb)
  * @returns {number|null} dB to send, or null when the input isn't a number
  */
-function clampDb(db, limits = limitsOf(readTotalMixConfig())) {
+function clampDb(db, limits) {
     if (typeof db !== 'number' || !Number.isFinite(db)) return null;
     if (db <= limits.minDb) return limits.silenceDb;
     if (db > limits.maxDb) return limits.maxDb;
@@ -95,10 +88,10 @@ function parseDb(args) {
 /**
  * @param {Object} [deps]
  * @param {{ info?: Function, warn?: Function, debug?: Function }} [deps.logger]
- * @param {Object} [deps.config] the `osc.totalmix` block; constants.json's
- *   when omitted
+ * @param {Object} deps.config the `osc.totalmix` block (required)
  */
-function createTotalMixLink({ logger, config = readTotalMixConfig() } = {}) {
+function createTotalMixLink({ logger, config } = {}) {
+    if (!config) throw new Error('createTotalMixLink: the osc.totalmix block is required');
     // constants.json carries `_`-prefixed documentation keys alongside real
     // entries; strip them so a doc string can never be mistaken for a channel.
     const CHANNELS = Object.fromEntries(

@@ -128,6 +128,22 @@ describe('/api/sample-peaks', () => {
 		expect((await peaks(capture)).status).toBe(200);
 	});
 
+	it('checks the audio an .alc resolves to: a library clip cannot name a file outside the roots', async () => {
+		const clipXml = (abs: string) =>
+			'<?xml version="1.0" encoding="UTF-8"?><Ableton><LiveSet><AudioClip><SampleRef><FileRef>' +
+			`<RelativePath></RelativePath><Path Value="${abs}" /><Name Value="x.wav" />` +
+			'</FileRef></SampleRef></AudioClip></LiveSet></Ableton>';
+		const secret = wav(join(outside, 'secret.wav'));
+		writeFileSync(join(library, 'sneaky.alc'), clipXml(secret));
+		expect((await peaks(join(library, 'sneaky.alc'))).status).toBe(403);
+
+		const kick = wav(join(library, 'kick.wav'));
+		writeFileSync(join(library, 'kick.alc'), clipXml(kick));
+		const answer = await peaks(join(library, 'kick.alc'));
+		expect(answer.status).toBe(200);
+		expect((answer.body as { path: string }).path).toBe(realpathSync(kick));
+	});
+
 	/*
 	 * `<library>/link/../escaped.wav` is `<library>/escaped.wav` as written, so
 	 * it passes the check — but resolved physically it is

@@ -1,6 +1,5 @@
 import { browser } from '$app/environment';
 import { writable, get } from 'svelte/store';
-import { logger } from '$lib/utils/logger';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -158,26 +157,3 @@ export const themeActions = {
 	cycle: () => themeManager.cycle(),
 	toggle: () => themeManager.toggle()
 };
-
-// OSC Message Handler for theme control
-export function handleMessage(address: string, ...args: import('$lib/types/osc').OSCArg[]): void {
-	logger.debug(`OSC message: ${address}`, { component: 'theme', args });
-	
-	if (address === '/theme/set') {
-		const themeValue = args[0];
-		if (typeof themeValue === 'string' && ['light', 'dark', 'system'].includes(themeValue)) {
-			themeManager.setTheme(themeValue as Theme);
-			logger.debug(`Set theme to: ${themeValue}`, { component: 'theme' });
-		} else {
-			logger.warn(`Invalid theme value: ${themeValue}`, { component: 'theme' });
-		}
-	} else if (address === '/theme/toggle') {
-		themeManager.toggle();
-		logger.debug('Toggled theme', { component: 'theme' });
-	} else if (address === '/theme/cycle') {
-		themeManager.cycle();
-		logger.debug('Cycled theme', { component: 'theme' });
-	} else {
-		logger.warn(`Unknown theme address: ${address}`, { component: 'theme' });
-	}
-}

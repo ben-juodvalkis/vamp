@@ -26,7 +26,8 @@
  * route used to decode whatever absolute path a LAN host named (general-release
  * audit §5.3). What passes is the *normalized* path, and everything below opens
  * that string, never `rawPath` — see sampleRoots.ts for why the difference is
- * a way out of the root.
+ * a way out of the root. An `.alc`'s audio, which the clip names and which may
+ * be anywhere, is checked again once resolved.
  */
 import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { realpath, stat, readFile, open } from 'node:fs/promises';
@@ -285,7 +286,18 @@ export const GET: RequestHandler = async ({ url }) => {
 			logger.warn('alc-resolve-failed', { path: alcReal, reason: (e as Error).message });
 		}
 		if (!resolved) throw error(404, 'could not resolve .alc to an audio file');
-		sourcePath = resolved;
+		// The clip names its sample, and its absolute `Path` can name any
+		// file at all: the audio it leads to passes the same gate as a path
+		// asked for directly, or a clip in the library reads past the roots.
+		const audioPath = normalizeSamplePath(resolved);
+		if (!audioPath || !isAllowedSamplePath(audioPath)) {
+			logger.warn('sample-peaks: refused an .alc whose audio is outside the sample roots', {
+				path: rawPath,
+				audio: resolved
+			});
+			throw error(403, 'the clip\'s audio is outside the sample library and Live projects');
+		}
+		sourcePath = audioPath;
 	}
 
 	let real: string;

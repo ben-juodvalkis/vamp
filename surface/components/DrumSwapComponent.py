@@ -40,6 +40,8 @@ import logging
 import re
 from collections.abc import Callable
 
+from ._common import coerce_str, LOM_ERRORS
+from .component_util import begin_undo_step, end_undo_step
 from .drum_vm_functions import PAD_NAME_MAX
 from .drum_vm_resolve import first_instrument, instrument_name, pad_devices, pad_name
 from .path_resolver import ResolveStatus, resolve_device, resolve_track
@@ -51,7 +53,7 @@ except Exception:  # pragma: no cover — only if LOMListeners cannot import
 
 logger = logging.getLogger("looping")
 
-_LOM_ERRORS = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 V3_DRUM_SHOW_FOR_SWAP_ADDRESS = "/looping/v3/drum/show_for_swap"
 V3_DRUM_SHOW_FOR_SWAP_ACK_ADDRESS = "/looping/v3/drum/show_for_swap/ack"
@@ -92,12 +94,7 @@ SWAP_UNDO_MAX_MS = 60_000
 _RACK_PATH = re.compile(r"^tracks/(\d+)/devices/(\d+)$")
 
 
-def _coerce_str(x) -> str:
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 def scroll_for(note: int, current: int) -> int:
@@ -264,13 +261,10 @@ class DrumSwapComponent:
                 names[state[0]] = (state[2], state[3])
         self._tokens += 1
         token = self._tokens
-        try:
-            self._song.begin_undo_step()
-            undo = True
-        except _LOM_ERRORS as e:
-            # The swap still works; its renames just land as an undo step of their own.
-            logger.warning("DrumSwapComponent: begin_undo_step raised: %s", e)
-            undo = False
+        # The song's shared step (component_util): a Drum Rack gesture or a
+        # wheel moved mid-swap joins it instead of closing it. False: the
+        # swap still works; its renames just land as an undo step of their own.
+        undo = begin_undo_step("DrumSwapComponent", self._song)
         self._open = _OpenSwap(rack_path, names, token, undo)
         if undo and self._schedule_delayed is not None:
             self._schedule_delayed(SWAP_UNDO_MAX_MS, lambda: self._expire(token))
@@ -285,10 +279,7 @@ class DrumSwapComponent:
         swap, self._open = self._open, None
         if swap is None or not swap.undo:
             return
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("DrumSwapComponent: end_undo_step (%s) raised: %s", reason, e)
+        end_undo_step("DrumSwapComponent (%s)" % reason, self._song, True)
 
     # --- finish_swap -------------------------------------------------------------
 

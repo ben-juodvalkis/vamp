@@ -24,6 +24,7 @@
  */
 
 import { logger } from '$lib/utils/logger';
+import { nextRequestId } from '$lib/api/connection/requestId';
 
 export interface MidiNote {
 	pitch: number;
@@ -72,15 +73,9 @@ const resolvedByClipPath = new Map<string, MidiNote[]>();
 const subscribers = new Map<string, Set<() => void>>();
 
 let _sender: NotesSender | null = null;
-let _seq = 0;
 
 export function setNotesSender(sender: NotesSender): void {
 	_sender = sender;
-}
-
-function nextRequestId(): string {
-	_seq = (_seq + 1) & 0x7fffffff;
-	return `notes-${Date.now().toString(36)}-${_seq}`;
 }
 
 /**
@@ -105,7 +100,7 @@ export function requestNotes(clipPath: string): Promise<MidiNote[]> {
 	const existing = inflightByClipPath.get(clipPath);
 	if (existing) return existing;
 
-	const requestId = nextRequestId();
+	const requestId = nextRequestId('notes');
 	const sender = _sender;
 	const promise = new Promise<MidiNote[]>((resolve, reject) => {
 		const timeoutId = setTimeout(() => {
@@ -327,7 +322,6 @@ export function __resetClipNotesServiceForTests(): void {
 	subscribers.clear();
 	inflightByClipPath.clear();
 	resolvedByClipPath.clear();
-	_seq = 0;
 }
 
 // A resync re-rides `state/full`, which can put different clips behind

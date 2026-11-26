@@ -97,6 +97,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 # The virtual-macro vocabulary comes from the module that owns it, not
 # through the component's re-export shim. One statement per alias is
 # ruff's isort default (``combine-as-imports`` off), not a leftover.
+from ._common import coerce_str, safe_remove, safe_emit
 from .drum_vm_functions import (
     DRUM_RACK_CLASS_NAME,
 )
@@ -753,19 +754,8 @@ def spec_for(class_name: str, property_name: str) -> Optional[PropertySpec]:
 
 
 def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; everything else → ``str()``.
-
-    Mirrors ``DevicesComponent._coerce_str`` so behaviour is identical
-    across the two v3 components. Kept module-private to discourage
-    import sprawl — string coercion is a property of the wire, not of
-    any one component.
-    """
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+    """``coerce_str``, keeping this component's ``None`` → ``"None"``."""
+    return coerce_str(x, none="None")
 
 
 def _walk_listener_target(device, listener_path: str):
@@ -816,13 +806,21 @@ def _attr_listener_method(target, verb: str, attr_name: str):
     return method if callable(method) else None
 
 
-def _remove_attr_listener(target, attr_name: str, cb) -> None:
-    """Detach ``cb`` from ``target``'s ``attr_name`` listener. Raises
-    ``AttributeError`` when there is no remover; callers log and move on."""
-    remover = _attr_listener_method(target, "remove", attr_name)
-    if remover is None:
-        raise AttributeError("no remove_%s_listener" % attr_name)
-    remover(cb)
+def _detach_attr_listener(target, spec: "PropertySpec", cb, where: str) -> None:
+    """Remove ``cb`` from the object it was added to; never raises.
+
+    ``target`` is the one the subscription recorded at attach time, not a
+    fresh walk of ``listener_path``: after Live replaces a container the
+    walk reaches the newcomer, which never held the listener, and the old
+    one kept firing into a callback nobody tracked. A torn-down target's
+    stale-handle error (and any other) is logged at DEBUG, as before.
+    """
+    if cb is _noop or target is None:
+        return
+    safe_remove(
+        target, "remove_%s_listener" % spec.attr_name, cb,
+        "PropertyComponent %s" % where, other_level=logging.DEBUG,
+    )
 
 
 def _jsonable(value):
@@ -1008,9 +1006,16 @@ class PropertyComponent:
         # True between arming the deferred structural pass and its fire,
         # so a burst of structural changes costs one re-resolve.
         self._structural_pass_armed = False
-        # (devicePath, propertyName) → (device, spec, listener_cb)
+        # (devicePath, propertyName) → (device, spec, listener_cb, target).
+        # ``target`` is the object the listener was added to (the device,
+        # or a container under it such as ``device.sample``), held so the
+        # detach goes to that object: re-walking ``listener_path`` at
+        # detach time reaches whatever container is there *now*, which
+        # after a replacement is not the one holding the listener.
+        # ``None`` when no listener was attached.
         self._subscriptions: Dict[
-            Tuple[str, str], Tuple[object, PropertySpec, Callable[[], None]],
+            Tuple[str, str],
+            Tuple[object, PropertySpec, Callable[[], None], object],
         ] = {}
         # (devicePath, containerSegment) → (device, container_replaced_cb).
         # When a property has a non-empty listener_path (e.g. ``sample`` or
@@ -1129,7 +1134,7 @@ class PropertyComponent:
                     "for %s/%s raised: %s",
                     spec.computed, device_path, property_name, e,
                 )
-            self._subscriptions[key] = (device, spec, _noop)
+            self._subscriptions[key] = (device, spec, _noop, None)
             return True
 
         target = _walk_listener_target(device, spec.listener_path)
@@ -1145,7 +1150,7 @@ class PropertyComponent:
                 "subscribing without listener",
                 spec.listener_path or "<device>", device_path,
             )
-            self._subscriptions[key] = (device, spec, _noop)
+            self._subscriptions[key] = (device, spec, _noop, None)
         else:
             adder = _attr_listener_method(target, "add", spec.attr_name)
             if adder is None:
@@ -1158,7 +1163,7 @@ class PropertyComponent:
                     spec.listener_path or "<device>", spec.attr_name,
                     device_path, spec.attr_name,
                 )
-                self._subscriptions[key] = (device, spec, _noop)
+                self._subscriptions[key] = (device, spec, _noop, None)
             else:
                 cb = self._make_fire_callback(
                     device=device, device_path=device_path,
@@ -1175,9 +1180,9 @@ class PropertyComponent:
                     )
                     # Record the subscription anyway so unsubscribe is
                     # symmetric; the fire path is then dead.
-                    self._subscriptions[key] = (device, spec, _noop)
+                    self._subscriptions[key] = (device, spec, _noop, None)
                 else:
-                    self._subscriptions[key] = (device, spec, cb)
+                    self._subscriptions[key] = (device, spec, cb, target)
 
         # Container-replaced safety net (see ``_container_listeners``
         # docstring on ``__init__``). Idempotent per
@@ -1210,32 +1215,15 @@ class PropertyComponent:
                 device_path, property_name,
             )
             return
-        device, spec, cb = sub
+        _device, spec, cb, target = sub
         if spec.computed:
             self._release_computed(spec, device_path)
             return
-        listener_path = spec.listener_path  # captured before any detach
-        if cb is _noop:
-            self._maybe_drop_container_listener(device_path, listener_path)
-            return
-        target = _walk_listener_target(device, spec.listener_path)
-        if target is None:
-            self._maybe_drop_container_listener(device_path, listener_path)
-            return
-        try:
-            _remove_attr_listener(target, spec.attr_name, cb)
-        except Exception as e:
-            # Live can raise on remove if the underlying object went
-            # stale between attach and detach (preset reload, plugin
-            # swap). Log and move on — the listener is effectively gone
-            # because its target is.
-            logger.debug(
-                "PropertyComponent: remove listener failed for "
-                "%s.%s on %s: %s",
-                spec.listener_path or "<device>", spec.attr_name,
-                device_path, e,
-            )
-        self._maybe_drop_container_listener(device_path, listener_path)
+        # Live can raise on remove if the object went stale between attach
+        # and detach (preset reload, plugin swap): logged at DEBUG, the
+        # listener is effectively gone because its target is.
+        _detach_attr_listener(target, spec, cb, "%s/%s" % key)
+        self._maybe_drop_container_listener(device_path, spec.listener_path)
 
     # --- /looping/v3/property/set -----------------------------------------
 
@@ -1815,7 +1803,7 @@ class PropertyComponent:
         if entry is None:
             return
         # Any other subscription under this device still using the segment?
-        for key, (_d, spec, _cb) in self._subscriptions.items():
+        for key, (_d, spec, _cb, _t) in self._subscriptions.items():
             if key[0] != device_path:
                 continue
             if spec.listener_path.split(".", 1)[0] == segment:
@@ -1843,12 +1831,7 @@ class PropertyComponent:
         """
         if self._disconnected:
             return
-        try:
-            self._emit(address, payload)
-        except Exception as e:
-            logger.warning(
-                "PropertyComponent: emit %s failed: %s", address, e,
-            )
+        safe_emit(self._emit, address, payload, "PropertyComponent")
 
     def _emit_error(
         self,
@@ -1941,7 +1924,7 @@ class PropertyComponent:
 
         dead_keys: List[Tuple[str, str]] = []
         rebinds: List[Tuple[Tuple[str, str], object]] = []
-        for key, (device, spec, cb) in self._subscriptions.items():
+        for key, (device, _spec, _cb, _t) in self._subscriptions.items():
             r = resolve_device(self._song, key[0])
             if r.status is not ResolveStatus.OK:
                 dead_keys.append(key)
@@ -1970,20 +1953,11 @@ class PropertyComponent:
         sub = self._subscriptions.pop(key, None)
         if sub is None:
             return
-        device, spec, cb = sub
+        _device, spec, cb, target = sub
         if spec.computed:
             self._release_computed(spec, key[0])
             return
-        if cb is not _noop:
-            target = _walk_listener_target(device, spec.listener_path)
-            if target is not None:
-                try:
-                    _remove_attr_listener(target, spec.attr_name, cb)
-                except Exception as e:
-                    logger.debug(
-                        "PropertyComponent: remove listener failed "
-                        "for %s/%s: %s", key[0], key[1], e,
-                    )
+        _detach_attr_listener(target, spec, cb, "%s/%s" % key)
         self._maybe_drop_container_listener(key[0], spec.listener_path)
 
     def _drop_container_listeners_for(self, device_path: str) -> None:
@@ -2046,19 +2020,8 @@ class PropertyComponent:
         becomes a no-op, then the listener detachment loop runs.
         """
         self._disconnected = True
-        for key, (device, spec, cb) in list(self._subscriptions.items()):
-            if cb is _noop:
-                continue
-            target = _walk_listener_target(device, spec.listener_path)
-            if target is None:
-                continue
-            try:
-                _remove_attr_listener(target, spec.attr_name, cb)
-            except Exception as e:
-                logger.debug(
-                    "PropertyComponent.disconnect: remove listener "
-                    "failed for %s/%s: %s", key[0], key[1], e,
-                )
+        for key, (_device, spec, cb, target) in list(self._subscriptions.items()):
+            _detach_attr_listener(target, spec, cb, "%s/%s" % key)
         for ckey, (device, cb) in list(self._container_listeners.items()):
             _device_path, segment = ckey
             remover = getattr(device, "remove_%s_listener" % segment, None)

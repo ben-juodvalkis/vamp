@@ -33,14 +33,11 @@
  */
 
 import { send } from '$lib/api/simpleClient';
-import {
-    addOscMessageListener,
-    removeOscMessageListener,
-    type OscBusMessage
-} from '$lib/api/connection/oscMessageBus';
+import { oscRequest, nextRequestId } from '$lib/api/connection/oscRequest';
 import { setTrackName } from '$lib/services/trackCommands';
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import { logger } from '$lib/utils/logger';
+import { regularTrackIndexOf } from '$lib/utils/livePaths';
 
 // --- wire addresses -------------------------------------------------------
 
@@ -142,83 +139,58 @@ async function doPrepareForPreset(
     source = '',
     rel = ''
 ): Promise<PrepareResult> {
-    const requestId = generateRequestId();
+    const requestId = nextRequestId('prep');
     logger.debug('prepareForPreset: sending', {
         component: 'trackPreparation', requestId, trackType,
         presetPath: presetPath || '(none)',
         targetTrackPath: targetTrackPath || '(auto)',
     });
 
-    return new Promise<PrepareResult>((resolve, reject) => {
-        let settled = false;
-        const settle = (fn: () => void) => {
-            if (settled) return;
-            settled = true;
-            removeOscMessageListener(handler);
-            clearTimeout(timer);
-            fn();
-        };
-
-        const handler = (msg: OscBusMessage) => {
-            if (!msg || !msg.address || !msg.args) return;
-            if (msg.address !== PREPARE_ACK_ADDRESS && msg.address !== PREPARE_NACK_ADDRESS) return;
-            if (msg.args[0] !== requestId) return;
-
-            if (msg.address === PREPARE_ACK_ADDRESS) {
-                const trackPath = String(msg.args[1] ?? '');
-                const wasCreated = Number(msg.args[2] ?? 0) !== 0;
+    // 4th arg (target_track_path) pins replace-mode loads to an exact
+    // track. Empty string = auto (reuse-vs-create). Always sent so the
+    // wire shape is stable; Python treats a 3-arg message as auto too.
+    return oscRequest<PrepareResult>({
+        address: PREPARE_ADDRESS,
+        requestId,
+        args: source && rel ? [trackType, presetPath, targetTrackPath, source, rel] : [trackType, presetPath, targetTrackPath],
+        replies: [PREPARE_ACK_ADDRESS, PREPARE_NACK_ADDRESS],
+        timeoutMs: PREPARE_TIMEOUT_MS,
+        onReply: (address, args) => {
+            if (address === PREPARE_ACK_ADDRESS) {
+                const trackPath = String(args[1] ?? '');
+                const wasCreated = Number(args[2] ?? 0) !== 0;
                 const trackIndex = parseTrackIndex(trackPath);
                 if (trackIndex < 0) {
-                    settle(() => reject(new Error(
-                        `prepareForPreset: malformed trackPath in ack: ${trackPath}`
-                    )));
-                    return;
+                    return { error: new Error(`prepareForPreset: malformed trackPath in ack: ${trackPath}`) };
                 }
                 logger.debug('prepareForPreset: ack', {
                     component: 'trackPreparation',
                     requestId, trackPath, wasCreated,
                 });
-                settle(() => resolve({ trackPath, trackIndex, wasCreated }));
-            } else {
-                const code = String(msg.args[1] ?? '');
-                const detail = String(msg.args[2] ?? '');
-                logger.warn('prepareForPreset: nack', {
-                    component: 'trackPreparation',
-                    requestId, code, detail,
-                });
-                settle(() => reject(new Error(`prepareForPreset ${code}: ${detail}`)));
+                return { value: { trackPath, trackIndex, wasCreated } };
             }
-        };
-
-        addOscMessageListener(handler);
-        // 4th arg (target_track_path) pins replace-mode loads to an exact
-        // track. Empty string = auto (reuse-vs-create). Always sent so the
-        // wire shape is stable; Python treats a 3-arg message as auto too.
-        send(PREPARE_ADDRESS, source && rel ? [requestId, trackType, presetPath, targetTrackPath, source, rel] : [requestId, trackType, presetPath, targetTrackPath]);
-
-        const timer = setTimeout(() => {
-            settle(() => reject(new Error(
-                `prepareForPreset timeout (${PREPARE_TIMEOUT_MS}ms) for ${trackType}`
-            )));
-        }, PREPARE_TIMEOUT_MS);
+            const code = String(args[1] ?? '');
+            const detail = String(args[2] ?? '');
+            logger.warn('prepareForPreset: nack', {
+                component: 'trackPreparation',
+                requestId, code, detail,
+            });
+            return { error: new Error(`prepareForPreset ${code}: ${detail}`) };
+        },
+        onTimeout: () => ({
+            error: new Error(`prepareForPreset timeout (${PREPARE_TIMEOUT_MS}ms) for ${trackType}`)
+        })
     });
 }
 
+/** @deprecated Use `nextRequestId` from `$lib/api/connection/oscRequest`. */
 export function generateRequestId(): string {
-    // crypto.randomUUID is available in iPad Safari 12.3+ and every
-    // modern Chromium / Firefox build. The fallback path covers
-    // Vitest/jsdom environments where crypto isn't fully populated.
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
-    }
-    return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return nextRequestId('prep');
 }
 
+/** `tracks/<N>` → N, or -1 for any other shape. */
 export function parseTrackIndex(trackPath: string): number {
-    const m = trackPath.match(/^tracks\/(\d+)$/);
-    if (!m) return -1;
-    const n = Number(m[1]);
-    return Number.isFinite(n) ? n : -1;
+    return regularTrackIndexOf(trackPath) ?? -1;
 }
 
 // --- backward-compat: `prepareTrack` returning trackIndex only ----------

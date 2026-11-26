@@ -16,6 +16,7 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
+import { toBool } from './oscTypeHelpers';
 import {
 	applyMasterMetadata,
 	type MasterMetadataAttr
@@ -55,11 +56,4 @@ export function handleV3MasterMetadata(address: string, args: OSCArg[]): void {
 	const raw = args[0];
 	const value = BOOLEAN_ATTRS.has(attr) ? toBool(raw) : raw;
 	applyMasterMetadata(attr, value);
-}
-
-function toBool(v: OSCArg): boolean {
-	if (typeof v === 'boolean') return v;
-	if (typeof v === 'number') return v !== 0;
-	if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
-	return Boolean(v);
 }

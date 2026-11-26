@@ -16,6 +16,7 @@
     import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
     import { paintModeReactive } from '$lib/utils/paintMode.svelte';
     import { useStripGestures } from './composables/useStripGestures.svelte';
+    import { useStripFader } from './composables/useStripFader.svelte';
     import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
     import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
     import { instrumentDisplayCoordinator } from '$lib/services/instrumentDisplayCoordinator.svelte';
@@ -23,26 +24,23 @@
     import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
     import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 
-    // Volume write path + throttle (same contract TrackVolumeMeter used)
+    // Volume write path
     import {
         setTrackVolumeByIndex,
         setTrackFoldState,
         setTrackSolo,
         setTrackMute
     } from '$lib/services/trackCommands';
-    import {
-        shouldRestoreOnRelease,
-        MOMENTARY_HOLD_MS
-    } from './TrackStrip/utils/momentaryPress';
-    import { press, type PressOptions } from '$lib/actions/press';
-    import { createSliderThrottle } from '$lib/utils/sliderThrottle';
+    import { shouldRestoreOnRelease } from './TrackStrip/utils/momentaryPress';
+    import { createMomentaryMute } from './TrackStrip/utils/momentaryMutePress';
+    import { sectionAt, dispatchSectionTap } from './TrackStrip/utils/sectionTap';
+    import { TRACK_DEFAULTS } from './TrackStrip/utils/trackConstants';
     import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
     import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
     import { presetLandingStore, LANDING_PULSE_MS } from '$lib/stores/v6/presetLandingStore.svelte';
 
     interface Props {
         trackIndex: number;
-        isMaster?: boolean;
         onTrackSelect?: (trackIndex: number) => void;
         /**
          * Whether the strips row can actually scroll horizontally, measured
@@ -54,11 +52,11 @@
         rowScrolls?: boolean;
     }
 
-    let { trackIndex, isMaster = false, onTrackSelect, rowScrolls = false }: Props = $props();
+    let { trackIndex, onTrackSelect, rowScrolls = false }: Props = $props();
 
     const trackPath = `tracks/${trackIndex}`;
 
-    const trackData = useTrackData({ trackIndex, isMaster, onTrackSelect });
+    const trackData = useTrackData({ trackIndex, onTrackSelect });
 
     const seq = useTinySequencer(trackPath);
     let sequencerState = $derived(seq.state);
@@ -114,7 +112,7 @@
     // group has no clip or Permute section to carry one. The freed Permute
     // third becomes the fold control at full section size — it's the group
     // strip's primary action and gets driven by a finger on an iPad.
-    let isGroup = $derived(!isMaster && clipStateStore.isGroupTrack(trackIndex));
+    let isGroup = $derived(clipStateStore.isGroupTrack(trackIndex));
     let isFolded = $derived(isGroup && clipStateStore.isGroupFolded(trackIndex));
 
     function toggleFold() {
@@ -132,7 +130,7 @@
     let isSoloed = $derived(trackData.track.solo === true);
     // The whole strip wears solo: there is no Solo button (two fingers on
     // the fader solo), so the strip is the only place it can show.
-    let stripSoloed = $derived(isSoloed && !isMaster);
+    let stripSoloed = $derived(isSoloed);
     let isGroupTapped = $derived(
         groupGestureStore.active && groupGestureStore.memberPaths.has(trackPath)
     );
@@ -146,9 +144,9 @@
     // and a group hosts no devices of its own.
     //
     // `uiPrefsStore.showDeviceBand` is pinned true (the INST switch went
-    // 2026-09-26), so this is `!isMaster`: a two-band card on a non-group
-    // strip is UNREACHABLE since 2026-09-26, kept until the flag goes.
-    let showDeviceBand = $derived(uiPrefsStore.showDeviceBand && !isMaster);
+    // 2026-09-26): a two-band card on a non-group strip is UNREACHABLE
+    // since 2026-09-26, kept until the flag goes.
+    let showDeviceBand = $derived(uiPrefsStore.showDeviceBand);
 
     /**
      * How many bands the Card holds — and, with it, the whole strip's
@@ -200,90 +198,14 @@
 
     // ---- Mute: timing and momentary hold (ADR-427 addenda 1–3) -----------
     //
-    // Mute is Solo's gesture now, on the same threshold: **tap latches,
-    // hold releases back**. Holding a track muted for two bars and letting
-    // go is the same performance move as holding a Solo, and a hold that
-    // means "momentary" on one button and nothing on the button beside it
-    // is a distinction the hand cannot keep. `shouldRestoreOnRelease` is
-    // the shared rule; the restore writes the CAPTURED value rather than
-    // toggling again, so a surface echo or another client flipping mute
-    // mid-press cannot invert it.
-    //
-    // What differs between the two branches below is only WHEN the toggle
-    // fires, and that is decided by whether the strips row can actually
-    // scroll.
-    //
-    // The release-wait mute used to have buys exactly one thing: a
-    // horizontal pan of the row that BEGINS on a track name scrolls the
-    // row instead of muting. It is not a confirm gate or a debounce.
-    // Measured on the mock stack with a 90ms tap it costs 103ms from
-    // touch-down against Solo's 0ms, on the most-used control on the
-    // surface — so it is spent only where it buys something. `rowScrolls`
-    // comes from `TracksPanelV6`, which owns the scroller and observes it:
-    // below 14 tracks at 1366x1024 the row is not a scroller at all.
-    //
-    //   row cannot scroll → toggle at TRUE finger-down, `touch-action:
-    //     none`. Solo's exact model. Release decides by elapsed time; no
-    //     timer runs, because nothing happens at the threshold itself.
-    //
-    //   row can scroll → `touch-action: pan-x`, so the browser keeps the
-    //     pan and cancels us when it claims one. A tap therefore toggles on
-    //     RELEASE. The momentary hold still works, and this is the part
-    //     worth reading twice: the toggle fires at the HOLD THRESHOLD
-    //     instead. By 300ms with the finger still down and no cancel, the
-    //     press is definitively not a pan — the browser has long since
-    //     decided — so firing then is safe where firing at down was not.
-    //     Momentary starts 300ms in rather than instantly, which is the
-    //     honest cost of sharing the axis, and a tap is unchanged.
-    //
-    // Down-firing on a `pan-x` node is the one combination that must never
-    // ship: every row pan starting on a name would mute and then unmute the
-    // track, which on a playing track is an audible dropout mid-set.
-    let muteRestoreTo: boolean | null = null;
-
-    function beginMute() {
-        muteRestoreTo = trackData.track.mute;
-        trackData.handleMuteToggle();
-    }
-
-    function endMute(restore: boolean) {
-        if (restore && muteRestoreTo !== null) {
-            setTrackMute(trackPath, muteRestoreTo);
-        }
-        muteRestoreTo = null;
-    }
-
-    let mutePress: PressOptions = $derived(
-        rowScrolls
-            ? {
-                  // Tap → toggle on release. Hold → toggle at the threshold,
-                  // restore on release.
-                  fireOn: 'up',
-                  touchAction: 'pan-x',
-                  holdMs: MOMENTARY_HOLD_MS,
-                  onPress: () => trackData.handleMuteToggle(),
-                  onHold: beginMute,
-                  onRelease: ({ held }) => {
-                      // A press that reported a hold never reaches `onPress`
-                      // (the action suppresses it), so this is the whole
-                      // momentary path. Restore on EVERY ending — an
-                      // interrupted momentary must not stay latched.
-                      if (held) endMute(true);
-                  }
-              }
-            : {
-                  // Zero delay, Solo's model exactly.
-                  fireOn: 'down',
-                  touchAction: 'none',
-                  // The name band owns the gesture outright, so travel
-                  // across it is still this press. Abandoning would read as
-                  // mute flickering under a hand that never left it.
-                  slop: 0,
-                  onPress: beginMute,
-                  onRelease: ({ reason, elapsedMs }) =>
-                      endMute(shouldRestoreOnRelease({ elapsedMs, reason }))
-              }
-    );
+    // Tap latches, hold releases back, and WHEN it toggles depends on
+    // whether the row can scroll. The whole rule, and why, is in
+    // `TrackStrip/utils/momentaryMutePress.ts`.
+    const mute = createMomentaryMute({
+        read: () => trackData.track.mute,
+        set: (muted) => setTrackMute(trackPath, muted)
+    });
+    let mutePress = $derived(mute.pressOptions(rowScrolls));
 
     // Edge tick: a luminous white-hot dash from the track ink; signal-dim when
     // muted (§5.2). color-mix over --track-color, which the Card sets below.
@@ -383,36 +305,20 @@
     // permute→select + Permute view. Neither mute nor Solo is part of this
     // machine — both live in the header block outside the Card.
 
-    // Optimistic local state drives the handle immediately during a drag;
-    // store echoes only sync here when not dragging, so they can't snap the
-    // handle mid-drag.
-    let localVolume = $state(trackData.track.volume ?? 0.85);
-
-    const throttle = createSliderThrottle((value: number) => {
-        setTrackVolumeByIndex(trackIndex, value);
+    // The level and its throttled write (`useStripFader`): a local value
+    // drives the handle immediately during a drag; store echoes only sync
+    // when not dragging, so they can't snap the handle mid-drag.
+    //
+    // The fader's TRAVEL is the whole Card: the header block (the name,
+    // mute) is outside it, so the Card is exactly the fader. Gain 1: a drag
+    // the Card's full height moves the handle end to end, so the ticks keep
+    // pace with the finger. (Relative: touch-down never jumps the value.)
+    const fader = useStripFader({
+        read: () => trackData.track.volume ?? TRACK_DEFAULTS.volume,
+        send: (value) => setTrackVolumeByIndex(trackIndex, value)
     });
 
-    // The fader's TRAVEL is now the whole Card. It used to be two thirds of
-    // it — the strip minus the Name section — because the name lived inside
-    // the Card and a handle riding up over a mute button read as a level
-    // that had left the fader. The header block moved OUT, so the Card is
-    // exactly the fader and nothing else.
-    //
-    // Feel is unchanged: `elementHeight` is the Card, which is now two
-    // thirds of the column, so delta-per-pixel is 1/(2H/3) = 1.5/H — the
-    // same as the old 1.5 gain over the full column height.
-    const VOL_TRAVEL = 1;
-
-    // Value change per fraction of strip height dragged. Set from the
-    // travel so the ticks keep pace with the finger: dragging the full
-    // strip height moves the handle exactly one full travel, end to end.
-    // (Relative — touch-down never jumps the value.)
-    const DRAG_GAIN = 1 / VOL_TRAVEL;
-
     let card = $state<HTMLDivElement | null>(null);
-    // Volume at the moment the finger landed. The drag is relative to this,
-    // so touch-down never jumps the value.
-    let startValue = 0;
 
     // The ADR-384 machine (see `useStripGestures`): vertical-dominant drag =
     // volume, horizontal-dominant = row scroll, neither = tap dispatched to
@@ -430,19 +336,13 @@
     const gestures = useStripGestures({
         getElement: () => card,
         crossAxisLive: () => rowScrolls,
-        onDown: () => {
-            startValue = localVolume;
-        },
+        onDown: () => fader.grab(),
         // Deliberately not started at finger-down: a pure tap never opens an
         // OSC frame loop.
-        onDragStart: () => throttle.start(),
-        onDragMove: ({ dy, elementHeight }) => {
-            const delta = (dy / elementHeight) * DRAG_GAIN;
-            localVolume = Math.max(0, Math.min(1, startValue + delta));
-            throttle.push(localVolume);
-        },
-        onDragEnd: () => throttle.flush(),
-        onTap: ({ x, y }) => dispatchSectionTap(x, y),
+        onDragStart: () => fader.start(),
+        onDragMove: ({ dy, elementHeight }) => fader.move(dy, elementHeight),
+        onDragEnd: () => fader.release(),
+        onTap: ({ x, y }) => handleTap(x, y),
         // A press past the threshold, resting or riding the fader: the FX
         // grid edits this track without selecting it, for as long as the
         // finger stays (trackHoldScope). The finger stays the fader. Not
@@ -461,7 +361,6 @@
                 groupGestureStore.tap(trackPath, trackData.track.name);
                 return true;
             }
-            if (isMaster) return false;
             chordSoloRestoreTo = isSoloed;
             setTrackSolo(trackPath, !isSoloed);
             return true;
@@ -474,7 +373,13 @@
         }
     });
 
-    let isDragging = $derived(gestures.isDragging);
+    let isDragging = $derived(fader.dragging);
+
+    // The ticks' height, once for both: inset by a handle height at each end
+    // so they stay fully visible at the top and bottom of the travel.
+    let tickBottom = $derived(
+        `calc(var(--vol-base) + var(--handle-h) + ${fader.value} * (var(--vol-travel) - 2 * var(--handle-h)))`
+    );
 
     // The fader's `touch-action`, by the rule mute follows (ADR-427
     // addendum 2): `pan-x` only where there is a row to pan. With nothing
@@ -483,12 +388,6 @@
     // whether or not anything can scroll — so the fader would go dead in
     // the browser before the machine above ever saw the vertical travel.
     let faderTouchAction = $derived(rowScrolls ? 'pan-x' : 'none');
-
-    $effect(() => {
-        if (!isDragging) {
-            localVolume = trackData.track.volume ?? 0.85;
-        }
-    });
 
     // Effect teardown, not onDestroy: onDestroy also runs during SSR, where
     // `window` is undefined.
@@ -499,87 +398,22 @@
     // structural argument for actions over hand-wired handlers — the teardown
     // cannot be forgotten, because it is not a separate thing to remember.
     $effect(() => () => {
-        throttle.cancel();
+        fader.cancel();
         gestures.destroy();
     });
 
-    // Tap: dispatch to the section under the finger immediately.
-    //
-    // `elementFromPoint` alone left DEAD BANDS. The Card is a flex column
-    // with `gap-2`, so there are two 8px seams between the three sections
-    // (plus the 1px border ring) where the topmost element is the Card
-    // itself — no `[data-section]` ancestor, so the tap resolved to
-    // nothing and the strip visibly did nothing. Measured on a 1366x1024
-    // iPad layout that is ~16px of a 331px strip: roughly one tap in
-    // twenty, and concentrated exactly at the seams a finger aims for.
-    //
-    // So the seam belongs to its nearest neighbour: fall back to the
-    // section closest on the Y axis. Same move ADR-417 made in the slot
-    // grid, where `--session-row-gap` was swallowing clip launches — a
-    // gap is spacing, not a meaning. A tap on the fader's slop beside the
-    // Card (`.fader::before`) is outside every section by construction and
-    // resolves the same way.
-    function sectionAt(x: number, y: number): string | null {
-        const hit = document
-            .elementFromPoint(x, y)
-            ?.closest('[data-section]')
-            ?.getAttribute('data-section');
-        if (hit) return hit;
-        if (!card) return null;
-        let best: string | null = null;
-        let bestDistance = Infinity;
-        for (const el of card.querySelectorAll('[data-section]')) {
-            const rect = el.getBoundingClientRect();
-            const distance =
-                y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = el.getAttribute('data-section');
-            }
-        }
-        return best;
-    }
-
-    function dispatchSectionTap(x: number, y: number) {
-        const section = sectionAt(x, y);
-
-        // The Group button is held: every ordinary "select this track" tap
-        // means "toggle this track into the pending group" instead, on
-        // every section that would otherwise select (including a group
-        // strip's own 'group-body' — grouping the group itself, i.e.
-        // merging into it, is exactly the gesture's other job). Fold is left
-        // alone: it changes what is visible, not the selection.
-        if (groupGestureStore.active && section !== 'fold' && section !== null) {
-            groupGestureStore.tap(trackPath, trackData.track.name);
-            return;
-        }
-
-        switch (section) {
-            // Fold occupies the Permute third on a group strip.
-            case 'fold':
-                toggleFold();
-                break;
-            // No 'header' or 'solo' case: both live OUTSIDE the Card now,
-            // so their presses never reach this dispatch. A release that
-            // drifts off the Card onto the header falls through to the
-            // nearest-section rule below rather than muting by accident.
-            case 'clip':
-                selectThen('clip');
-                break;
-            case 'permute':
-                selectThen('permute');
-                break;
-            case 'device':
-                selectThenDevice();
-                break;
-            // Group body: the group's only select affordance (it has no
-            // clip or permute section). No view routing — a group has no
-            // instrument and no clip, so Central View stays put.
-            case 'group-body':
-                trackData.handleSelect({ showInstrumentView: false });
-                break;
-            // Taps on the background (no [data-section]) have no action.
-        }
+    // Tap: dispatch to the section under the finger (or the nearest one;
+    // see `TrackStrip/utils/sectionTap.ts` for the dead-band fix).
+    function handleTap(x: number, y: number) {
+        dispatchSectionTap(sectionAt(x, y, card), {
+            groupGestureActive: groupGestureStore.active,
+            groupTap: () => groupGestureStore.tap(trackPath, trackData.track.name),
+            fold: toggleFold,
+            clip: () => selectThen('clip'),
+            permute: () => selectThen('permute'),
+            device: () => selectThenDevice(),
+            groupBody: () => trackData.handleSelect({ showInstrumentView: false })
+        });
     }
 </script>
 
@@ -608,7 +442,7 @@
     aria-orientation="vertical"
     aria-valuemin={0}
     aria-valuemax={100}
-    aria-valuenow={Math.round(localVolume * 100)}
+    aria-valuenow={Math.round(fader.value * 100)}
 >
     <!-- Meter visualization — animated background behind all sections -->
     <div class="meter-bg">
@@ -725,12 +559,12 @@
     <div
         class="vol-tick left"
         class:transition-none={isDragging}
-        style="bottom: calc(var(--vol-base) + var(--handle-h) + {localVolume} * (var(--vol-travel) - 2 * var(--handle-h))); --tick-ink: {handleColor};"
+        style="bottom: {tickBottom}; --tick-ink: {handleColor};"
     ></div>
     <div
         class="vol-tick right"
         class:transition-none={isDragging}
-        style="bottom: calc(var(--vol-base) + var(--handle-h) + {localVolume} * (var(--vol-travel) - 2 * var(--handle-h))); --tick-ink: {handleColor};"
+        style="bottom: {tickBottom}; --tick-ink: {handleColor};"
     ></div>
 
     <!-- Record HUD label (§4.3) — pointer-events:none, no data-* so it never
@@ -742,86 +576,21 @@
 </Card>
 </div>
 
-<!-- Header block (name/mute) — a SIBLING of the Card, not a section
-     inside it, taking the strip's remaining third. Out here it is outside
-     the volume fader: the Card owns "drag anywhere = volume", and while the
-     name lived inside it a mute tap that slid 6px silently changed the level
-     instead of muting — on the strip's most-used control. Now the fader is
-     the Card (Clip + Permute) and the header is plain buttons, the same
-     separation ADR-414 made for Solo, applied to the whole band.
-
-     Mute fires at TRUE FINGER-DOWN, exactly like Solo (ADR-427, amended
-     2026-09-03 after playing it).
-
-     It used to fire on `click`, and briefly on `pointerup`, so that a
-     horizontal pan of the strips row that *started on a name* would scroll
-     the row rather than mute the track. That was the only thing the wait
-     bought — it was never a confirm gate or a debounce — and it was
-     measured on the mock stack at **103ms from touch-down** against Solo's
-     0ms, on the single most-used control on the surface. 90ms of that was
-     simply waiting for the finger to lift.
-
-     The trade, stated plainly: a row pan can no longer BEGIN on the name
-     band. It still begins anywhere on the Card above it — Clip and Permute
-     are two thirds of every strip and take `touch-action: pan-x` whenever
-     the row can scroll (`faderTouchAction`; with no row to pan they take
-     `none`, by this same rule), so the row still pans natively from the
-     large part of the strip. What is lost
-     is the bottom third, which in the flipped layout is the band nearest
-     the hands. That band was already half non-pannable: Solo has sat in it
-     with `touch-action: none` since ADR-414.
-
-     Down-toggling with `pan-x` and reverting on cancel was the other way to
-     get zero latency, and is the one thing that must NOT be done here: a
-     row pan starting on a name would mute and then unmute the track, which
-     on a playing track is an audible dropout mid-set. `touch-action: none`
-     is what makes the down-fire safe — no pan can start on this node, so
-     the browser never claims the gesture and there is nothing to revert.
-     That is the same reason Solo could always afford it.
-
-     There is no revert on cancel, and deliberately: mute has no momentary
-     behaviour (unlike Solo), so a press that the system interrupts still
-     read as a press.
-
-     The rule this leaves for the rest of the surface: **fire at
-     finger-down wherever the control sets `touch-action: none` and has no
-     drag meaning of its own.** The per-track stop cell and the group fold
-     arm keep `pan-x` and therefore keep firing on release — there the wait
-     really does buy the pan. The master card keeps firing on release for a
-     different reason: it has a volume drag underneath it, and a down-fire
-     would select the master on every fader move.
-
-     (The original bug, for the record: `.header-name` computed
-     `touch-action: auto` — nothing declared it, and touch-action does not
-     inherit, so the `manipulation` on `html, body` never reached it. Inside
-     a horizontally-scrolling panel `auto` hands the gesture to the browser,
-     which is then free to suppress the click. iOS also synthesizes at most
-     one click per gesture, so two names tapped together produced one mute.
-     `use:press` writes the touch-action onto the same node it binds the
-     handler to, which is why those two cannot drift apart again.) -->
-<div class="header-block" class:is-flipped={flipLayout} class:is-selected={trackData.isSelected}>
-    <div
-        class="header-name"
-        class:is-soloed={stripSoloed}
-        role="button"
-        tabindex="-1"
-        aria-label="{trackData.track.mute ? 'Unmute' : 'Mute'} track {trackData.track.name}"
-        aria-pressed={trackData.track.mute}
-        use:press={mutePress}
-    >
-        <TrackHeader
-            name={trackData.track.name}
-            color={trackData.track.color}
-            mute={trackData.track.mute}
-            isSelected={trackData.isSelected}
-            {isPending}
-            {pendingName}
-            {isMaster}
-            trackNumber={trackIndex + 1}
-        />
-    </div>
-
-</div>
+<!-- Header block (name/mute): TrackHeader, a sibling of the Card and so
+     outside the fader. When mute fires and why: the Mute comment in the
+     script block (`createMomentaryMute`). -->
+<TrackHeader
+    name={trackData.track.name}
+    color={trackData.track.color}
+    mute={trackData.track.mute}
+    {mutePress}
+    isSoloed={stripSoloed}
+    {flipLayout}
+    isSelected={trackData.isSelected}
+    {isPending}
+    {pendingName}
+    trackNumber={trackIndex + 1}
+/>
 </div>
 
 <style>
@@ -843,12 +612,6 @@
            resolve which [data-section] a tap landed on — it ignores any
            element with pointer-events:none. */
         z-index: 1;
-    }
-
-    /* Header fills its half instead of enforcing its own min-height. */
-    .header-block :global(.track-name-button) {
-        min-height: 0;
-        height: 100%;
     }
 
     /* Clip + Permute clear the left/right edge volume ticks (10px wide). */
@@ -1017,84 +780,6 @@
         top: calc(-1 * var(--strip-gap));
     }
 
-    /* One third of the column: the name (mute), full height. */
-    .header-block {
-        flex: 1 1 0;
-        min-height: 0;
-        display: flex;
-        flex-direction: row;
-        align-items: stretch;
-        gap: var(--strip-gap);
-    }
-
-    /* Unflipped (strips on TOP) the header leads the column; the flipped
-       default keeps its source order at the foot, nearest the hands.
-       UNREACHABLE since 2026-09-26 (flipLayout is pinned on). */
-    .header-block:not(.is-flipped) {
-        order: -1;
-    }
-
-    .header-name {
-        flex: 1 1 0;
-        min-height: 0;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        /* Anchors the solo tint's ::after. */
-        position: relative;
-        /* Inner size container, for TrackHeader's fluid name size alone.
-           The name has always been authored in `cqi` ("scales with its
-           container") but has had no container since it moved out of the
-           Card — `cqi` with no container falls back to the VIEWPORT, so
-           every name sat pinned at its clamp maximum no matter how narrow
-           its strip. This is the box it is actually painted in, and it is
-           the right one in both header layouts. */
-        container-type: inline-size;
-    }
-
-    /* ---- Selection, outside the Card ------------------------------------
-       The Card carries the selection edge (`.track-selected`), but the
-       Card is only the fader — the name (mute) is a sibling below it, and
-       until now it wore nothing. A selected strip was therefore outlined
-       for two thirds of its height and bare for the last third, which is
-       exactly the third the eye goes to (the name is how you identify a
-       track). Both blocks take the same ink at the same weight, so the
-       column reads as one lit object top to bottom.
-
-       `inset` box-shadow rather than a real border: the name block is a
-       solid track-colour slab in the shipped skin, so a border swap would
-       move its contents by a pixel
-       every time the selection changed. An inset ring is drawn inside the
-       existing box and costs no layout. */
-    .header-block.is-selected .header-name {
-        box-shadow: inset 0 0 0 2px var(--sel-ink);
-    }
-
-    /* Graticule wears the track's own ink, matching that skin's
-       `.track-selected`; the flat/hybrid skin wears Live's neutral
-       selection colour, matching its own. Declared as one variable so the
-       two rules above stay skin-agnostic. */
-    .header-block {
-        --sel-ink: var(--track-color);
-    }
-
-    :global([data-grammar='flat']) .header-block {
-        --sel-ink: var(--flat-selection);
-    }
-
-    /* GRATICULE only: the title is transparent ink, so once it left the Card
-       it read as text floating under the strip with nothing behind it. Give
-       it the Card's own glass recipe (it inherits `--track-color` from
-       `.strip-col`) so the three blocks read as one family, and so it sits
-       as a slab beside the browser rail's slabs. The flat skin needs none of
-       this — there the title already IS a solid track-colour block, and a
-       border under it would show as a hairline inset. */
-    :global(html:not([data-grammar='flat'])) .header-name {
-        background: color-mix(in oklab, var(--track-color, var(--card)) 12%, var(--card));
-        border: 1px solid color-mix(in oklab, var(--track-color, var(--line)) 55%, transparent);
-        box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
-        border-radius: var(--strip-radius, var(--radius-md));
-    }
-
     /* Soloed strip: an act-solo wash laid OVER the sections (z 2, under
        the volume ticks, which follow it in the DOM) plus an inset ring.
        Over, not under: the clip, device and permute wells are opaque, so a
@@ -1123,16 +808,6 @@
         z-index: 2;
         border-radius: inherit;
         box-shadow: inset 0 0 0 4px var(--act-rec);
-    }
-
-    .header-name.is-soloed::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        border-radius: var(--strip-radius, var(--radius-md));
-        background: color-mix(in oklab, var(--act-solo) 45%, transparent);
-        box-shadow: inset 0 0 0 2px var(--act-solo);
     }
 
     /* Meter visualization sits behind everything. */

@@ -15,27 +15,38 @@
 	 * are Settings → Connection's, and its button opens that section.
 	 * Hidden while Settings is open, which says the same thing.
 	 */
-	import { onMount } from 'svelte';
+	import constants from '$config/constants.json';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 	import { handshakeState } from '$lib/stores/v3/handshakeState.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
 	import { press } from '$lib/actions/press';
 
-	const GRACE_MS = 4000;
+	const GRACE_MS: number = constants.ui.liveBanner.graceMs;
 
-	let now = $state(Date.now());
 	// When the connection was last seen missing: mount, or the moment the
-	// handshake left `accepted`. Null while connected.
-	let lostAt = $state<number | null>(Date.now());
+	// handshake left `accepted`. Null while connected. Plain, not state:
+	// nothing draws it, and the effect below must not re-run on its write.
+	let lostAt: number | null = Date.now();
+	// The grace period has run out since `lostAt`.
+	let graceOver = $state(false);
 
-	onMount(() => {
-		const tick = setInterval(() => (now = Date.now()), 500);
-		return () => clearInterval(tick);
-	});
-
+	// One timer, armed only while the connection is lost, for the time the
+	// grace period has left. (A 500 ms ticker used to run for the life of
+	// the page, connected or not.)
 	$effect(() => {
-		if (handshakeState.phase === 'accepted') lostAt = null;
-		else if (lostAt === null) lostAt = Date.now();
+		if (handshakeState.phase === 'accepted') {
+			lostAt = null;
+			graceOver = false;
+			return;
+		}
+		if (lostAt === null) lostAt = Date.now();
+		const left = GRACE_MS - (Date.now() - lostAt);
+		if (left <= 0) {
+			graceOver = true;
+			return;
+		}
+		const timer = setTimeout(() => (graceOver = true), left);
+		return () => clearTimeout(timer);
 	});
 
 	const message = $derived.by((): { title: string; line: string } | null => {
@@ -46,7 +57,7 @@
 				line: `${handshakeState.errorDetail ? `${handshakeState.errorDetail}. ` : ''}Quit and reopen Live so it loads this version.`
 			};
 		}
-		if (lostAt === null || now - lostAt < GRACE_MS) return null;
+		if (!graceOver) return null;
 		const surface = bridgeStatus.status.pythonSurface;
 		if (surface === 'disconnected' || surface === 'error') {
 			return { title: 'Live isn’t answering', line: 'Is Live open, with Vamp chosen as a Control Surface?' };

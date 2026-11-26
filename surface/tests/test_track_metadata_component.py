@@ -1671,16 +1671,72 @@ class _FiresOnChangeOnlyTrack(StubTrack):
         StubTrack.__setattr__(self, name, value)
 
 
-def test_idempotent_write_leaves_the_flag_armed_this_is_the_precondition():
-    """Not the bug — the state the bug needs. Pinned so it can't drift."""
-    song = StubSong(tracks=[_FiresOnChangeOnlyTrack(name="T0")])
-    c = TrackMetadataComponent(song=song, emit=EmitRecorder())
+def test_idempotent_write_arms_no_flag():
+    """A write of the value the track already holds expects no echo.
+
+    Live never fires for it, so a flag armed here would sit unspent and
+    swallow the next genuine change (the MutationComponent bug class).
+    """
+    t0 = _FiresOnChangeOnlyTrack(name="T0")
+    recorder = EmitRecorder()
+    song = StubSong(tracks=[t0])
+    c = TrackMetadataComponent(song=song, emit=recorder)
     c.set_generation(GenerationComponent())
     try:
-        # The track is already called "T0"; writing "T0" changes nothing,
-        # so Live never fires and the flag is never spent.
         c.handle_set_name(("tracks/0", "T0"), source_addr=None)
-        assert c._suppress.get(("tracks/0", "name")) is True
+        assert c._suppress == {}
+
+        recorder.clear()
+        t0.name = "Renamed in Live"
+        assert recorder.only(V3_TRACK_NAME_ADDRESS) == [
+            ("tracks/0", "Renamed in Live"),
+        ]
+    finally:
+        c.disconnect()
+
+
+def test_an_unspent_flag_lapses_after_the_ttl(monkeypatch):
+    """A flag whose fire never came stops suppressing after the TTL."""
+    import components.TrackMetadataComponent as tm
+
+    clock = [100.0]
+    monkeypatch.setattr(tm, "_now", lambda: clock[0])
+    t0 = _FiresOnChangeOnlyTrack(name="T0")
+    recorder = EmitRecorder()
+    song = StubSong(tracks=[t0])
+    c = TrackMetadataComponent(song=song, emit=recorder)
+    c.set_generation(GenerationComponent())
+    try:
+        # Arm by hand: a write Live accepted without firing (the read said
+        # it would change, the LOM disagreed).
+        c._arm_suppression(("tracks/0", "name"))
+        clock[0] += tm.SUPPRESS_TTL_SEC + 0.01
+
+        recorder.clear()
+        t0.name = "Renamed in Live"
+        assert recorder.only(V3_TRACK_NAME_ADDRESS) == [
+            ("tracks/0", "Renamed in Live"),
+        ]
+    finally:
+        c.disconnect()
+
+
+def test_a_live_flag_still_swallows_its_own_echo(monkeypatch):
+    """Inside the TTL the expected echo is still suppressed."""
+    import components.TrackMetadataComponent as tm
+
+    clock = [100.0]
+    monkeypatch.setattr(tm, "_now", lambda: clock[0])
+    t0 = _FiresOnChangeOnlyTrack(name="T0")
+    recorder = EmitRecorder()
+    song = StubSong(tracks=[t0])
+    c = TrackMetadataComponent(song=song, emit=recorder)
+    c.set_generation(GenerationComponent())
+    try:
+        recorder.clear()
+        c.handle_set_name(("tracks/0", "Changed"), source_addr=None)
+        assert recorder.only(V3_TRACK_NAME_ADDRESS) == []
+        assert c._suppress == {}
     finally:
         c.disconnect()
 
@@ -1701,8 +1757,10 @@ def test_structural_change_clears_stale_echo_suppression():
     c = TrackMetadataComponent(song=song, emit=recorder)
     c.set_generation(GenerationComponent())
     try:
-        c.handle_set_name(("tracks/0", "T0"), source_addr=None)
-        assert c._suppress.get(("tracks/0", "name")) is True
+        # A flag whose fire never came (armed by hand: a same-value write
+        # no longer arms one).
+        c._arm_suppression(("tracks/0", "name"))
+        assert ("tracks/0", "name") in c._suppress
 
         # Delete track 0. T1 is now tracks/0 — the path the stale flag
         # is keyed on.

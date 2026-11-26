@@ -59,6 +59,8 @@ try:
 except ImportError:  # pytest imports these flat — see osc_transport.py
     from V3StateFullComponent import extract_etag
 
+from ._common import LOM_ERRORS
+from .component_util import begin_undo_step, end_undo_step
 from .LOMListeners import _safe_int_id
 from .path_resolver import ResolveStatus, resolve_device, resolve_param
 
@@ -74,7 +76,7 @@ V3_DEVICE_PARAMS_SET_ADDRESS = "/looping/v3/device/params/set"
 # is not written: the preset already has it.
 DEVICE_PARAMS_SAME_FRACTION = 1e-6
 
-_LOM_ERRORS = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 V3_STATE_RESYNC_ADDRESS = "/looping/v3/state/resync"
 V3_ERROR_ADDRESS = "/looping/v3/error"
 
@@ -383,8 +385,7 @@ class DevicesComponent:
             for parameter, value in writes:
                 self._write(parameter, value, where="device-params", param_id=None)
         finally:
-            if began:
-                self._end_undo_step()
+            end_undo_step("DevicesComponent", self._song, began)
         logger.info(
             "device/params/set %s: %d written, %d already held, %d skipped",
             path, len(writes), len(values) - len(writes) - unknown, unknown,
@@ -392,19 +393,9 @@ class DevicesComponent:
         return None
 
     def _begin_undo_step(self) -> bool:
-        """Open an undo step; ``False`` when Live refused or has none."""
-        try:
-            self._song.begin_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("DevicesComponent: begin_undo_step raised %s: %s", type(e).__name__, e)
-            return False
-        return True
-
-    def _end_undo_step(self) -> None:
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("DevicesComponent: end_undo_step raised %s: %s", type(e).__name__, e)
+        """The song's shared undo step (``component_util``); ``False`` when
+        Live refused or has none."""
+        return begin_undo_step("DevicesComponent", self._song)
 
     # --- /looping/v3/param/query ------------------------------------------
 
@@ -489,15 +480,13 @@ class DevicesComponent:
         if remaining and isinstance(remaining[0], str) and remaining[0]:
             session_id = remaining[0]
 
+        # No retry without the ETag on a TypeError: it also caught one
+        # raised inside the chain and re-ran it (HandshakeComponent's
+        # ``_kick_state_delivery`` has the same rule).
         try:
-            try:
-                self._state_full_on_resync(
-                    session_id=session_id, client_etag=client_etag,
-                )
-            except TypeError:
-                # Callback predates the ETag arguments (older publisher
-                # or a test double). A full send is the safe answer.
-                self._state_full_on_resync()
+            self._state_full_on_resync(
+                session_id=session_id, client_etag=client_etag,
+            )
         except Exception as e:
             logger.error(
                 "DevicesComponent.handle_v3_state_resync: resync callback "
@@ -539,9 +528,15 @@ class DevicesComponent:
 
         # Arm the one-shot before the write. If assignment raises (torn
         # down device, plugin reconfig mid-flight) unarm so a later
-        # unrelated fire isn't swallowed.
+        # unrelated fire isn't swallowed. A parameter already at the
+        # value fires nothing, so arming for it would swallow the next
+        # real change instead: write, but don't arm.
+        try:
+            unchanged = float(parameter.value) == clamped
+        except Exception:
+            unchanged = False
         armed = False
-        if self._mutation is not None and param_id is not None:
+        if self._mutation is not None and param_id is not None and not unchanged:
             self._mutation.arm_suppression(param_id)
             armed = True
         try:

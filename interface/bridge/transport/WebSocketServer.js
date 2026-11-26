@@ -12,7 +12,7 @@
 const http = require('http');
 const WebSocket = require('ws');
 const { logger, LogLevel } = require('../utils/logger');
-const { getRoutingTarget } = require('../routing/messageRouter');
+const { configureRouting, getRoutingTarget } = require('../routing/messageRouter');
 const { recordOutbound } = require('../utils/oscTap');
 const bridgeProfiler = require('../utils/bridgeProfiler');
 const { AUTO_CAPTURE_ADDRESS } = require('../handlers/autoCaptureOverride');
@@ -54,34 +54,47 @@ function resolveAuthConfig(readAuth) {
     return { ...block, enabled: block.enabled !== false };
 }
 
-const authConfig = resolveAuthConfig(() => {
-    const { loadConstants } = require('../utils/constants');
-    return loadConstants().osc.webSocket.auth;
-});
+/**
+ * The resolved gate: its config, the secret, and whether a proof is required.
+ * Set by `configureAuth`, which `createWebSocketServer` calls with the
+ * `osc.webSocket.auth` block the orchestrator loaded (the config is read once,
+ * there, not here when the file is required). Used before that, it resolves
+ * as a missing block does: on.
+ *
+ * A null secret means we cannot authenticate anybody, which is a
+ * configuration failure rather than a reason to silently drop the gate — so
+ * it is loud, and it fails OPEN rather than bricking a performance rig. That
+ * trade is deliberate and stated here so nobody has to infer it.
+ */
+let authState = null;
 
-const authSaltBytes = authConfig.saltBytes || 16;
-const authTimeoutMs = authConfig.timeoutMs || 5000;
+function configureAuth(block) {
+    const config = resolveAuthConfig(() => block);
+    const { secret, source } = config.enabled
+        ? resolveWsSecret()
+        : { secret: null, source: 'disabled' };
+    const required = Boolean(config.enabled && secret);
+    if (config.enabled && !secret) {
+        logger.error(
+            'WebSocket auth is enabled but no secret could be established — '
+            + 'running UNAUTHENTICATED so the rig still works. Fix the secret file.'
+        );
+    } else if (required) {
+        logger.info('WebSocket auth enabled', { secretSource: source });
+    } else {
+        logger.warn('WebSocket auth disabled — 8081 accepts any LAN client');
+    }
+    authState = {
+        secret,
+        required,
+        saltBytes: config.saltBytes || 16,
+        timeoutMs: config.timeoutMs || 5000
+    };
+    return authState;
+}
 
-// Resolved once at module load. A null secret means we cannot
-// authenticate anybody, which is a configuration failure rather than a
-// reason to silently drop the gate — so it is loud, and it fails OPEN
-// rather than bricking a performance rig. That trade is deliberate and
-// stated here so nobody has to infer it.
-const { secret: authSecret, source: authSecretSource } = authConfig.enabled
-    ? resolveWsSecret()
-    : { secret: null, source: 'disabled' };
-
-const authRequired = Boolean(authConfig.enabled && authSecret);
-
-if (authConfig.enabled && !authSecret) {
-    logger.error(
-        'WebSocket auth is enabled but no secret could be established — '
-        + 'running UNAUTHENTICATED so the rig still works. Fix the secret file.'
-    );
-} else if (authRequired) {
-    logger.info('WebSocket auth enabled', { secretSource: authSecretSource });
-} else {
-    logger.warn('WebSocket auth disabled — 8081 accepts any LAN client');
+function currentAuth() {
+    return authState || configureAuth(undefined);
 }
 
 /**
@@ -94,7 +107,7 @@ function handleAuth(ws, message, context) {
     const auth = ws.loopingAuth;
     if (!auth || !auth.salt) return;
     const offered = Array.isArray(message.args) ? message.args[0] : null;
-    const expected = computeProof(authSecret, auth.salt);
+    const expected = computeProof(currentAuth().secret, auth.salt);
 
     if (proofMatches(expected, offered)) {
         auth.ok = true;
@@ -153,6 +166,9 @@ function replayTotalMixToClient(ws, totalmixLink, clientId) {
  * @param {Object} config - Configuration object
  * @param {number} config.port - WebSocket port
  * @param {string} config.host - Host to bind to
+ * @param {Object} [config.auth] - `osc.webSocket.auth` (missing: the gate on)
+ * @param {Object} [config.backendScope] - `osc.backendScope`, the routing
+ *   scopes; omitted, the routing configured before is kept (a test's)
  * @param {Object} udpPorts - Map of UDP port instances
  * @param {Object} connectionStatus - Connection status object
  * @param {Object} metrics - Metrics object for tracking
@@ -179,6 +195,9 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
     // it — the UDP server-presence heartbeat carries `mode` to the surface
     // only. Defaults to "dev" if the caller didn't thread it through.
     const serverMode = config.serverMode || 'dev';
+
+    configureAuth(config.auth);
+    if (config.backendScope !== undefined) configureRouting(config.backendScope);
 
     // Create HTTP server first
     const httpServer = http.createServer((req, res) => {
@@ -346,9 +365,10 @@ function handleConnection(ws, request, context) {
     // needs to *render* a disconnected state. What an unauthenticated
     // client cannot do is send commands (`dispatchClientMessage` refuses
     // them) or receive broadcasts (`broadcastToClients` skips it).
-    ws.loopingAuth = { required: authRequired, ok: !authRequired, salt: null };
-    if (authRequired) {
-        ws.loopingAuth.salt = makeSalt(authSaltBytes);
+    const gate = currentAuth();
+    ws.loopingAuth = { required: gate.required, ok: !gate.required, salt: null };
+    if (gate.required) {
+        ws.loopingAuth.salt = makeSalt(gate.saltBytes);
         try {
             ws.send(JSON.stringify({
                 address: AUTH_CHALLENGE_ADDRESS,
@@ -366,7 +386,7 @@ function handleConnection(ws, request, context) {
                 logger.warn('Closing client that never authenticated', { clientId });
                 try { ws.close(4401, 'auth timeout'); } catch { /* already gone */ }
             }
-        }, authTimeoutMs);
+        }, gate.timeoutMs);
         if (timer.unref) timer.unref();
         ws.on('close', () => clearTimeout(timer));
     }
@@ -693,11 +713,15 @@ function dispatchClientMessage(ws, message, context) {
         // Everything else needs a proven client. Refusing here rather
         // than at the socket means a client that authenticates late
         // simply starts working, with no reconnect needed.
+        // Rate-rolled: a client that never authenticates may keep sending,
+        // and a plain warn is a synchronous disk write per frame.
         if (ws && ws.loopingAuth && !ws.loopingAuth.ok) {
-            logger.warn('Refusing message from unauthenticated client', {
-                clientId: context.clientId,
-                address: message && message.address
-            });
+            logger.rate(
+                `unauthed:${context.clientId}`,
+                LogLevel.WARN,
+                'Refusing message from unauthenticated client',
+                { clientId: context.clientId, address: message && message.address }
+            );
             return;
         }
 
@@ -820,7 +844,13 @@ function routeMessageToUDP(message, udpPorts, metrics, captureOverride) {
 
     const port = udpPorts[routingTarget];
     if (!port) {
-        logger.warn('No route found for address', { address: message.address, routingTarget });
+        // Per frame, so rate-rolled like the null-args check above.
+        logger.rate(
+            `no-route:${message.address}`,
+            LogLevel.WARN,
+            'No route found for address',
+            { address: message.address, routingTarget }
+        );
         metrics.routingErrors++;
         return;
     }
@@ -951,7 +981,8 @@ module.exports = {
     AUTH_RESULT_ADDRESS,
     __testing: {
         routeMessageToUDP, handleMessage, dispatchClientMessage, handleBatch,
-        handleAuth, isAuthRequired: () => authRequired, resolveAuthConfig,
-        expectedProofFor: (salt) => computeProof(authSecret, salt)
+        handleAuth, isAuthRequired: () => currentAuth().required, resolveAuthConfig,
+        configureAuth,
+        expectedProofFor: (salt) => computeProof(currentAuth().secret, salt)
     }
 };

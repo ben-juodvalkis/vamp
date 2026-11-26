@@ -23,7 +23,7 @@
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
 
 	// Initialize on mount
-	onMount(async () => {
+	onMount(() => {
 		// Set default welcome view in central display
 		centralDisplayStore.setView('default');
 

@@ -51,8 +51,8 @@
       "cleanup:caches": "Cleanup + nuke .svelte-kit / .vite / scripts/.cache \u2014 the manual escape hatch when a stale artifact is suspected.",
       "dev:bridge": "Internal: bridge with LOG_LEVEL=INFO.",
       "dev:bridge:ipad": "Internal: bridge with LOG_LEVEL=WARN (iPad preview mode).",
-      "dev:interface": "Internal: interface dev server on :3000.",
-      "preview:ipad": "Internal: production-build preview server on :8889.",
+      "dev:interface": "Internal: interface dev server on http.interfacePort (3000), set in interface/vite.config.ts.",
+      "preview:ipad": "Internal: production-build preview server on padLink.pagePort (8889), set in interface/vite.config.ts.",
       "open:browser": "macOS open(1) helper used by `dev`: opens the page."
     }
   },
@@ -70,15 +70,15 @@
     "dev": "npm run validate && npm run cleanup && concurrently -n \"BRIDGE,INTERFACE,BROWSER,MENUBAR\" -c \"cyan,green,magenta,yellow\" \"npm run dev:bridge\" \"npm run dev:interface\" \"npm run open:browser\" \"npm run menubar\"",
     "menubar": "./scripts/launch-menubar.sh",
     "dev:bridge": "cd interface/bridge && LOG_LEVEL=INFO LOOPING_SERVER_MODE=dev npm run dev",
-    "dev:interface": "cd interface && npm run dev -- --port 3000 --host 0.0.0.0",
+    "dev:interface": "cd interface && npm run dev -- --host 0.0.0.0",
     "open:browser": "sleep 5 && echo \"\\n\ud83d\udda5\ufe0f  Mac: http://localhost:3000\\n\ud83d\udcf1 iPad: http://$(scutil --get LocalHostName 2>/dev/null).local:3000\\n\" && open http://localhost:3000",
     "ipad": "npm run validate && npm run cleanup && node scripts/setup-ipad.js",
     "setup-ipad-core": "concurrently -n \"BRIDGE,PREVIEW\" -c \"cyan,green\" --restart-tries -1 --restart-after 1500 \"npm run dev:bridge:ipad\" \"npm run preview:ipad\"",
     "prep:ipad": "npm run build:ipad",
     "build:ipad": "node scripts/staleness.mjs build",
     "dev:bridge:ipad": "cd interface/bridge && LOG_LEVEL=WARN LOOPING_SERVER_MODE=ipad node enhanced-osc-bridge.js",
-    "preview:ipad": "cd interface && npm run preview -- --port 8889 --host 0.0.0.0",
-    "interfaces": "node scripts/detect-interfaces.js 8889",
+    "preview:ipad": "cd interface && npm run preview -- --host 0.0.0.0",
+    "interfaces": "node scripts/detect-interfaces.js",
     "status": "node scripts/create-status-page.js",
     "shot": "node scripts/shot/shot.mjs",
     "shot:list": "node scripts/shot/shot.mjs --list",
@@ -105,7 +105,7 @@
     "restart-preview": "lsof -ti tcp:8889 | xargs kill 2>/dev/null || true",
     "update": "npm run rebuild && npm run restart-preview && npm run status",
     "bridge": "cd interface/bridge && LOG_LEVEL=WARN npm run dev",
-    "interface": "npm run cleanup && cd interface && npm run dev -- --port 3000 --host 0.0.0.0"
+    "interface": "npm run cleanup && cd interface && npm run dev -- --host 0.0.0.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

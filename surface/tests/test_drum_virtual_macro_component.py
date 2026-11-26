@@ -2811,7 +2811,7 @@ def test_census_follows_a_pad_whose_instrument_is_replaced(comp, emits):
     assert census["padClasses"] == {"OriginalSimpler": 1}
     # And the name listener moved with it, so the *next* rename still lands.
     st = comp._states[PATH]
-    assert [d for d, _cb in st.name_listeners] == [chain.devices[0]]
+    assert [rec[0] for rec in st.name_listeners] == [chain.devices[0]]
 
 
 def test_pad_chain_listeners_are_let_go_with_the_rack(comp):
@@ -3268,3 +3268,104 @@ def test_the_ui_pad_write_rides_a_held_pad_shift(comp):
     assert comp.set_pad_sequencer_shift(rack, PATH, 37, 0) is True
     assert param(cells(rack)[1], "Transpose").value == -3
     assert comp.debug_state(PATH)["offsets"] == {"37": -3}
+
+
+# --- a state the sequencer alone kept is released once idle ---------------
+
+
+def _scheduled_comp(emits):
+    scheduled = []
+    comp = DrumVirtualMacroComponent(
+        emit=lambda a, args: emits.append((a, args)),
+        schedule_delayed=lambda ms, fn: scheduled.append((ms, fn)),
+    )
+    return comp, scheduled
+
+
+def _run_release(scheduled):
+    from components.drum_vm_functions import SHIFT_RELEASE_IDLE_MS
+    fns = [fn for ms, fn in scheduled if ms == SHIFT_RELEASE_IDLE_MS]
+    for fn in fns:
+        fn()
+    return len(fns)
+
+
+def test_an_unsubscribed_rack_is_released_after_its_shift_returns_to_zero(emits):
+    comp, scheduled = _scheduled_comp(emits)
+    rack = tuned_kit(0, 3)
+    assert comp.set_sequencer_shift(rack, PATH, 12) is True
+    assert rack.listener_count() > 0
+    assert comp.set_sequencer_shift(rack, PATH, 0) is True
+    assert PATH in comp._states                          # kept until the idle window passes
+    assert _run_release(scheduled) == 1
+    assert PATH not in comp._states
+    assert rack.listener_count() == 0
+
+
+def test_a_shift_back_on_inside_the_window_keeps_the_state(emits):
+    comp, scheduled = _scheduled_comp(emits)
+    rack = tuned_kit(0)
+    comp.set_sequencer_shift(rack, PATH, 12)
+    comp.set_sequencer_shift(rack, PATH, 0)
+    st = comp._states[PATH]
+    comp.set_sequencer_shift(rack, PATH, 12)             # the next step: octave on again
+    _run_release(scheduled)
+    assert comp._states[PATH] is st and comp.sequencer_shift(PATH) == 12
+
+
+def test_a_subscribed_rack_is_not_released_by_its_shift(emits):
+    comp, scheduled = _scheduled_comp(emits)
+    rack = tuned_kit(0)
+    comp.subscribe(rack, PATH, "pitch")
+    comp.set_sequencer_shift(rack, PATH, 12)
+    comp.set_sequencer_shift(rack, PATH, 0)
+    _run_release(scheduled)
+    assert PATH in comp._states
+    comp.unsubscribe(PATH, "pitch")                      # the ordinary release still applies
+    assert PATH not in comp._states
+
+
+def test_an_unsubscribed_pad_shift_is_released_once_idle(emits):
+    comp, scheduled = _scheduled_comp(emits)
+    rack = make_rack([pad(36, drumcell()), pad(37, drumcell())], mapped=False)
+    assert comp.set_pad_sequencer_shift(rack, PATH, 37, 12) is True
+    assert comp.set_pad_sequencer_shift(rack, PATH, 37, 0) is True
+    assert _run_release(scheduled) == 1
+    assert PATH not in comp._states and rack.listener_count() == 0
+
+
+def test_a_rack_parked_by_a_kit_swap_is_released_as_soon_as_its_restore_lands(comp):
+    old = tuned_kit(0)
+    assert comp.set_sequencer_shift(old, PATH, 12) is True
+    new = tuned_kit(5)                                   # another kit loaded at the same path
+    comp.subscribe(new, PATH, "pitch")
+    assert any("#parked" in k for k in comp._states)     # the shifted state waits for its restore
+    assert comp.set_sequencer_shift(old, PATH, 0) is True
+    assert not any("#parked" in k for k in comp._states)  # no idle wait: its rack is at no path
+    assert old.listener_count() == 0
+    assert comp._states[PATH].device is new
+
+
+def test_a_rack_parked_at_a_vacated_path_is_released_once_idle(emits):
+    comp, scheduled = _scheduled_comp(emits)
+    upper = tuned_kit(0)          # tracks/5: its track is deleted while a step is held
+    lower = tuned_kit(0, 3)       # tracks/6: moves up to tracks/5
+    comp.set_sequencer_shift(upper, "tracks/5/devices/0", 12)
+    comp.set_sequencer_shift(lower, "tracks/6/devices/0", 12)
+    comp.rebind(lower, "tracks/5/devices/0")             # upper parked at tracks/6
+    assert comp.set_sequencer_shift(upper, "tracks/5/devices/0", 0) is True
+    _run_release(scheduled)
+    assert upper.listener_count() == 0
+    assert list(comp._states) == ["tracks/5/devices/0"]
+    assert comp._states["tracks/5/devices/0"].device is lower
+
+
+def test_build_members_walks_the_kit_without_the_component():
+    from components.drum_vm_resolve import PadWalk, build_members
+    rack = make_rack([pad(36, drumcell()), pad(37, drumcell(values={"Transpose": 3.0}))], mapped=False)
+    warned = []
+    walk = build_members(rack, PATH, warn=lambda key, message: warned.append(key))
+    assert isinstance(walk, PadWalk)
+    assert walk.pad_count == 2 and walk.member_pads == 2
+    assert [row["note"] for row in walk.pad_list] == [36, 37]
+    assert len(walk.members["pitch"]) == 2 and warned == []
