@@ -61,10 +61,14 @@ picks them up without a gap.
 Echo suppression
 ----------------
 
-Keyed by ``(track_path, attr)``. Every UI→Surface write sets
-``self._suppress[(path, attr)] = True`` immediately before the
-``setattr``; the listener callback pops-and-skips the first fire that
-matches. Mirrors SessionComponent's one-shot flag (tempo drag analysis
+Keyed by ``(track_path, attr)``. Every UI→Surface write that will change
+the value arms ``self._suppress[(path, attr)]`` with a monotonic deadline
+immediately before the ``setattr``; the listener callback pops-and-skips
+the first fire that matches while the deadline holds. Live fires only on
+an actual change, so a write of the value the track already holds arms
+nothing, and a flag whose fire never came lapses after
+``SUPPRESS_TTL_SEC`` instead of swallowing the next genuine change
+(the same rule as ``MutationComponent``). Mirrors SessionComponent's one-shot flag (tempo drag analysis
 confirmed LOM debounces a drag to one settling fire) but keyed per
 (path, attr) so two simultaneous writes on different tracks don't
 swallow each other's echoes.
@@ -97,12 +101,20 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from collections.abc import Mapping
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ._common import coerce_str, LOM_ERRORS, safe_remove, safe_emit
 from .drum_vm_functions import DEVICE_TYPE_INSTRUMENT, device_type
 from .path_resolver import ResolveStatus, resolve_track
+
+#: How long an armed echo flag waits for its fire. Live fires on the
+#: setattr itself, so this only bounds a flag whose fire never comes.
+SUPPRESS_TTL_SEC = 0.5
+
+#: The clock suppression reads; tests replace it.
+_now = time.monotonic
 
 logger = logging.getLogger("looping")
 
@@ -424,8 +436,9 @@ class TrackMetadataComponent:
         self._advance_generation = advance_generation
         self._disconnected = False
 
-        # (track_path, attr) → True for exactly one suppressed fire.
-        self._suppress: Dict[Tuple[str, str], bool] = {}
+        # (track_path, attr) → monotonic deadline for exactly one
+        # suppressed fire (see "Echo suppression" above).
+        self._suppress: Dict[Tuple[str, str], float] = {}
 
         # Detach records — flat list of every listener we attached.
         # Each record is ``(target, remove_method_name, cb, path)``
@@ -732,6 +745,38 @@ class TrackMetadataComponent:
             (param, "remove_value_listener", cb, track_path),
         )
 
+    def _arm_suppression(self, key: Tuple[str, str]) -> None:
+        """Expect one echo for ``key`` within ``SUPPRESS_TTL_SEC``."""
+        self._suppress[key] = _now() + SUPPRESS_TTL_SEC
+
+    def _consume_suppression(self, key: Tuple[str, str]) -> bool:
+        """Pop ``key``'s flag; ``True`` when it was armed and still live."""
+        deadline = self._suppress.pop(key, None)
+        return deadline is not None and _now() < deadline
+
+    def _would_change(self, track, attr: str, coerced) -> bool:
+        """Whether writing ``coerced`` changes what Live holds.
+
+        Live fires a listener only on a change, so a same-value write must
+        not arm a flag it will never spend. A read that raises answers
+        ``True``: arming then costs at most one swallowed fire, bounded by
+        the TTL.
+        """
+        try:
+            if attr in _MIXER_ATTRS:
+                param = self._resolve_mixer_param(track, attr)
+                if param is None:
+                    return True
+                current = param.value
+            else:
+                current = getattr(track, _LOM_ATTR_FOR[attr])
+        except Exception:
+            return True
+        try:
+            return current != coerced
+        except Exception:
+            return True
+
     def _resolve_mixer_param(self, track, attr: str):
         """Return ``track.mixer_device.<param>`` or ``None`` on LOM raise.
 
@@ -800,8 +845,7 @@ class TrackMetadataComponent:
         def _on_fire(t=track, a=attr, p=path):
             if self._disconnected:
                 return
-            key = (p, a)
-            if self._suppress.pop(key, False):
+            if self._consume_suppression((p, a)):
                 return
             try:
                 value = getattr(t, _LOM_ATTR_FOR[a])
@@ -828,8 +872,7 @@ class TrackMetadataComponent:
         def _on_fire(t=track, a=attr, p=path):
             if self._disconnected:
                 return
-            key = (p, a)
-            if self._suppress.pop(key, False):
+            if self._consume_suppression((p, a)):
                 return
             param = self._resolve_mixer_param(t, a)
             if param is None:
@@ -1201,7 +1244,7 @@ class TrackMetadataComponent:
             return
 
         new_value = not current
-        self._suppress[(track_path, _ATTR_MUTE)] = True
+        self._arm_suppression((track_path, _ATTR_MUTE))
         try:
             setattr(track, _LOM_ATTR_FOR[_ATTR_MUTE], new_value)
         except Exception as e:
@@ -1429,7 +1472,8 @@ class TrackMetadataComponent:
         # Arm suppression before setattr. On a raise we roll back the
         # flag so a later unrelated fire isn't inadvertently swallowed
         # (same contract DevicesComponent upholds).
-        self._suppress[(track_path, attr)] = True
+        if self._would_change(track, attr, coerced):
+            self._arm_suppression((track_path, attr))
         try:
             if attr in _MIXER_ATTRS:
                 param = self._resolve_mixer_param(track, attr)
