@@ -7,11 +7,16 @@
 	 */
 	import { addEffectToChain, type ChainEffect } from '$lib/services/chainEffects.svelte';
 	import { press } from '$lib/actions/press';
+	import EffectGlyph from './EffectGlyph.svelte';
+	import { effectGlyph } from './effectGlyphs';
 
 	// Not `effect`: a variable of that name turns `$effect` into a store read.
 	// `passive`: the palette's own gesture reads the chip (ADR-548's hold),
 	// so the chip takes no press of its own; `hot` is the one under the finger.
 	let { fx, label, ink, passive = false, hot = false }: { fx: ChainEffect; label: string; ink?: string; passive?: boolean; hot?: boolean } = $props();
+
+	// What it does, drawn beside the name (2026-11-25): its preset key, else its file's name.
+	const glyph = $derived(effectGlyph(fx.preset ?? fx.name));
 </script>
 
 <button
@@ -23,6 +28,7 @@
 	data-debug="chain-chip"
 	use:press={{ onPress: () => void addEffectToChain(fx), touchAction: 'none', stopPropagation: true, disabled: passive }}
 >
+	{#if glyph}<span class="chip-glyph"><EffectGlyph strokes={glyph} /></span>{/if}
 	<span class="chip-name">{label}</span>
 </button>
 
@@ -33,7 +39,9 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		gap: 6px;
 		padding: 2px 4px;
+		container-type: inline-size;
 		/* Not on the chain yet, so an outline where a device on it is a
 		   slab. A faint wash of its family's colour (ADR-547) tells the
 		   blocks apart; the name stays plain. */
@@ -53,6 +61,24 @@
 		border-color: var(--foreground);
 		background: color-mix(in srgb, var(--chip-ink) 30%, var(--secondary));
 		color: var(--foreground);
+	}
+	/* The picture in the family's colour, the name plain beside it. */
+	.chip-glyph {
+		flex: none;
+		display: flex;
+		width: 20px;
+		height: 20px;
+		color: color-mix(in srgb, var(--chip-ink) 75%, var(--foreground));
+	}
+	.chip-glyph :global(svg) {
+		width: 100%;
+		height: 100%;
+	}
+	/* A chip too narrow for both keeps the name. */
+	@container (max-width: 96px) {
+		.chip-glyph {
+			display: none;
+		}
 	}
 	/* A long name (Drum Buss, Pitch Hack) wraps to two lines, between words. */
 	.chip-name {
