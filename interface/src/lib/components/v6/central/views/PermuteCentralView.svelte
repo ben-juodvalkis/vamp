@@ -10,7 +10,7 @@
 	import SectionDivider from '../SectionDivider.svelte';
 	import { readFxScope } from '../fxScope';
 	import { PERMUTE_MAX_STEPS } from '$lib/config/permuteLayout';
-	import KnobFace from '$lib/components/v6/device-panel/KnobFace.svelte';
+	import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
 
 	let device = $derived(sequencerStore.device);
 
@@ -56,9 +56,8 @@
 
 	const MIN_LENGTH = 2;
 	const MAX_LENGTH = PERMUTE_MAX_STEPS;
-	const RATE_COUNT = 8;
-	const LENGTH_DRAG_SENSITIVITY = 20;
-	const RATE_DRAG_SENSITIVITY = 25;
+	/** Every length a row can have, 2..16 (ADR-443): one cell of the tab each. */
+	const LENGTHS = Array.from({ length: MAX_LENGTH - MIN_LENGTH + 1 }, (_, i) => MIN_LENGTH + i);
 
 	const rateProgression = [
 		{ mode: 'bars', value: 8, display: '8' },
@@ -70,121 +69,36 @@
 		{ mode: '16ths', value: 2, display: '1/8' },
 		{ mode: '16ths', value: 1, display: '1/16' },
 	];
+	const RATE_LABELS = rateProgression.map((r) => r.display);
 
-	let muteRateIndex = $derived((() => {
-		const opt = DIVISION_OPTIONS[muteRate];
-		if (!opt) return 0;
+	function rateIndexOf(division: number): number {
+		const opt = DIVISION_OPTIONS[division];
+		if (!opt) return -1;
 		return rateProgression.findIndex(r => r.mode === opt.mode && r.value === opt.value);
-	})());
-	let pitchRateIndex = $derived((() => {
-		const opt = DIVISION_OPTIONS[pitchRate];
-		if (!opt) return 0;
-		return rateProgression.findIndex(r => r.mode === opt.mode && r.value === opt.value);
-	})());
-
-	let muteRateDisplay = $derived(muteRateIndex >= 0 ? rateProgression[muteRateIndex].display : '?');
-	let pitchRateDisplay = $derived(pitchRateIndex >= 0 ? rateProgression[pitchRateIndex].display : '?');
-
-	// — mute length drag —
-	let isDraggingMuteLength = $state(false);
-	let startMuteLengthY = $state(0);
-	let startMuteLengthVal = $state(0);
-
-	function onMuteLengthDown(e: PointerEvent) {
-		e.preventDefault();
-		isDraggingMuteLength = true;
-		startMuteLengthY = e.clientY;
-		startMuteLengthVal = muteLength;
-		(e.target as Element).setPointerCapture(e.pointerId);
 	}
-	function onMuteLengthMove(e: PointerEvent) {
-		if (!isDraggingMuteLength) return;
-		e.preventDefault();
-		const delta = Math.round((startMuteLengthY - e.clientY) / LENGTH_DRAG_SENSITIVITY);
-		const next = Math.max(MIN_LENGTH, Math.min(MAX_LENGTH, startMuteLengthVal + delta));
-		if (next !== muteLength) (device ? sequencerStore.handleMuteLengthChange : sequencerStore.handleMuteLengthChangeGhost)(next);
-	}
-	function onMuteLengthUp(e: PointerEvent) {
-		e.preventDefault();
-		isDraggingMuteLength = false;
+	let muteRateIndex = $derived(rateIndexOf(muteRate));
+	let pitchRateIndex = $derived(rateIndexOf(pitchRate));
+
+	/** A rate tab's pick, as the division the store writes. */
+	function divisionOf(rateIndex: number): number {
+		const r = rateProgression[rateIndex];
+		return DIVISION_OPTIONS.findIndex(o => o.mode === r.mode && o.value === r.value);
 	}
 
-	// — mute rate drag —
-	let isDraggingMuteRate = $state(false);
-	let startMuteRateY = $state(0);
-	let startMuteRateIdx = $state(0);
-
-	function onMuteRateDown(e: PointerEvent) {
-		e.preventDefault();
-		isDraggingMuteRate = true;
-		startMuteRateY = e.clientY;
-		startMuteRateIdx = muteRateIndex;
-		(e.target as Element).setPointerCapture(e.pointerId);
+	// A ghost (no Permute yet) writes through the ghost path, which loads it.
+	function setMuteLength(next: number) {
+		(device ? sequencerStore.handleMuteLengthChange : sequencerStore.handleMuteLengthChangeGhost)(next);
 	}
-	function onMuteRateMove(e: PointerEvent) {
-		if (!isDraggingMuteRate) return;
-		e.preventDefault();
-		const delta = Math.round((startMuteRateY - e.clientY) / RATE_DRAG_SENSITIVITY);
-		const next = Math.max(0, Math.min(RATE_COUNT - 1, startMuteRateIdx + delta));
-		if (next !== muteRateIndex) {
-			const divIdx = DIVISION_OPTIONS.findIndex(o => o.mode === rateProgression[next].mode && o.value === rateProgression[next].value);
-			if (divIdx >= 0) (device ? sequencerStore.handleMuteRateChange : sequencerStore.handleMuteRateChangeGhost)(divIdx);
-		}
+	function setPitchLength(next: number) {
+		(device ? sequencerStore.handlePitchLengthChange : sequencerStore.handlePitchLengthChangeGhost)(next);
 	}
-	function onMuteRateUp(e: PointerEvent) {
-		e.preventDefault();
-		isDraggingMuteRate = false;
+	function setMuteRate(rateIndex: number) {
+		const divIdx = divisionOf(rateIndex);
+		if (divIdx >= 0) (device ? sequencerStore.handleMuteRateChange : sequencerStore.handleMuteRateChangeGhost)(divIdx);
 	}
-
-	// — pitch length drag —
-	let isDraggingPitchLength = $state(false);
-	let startPitchLengthY = $state(0);
-	let startPitchLengthVal = $state(0);
-
-	function onPitchLengthDown(e: PointerEvent) {
-		e.preventDefault();
-		isDraggingPitchLength = true;
-		startPitchLengthY = e.clientY;
-		startPitchLengthVal = pitchLength;
-		(e.target as Element).setPointerCapture(e.pointerId);
-	}
-	function onPitchLengthMove(e: PointerEvent) {
-		if (!isDraggingPitchLength) return;
-		e.preventDefault();
-		const delta = Math.round((startPitchLengthY - e.clientY) / LENGTH_DRAG_SENSITIVITY);
-		const next = Math.max(MIN_LENGTH, Math.min(MAX_LENGTH, startPitchLengthVal + delta));
-		if (next !== pitchLength) (device ? sequencerStore.handlePitchLengthChange : sequencerStore.handlePitchLengthChangeGhost)(next);
-	}
-	function onPitchLengthUp(e: PointerEvent) {
-		e.preventDefault();
-		isDraggingPitchLength = false;
-	}
-
-	// — pitch rate drag —
-	let isDraggingPitchRate = $state(false);
-	let startPitchRateY = $state(0);
-	let startPitchRateIdx = $state(0);
-
-	function onPitchRateDown(e: PointerEvent) {
-		e.preventDefault();
-		isDraggingPitchRate = true;
-		startPitchRateY = e.clientY;
-		startPitchRateIdx = pitchRateIndex;
-		(e.target as Element).setPointerCapture(e.pointerId);
-	}
-	function onPitchRateMove(e: PointerEvent) {
-		if (!isDraggingPitchRate) return;
-		e.preventDefault();
-		const delta = Math.round((startPitchRateY - e.clientY) / RATE_DRAG_SENSITIVITY);
-		const next = Math.max(0, Math.min(RATE_COUNT - 1, startPitchRateIdx + delta));
-		if (next !== pitchRateIndex) {
-			const divIdx = DIVISION_OPTIONS.findIndex(o => o.mode === rateProgression[next].mode && o.value === rateProgression[next].value);
-			if (divIdx >= 0) (device ? sequencerStore.handlePitchRateChange : sequencerStore.handlePitchRateChangeGhost)(divIdx);
-		}
-	}
-	function onPitchRateUp(e: PointerEvent) {
-		e.preventDefault();
-		isDraggingPitchRate = false;
+	function setPitchRate(rateIndex: number) {
+		const divIdx = divisionOf(rateIndex);
+		if (divIdx >= 0) (device ? sequencerStore.handlePitchRateChange : sequencerStore.handlePitchRateChangeGhost)(divIdx);
 	}
 </script>
 
@@ -195,8 +109,9 @@
 
   The step block is 8 columns wide whatever the length: it holds as many
   cells as the row's length, 2..16 (ADR-443), so at 16 each cell is half
-  the width it has at 8. Length and rate are knobs with a detent per
-  value (2026-11-09).
+  the width it has at 8. Length and rate are scrub tabs, a cell per value
+  (2026-11-25; knobs from 2026-11-09): Length 2..16 three across, Rate
+  8 bars..1/16 two across, each under its name.
 
   Two sequencers, one per row, sharing a grid. They run at their own
   lengths and their own rates and only their ink said so; the seam between
@@ -204,31 +119,41 @@
 -->
 <div class="h-full w-full p-(--central-inset) grid-layout" data-permute-scope={scope?.note ?? undefined}>
 	<!-- Mute length — col 1, row 1 -->
-	<div
-		class="ctrl-cell cursor-ns-resize select-none" data-layout-box
-		style="--cell-ink: {muteColor}; grid-column: 1; grid-row: 1;"
-		onpointerdown={onMuteLengthDown}
-		onpointermove={onMuteLengthMove}
-		onpointerup={onMuteLengthUp}
-		onpointercancel={onMuteLengthUp}
-		title="Mute length: {muteLength} steps"
-		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={muteLength} tabindex="0"
-	>
-		<KnobFace position={(muteLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Mute length" centreValue={`${muteLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingMuteLength} ink={muteColor} size="xl" fit captionBelow />
+	<div class="ctrl-cell" data-layout-box style="grid-column: 1; grid-row: 1;">
+		<span class="tab-name">Mute length</span>
+		<ScrubTabs
+			options={LENGTHS}
+			selected={muteLength - MIN_LENGTH}
+			onSelect={(_, n) => setMuteLength(n)}
+			cols={3}
+			tint={muteColor}
+			ghost={!device}
+			label={(n) => `Mute length ${n} steps`}
+			groupLabel="Mute length"
+			name="mute-length"
+			style="--scrub-font-size: 1rem;"
+		>
+			{#snippet item(option)}{option}{/snippet}
+		</ScrubTabs>
 	</div>
 
 	<!-- Mute rate — col 10, row 1 -->
-	<div
-		class="ctrl-cell cursor-ns-resize select-none" data-layout-box
-		style="--cell-ink: {muteColor}; grid-column: 10; grid-row: 1;"
-		onpointerdown={onMuteRateDown}
-		onpointermove={onMuteRateMove}
-		onpointerup={onMuteRateUp}
-		onpointercancel={onMuteRateUp}
-		title="Mute rate"
-		role="slider" aria-valuemin={0} aria-valuemax={RATE_COUNT - 1} aria-valuenow={muteRateIndex} tabindex="0"
-	>
-		<KnobFace position={Math.max(0, muteRateIndex) / (RATE_COUNT - 1)} title="Mute rate" centreValue={muteRateDisplay} steps={RATE_COUNT} dragging={isDraggingMuteRate} ink={muteColor} size="xl" fit captionBelow />
+	<div class="ctrl-cell" data-layout-box style="grid-column: 10; grid-row: 1;">
+		<span class="tab-name">Mute rate</span>
+		<ScrubTabs
+			options={RATE_LABELS}
+			selected={muteRateIndex}
+			onSelect={(i) => setMuteRate(i)}
+			cols={2}
+			tint={muteColor}
+			ghost={!device}
+			label={(r) => `Mute rate ${r}`}
+			groupLabel="Mute rate"
+			name="mute-rate"
+			style="--scrub-font-size: 1rem;"
+		>
+			{#snippet item(option)}{option}{/snippet}
+		</ScrubTabs>
 	</div>
 
 	<!-- Mute steps — cols 2-9, row 1 -->
@@ -245,31 +170,41 @@
 	</div>
 
 	<!-- Pitch length — col 1, row 3 -->
-	<div
-		class="ctrl-cell cursor-ns-resize select-none" data-layout-box
-		style="--cell-ink: {pitchColor}; grid-column: 1; grid-row: 3;"
-		onpointerdown={onPitchLengthDown}
-		onpointermove={onPitchLengthMove}
-		onpointerup={onPitchLengthUp}
-		onpointercancel={onPitchLengthUp}
-		title="Pitch length: {pitchLength} steps"
-		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={pitchLength} tabindex="0"
-	>
-		<KnobFace position={(pitchLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Pitch length" centreValue={`${pitchLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingPitchLength} ink={pitchColor} size="xl" fit captionBelow />
+	<div class="ctrl-cell" data-layout-box style="grid-column: 1; grid-row: 3;">
+		<span class="tab-name">Pitch length</span>
+		<ScrubTabs
+			options={LENGTHS}
+			selected={pitchLength - MIN_LENGTH}
+			onSelect={(_, n) => setPitchLength(n)}
+			cols={3}
+			tint={pitchColor}
+			ghost={!device}
+			label={(n) => `Pitch length ${n} steps`}
+			groupLabel="Pitch length"
+			name="pitch-length"
+			style="--scrub-font-size: 1rem;"
+		>
+			{#snippet item(option)}{option}{/snippet}
+		</ScrubTabs>
 	</div>
 
 	<!-- Pitch rate — col 10, row 3 -->
-	<div
-		class="ctrl-cell cursor-ns-resize select-none" data-layout-box
-		style="--cell-ink: {pitchColor}; grid-column: 10; grid-row: 3;"
-		onpointerdown={onPitchRateDown}
-		onpointermove={onPitchRateMove}
-		onpointerup={onPitchRateUp}
-		onpointercancel={onPitchRateUp}
-		title="Pitch rate"
-		role="slider" aria-valuemin={0} aria-valuemax={RATE_COUNT - 1} aria-valuenow={pitchRateIndex} tabindex="0"
-	>
-		<KnobFace position={Math.max(0, pitchRateIndex) / (RATE_COUNT - 1)} title="Pitch rate" centreValue={pitchRateDisplay} steps={RATE_COUNT} dragging={isDraggingPitchRate} ink={pitchColor} size="xl" fit captionBelow />
+	<div class="ctrl-cell" data-layout-box style="grid-column: 10; grid-row: 3;">
+		<span class="tab-name">Pitch rate</span>
+		<ScrubTabs
+			options={RATE_LABELS}
+			selected={pitchRateIndex}
+			onSelect={(i) => setPitchRate(i)}
+			cols={2}
+			tint={pitchColor}
+			ghost={!device}
+			label={(r) => `Pitch rate ${r}`}
+			groupLabel="Pitch rate"
+			name="pitch-rate"
+			style="--scrub-font-size: 1rem;"
+		>
+			{#snippet item(option)}{option}{/snippet}
+		</ScrubTabs>
 	</div>
 
 	<!-- Pitch steps — cols 2-9, row 2 -->
@@ -313,12 +248,6 @@
 		white-space: nowrap;
 	}
 
-	/* Each knob names its row with what it sets (ADR-544): Mute length,
-	   Pitch rate. Long for a one-column cell at the knob's own type size,
-	   so the caption is set a step smaller here. */
-	.ctrl-cell :global(.knob-title) {
-		font-size: 14px;
-	}
 
 	/* col 1=length, 2-9=steps, 10=rate */
 	.grid-mute-steps {
@@ -331,13 +260,26 @@
 		grid-row: 3;
 	}
 
-	/* Length and rate are knobs (2026-11-09; filled boxes before): the
-	   cell is the touch target, the knob is drawn in the row's ink. */
+	/* Length and rate are scrub tabs (2026-11-25), each under the name of
+	   what it sets: Mute length, Pitch rate. The tab fills the cell under
+	   its name. */
 	.ctrl-cell {
-		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
 		min-width: 0;
 		min-height: 0;
-		touch-action: none;
+	}
+	.ctrl-cell > :global(.scrub-tabs) {
+		flex: 1 1 0;
+	}
+	.tab-name {
+		text-align: center;
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.2;
+		color: var(--label);
+		white-space: nowrap;
 	}
 
 	/* The muted-track grey rides the palette's --signal-dim on the flat
