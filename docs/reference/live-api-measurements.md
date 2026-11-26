@@ -19,6 +19,20 @@ Until 2026-09-28 these notes lived inside a scrape of Cycling '74's pages
 
 The UI reaches the LOM only through the surface, over the v3 wire ([wire-protocol.md](wire-protocol.md)).
 
+## Object identity
+
+- **Every read hands back a fresh Python wrapper** (Live 13.0b26, 2026-11-25, issue #14). Two
+  reads of `song.tracks[0]`, of `tracks[1].devices[0]` / `devices[1]`, of `song.scenes[0]`, and
+  `view.selected_track` against `tracks[1]`, each held at once: Python's own `object.__eq__` (an
+  identity test, reached through `Track.__mro__[4]` with both wrappers passed as `lom_invoke`
+  `$ref` arguments) answered `NotImplemented` for every pair, and `True` for one wrapper passed
+  twice. So `is` and `id()` never match across two reads; key by `_common.safe_int_id`
+  (`_live_ptr`) and compare with `path_resolver.same_lom_handle`. Comparing the `at 0x…` in
+  reprs proves nothing: a wrapper is freed after each read and the next lands at the same
+  address (tracks 0 and 1 printed the same two addresses in turn).
+- **Live's own `==` compares the LOM object**: `LomObject.__eq__` is overridden, `True` for two
+  wrappers of one track or device or scene, `False` (not `NotImplemented`) for different tracks.
+
 ## Song
 
 - **`undo()`** returns the entry's label (`'Undo Custom Action'`), so a probe can read what it
@@ -27,10 +41,15 @@ The UI reaches the LOM only through the surface, over the v3 wire ([wire-protoco
   12.4.15b2: `begin` → `begin` → write A → `end` → write B → `end`, then undo twice. Undo #1
   restored only B; undo #2 restored A: two separate steps, both named `Custom Action`. The inner
   `end_undo_step` closed the step the outer `begin` opened, and everything written after it
-  landed in a fresh one. So a long-held step is not safe against anything else that opens and
-  closes its own: `DrumVirtualMacroComponent.flush` does exactly that, and a macro move during a
-  held step silently splits it. Several writes that must undo as one need a window where nothing
-  else writes, or must be grouped by their writer without relying on nesting (swap audit M3).
+  landed in a fresh one. **Live 13.0b26 is the same** (2026-11-25, the same sequence on a pad's
+  Pan and Detune: undo #1 restored Detune alone, undo #2 Pan, both `Undo Custom Action`).
+  So a long-held step was not safe against anything else that opens and closes its own. Measured
+  through the surface (2026-11-25, issue #14): `show_for_swap` opened the swap's step, a pad's
+  Pan moved, `vm.pad.36.decay` went through `property/set` (DrumVM's own step), Detune moved,
+  then `finish_swap`. In three runs of four, undo #1 reverted the decay **and** the Detune, and
+  undo #2 the Pan: the gesture split the swap in two. Since then every component opens and
+  closes the step through `component_util.begin_undo_step` / `end_undo_step`, which count per
+  song: a begin while a step is open joins it and only the outermost end calls Live.
 - **Live does not coalesce one handler's writes to different parameters into one undo step**
   (2026-09-07, 12.4.15b1): wrap a fan-out in `begin_undo_step()` / `end_undo_step()`.
 
@@ -59,6 +78,12 @@ The UI reaches the LOM only through the surface, over the v3 wire ([wire-protoco
 
 ## Clip
 
+- **`get_all_notes_extended` takes no arguments** (Live 13.0b26, 2026-11-25): the bare call
+  returns a `MidiNoteVector`; `(0, 128, 0.0, 4.0)` raises `ArgumentError` ("did not match C++
+  signature: get_all_notes_extended(TPyHandle<AClip>)"). The ranged form is
+  `get_notes_extended(from_pitch, pitch_span, from_time, time_span)`, which answered both
+  `(0, 128, 0.0, 4.0)` and `(36, 1, 0.0, 4.0)`. The surface reads through
+  `_common.read_all_notes`. `set_notes` wants a tuple: a list raises `ArgumentError`.
 - **`is_playing`** can read True while `Song.is_playing` is False (12.4.15b2, ADR-440).
 - **`warp_markers`**: in Python a `WarpMarkerVector` of `.beat_time` / `.sample_time` (seconds). A
   fresh warped clip has three: start, end, and a hidden one 1/32 beat past the end.

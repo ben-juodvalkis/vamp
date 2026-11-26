@@ -30,6 +30,7 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
+import { toBool } from './oscTypeHelpers';
 import { applyTrackFoldState } from '$lib/stores/v3/normalized.svelte';
 
 export const V3_TRACK_FOLD_STATE_ADDRESS = '/looping/v3/track/fold_state';
@@ -41,11 +42,4 @@ export function handleV3TrackFoldState(args: OSCArg[]): void {
 	}
 	const trackPath = typeof args[0] === 'string' ? args[0] : String(args[0]);
 	applyTrackFoldState(trackPath, toBool(args[1]));
-}
-
-function toBool(v: OSCArg): boolean {
-	if (typeof v === 'boolean') return v;
-	if (typeof v === 'number') return v !== 0;
-	if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
-	return Boolean(v);
 }

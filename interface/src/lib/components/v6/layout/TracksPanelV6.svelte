@@ -19,9 +19,10 @@
 	import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
 	import { setTrackFoldState } from '$lib/services/trackCommands';
-	import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import { trackInkFor } from '$lib/utils/trackInkFor';
 	import { press } from '$lib/actions/press';
+	import { boxSize } from '$lib/actions/boxSize';
+	import { sessionRowPitch } from '$lib/utils/sessionRowPitch';
 
 	interface Props {
 		onTrackSelect?: (trackIndex: number) => void;
@@ -123,7 +124,7 @@
 			return {
 				...band,
 				name: record?.name ?? `Group ${band.groupIndex + 1}`,
-				ink: trackInk(rgbToHex(record?.color ?? 0x808080), paintModeReactive()),
+				ink: trackInkFor(`tracks/${band.groupIndex}`),
 				selected: session.selectedTrackIndex === band.groupIndex,
 				muted: record?.mute ?? false
 			};
@@ -180,40 +181,16 @@
 	// taller section shows more scenes at roughly the same pitch rather
 	// than the same scenes at a taller one. Nothing here changes for
 	// that — the pitch is still this box divided by the rows drawn.
-	let slotSectionEl = $state<HTMLDivElement | null>(null);
+	// Measured by `use:boxSize` on `.slots-section`.
 	let slotSectionHeightPx = $state(0);
 	let renderedRows = $derived(sceneWindowStore.renderedRows);
-	let rowPitchPx = $derived(
-		renderedRows > 0 ? slotSectionHeightPx / (renderedRows + 1) : 0
-	);
-
-	$effect(() => {
-		const el = slotSectionEl;
-		if (!el || typeof ResizeObserver === 'undefined') return;
-		const measure = () => {
-			const h = el.getBoundingClientRect().height;
-			if (h > 0) slotSectionHeightPx = h;
-		};
-		measure();
-		const ro = new ResizeObserver(measure);
-		ro.observe(el);
-		return () => ro.disconnect();
-	});
+	let rowPitchPx = $derived(sessionRowPitch(slotSectionHeightPx, renderedRows));
 
 	// The cell gestures themselves live in `composables/slotActions` — the
 	// FX grid's mini session column renders the same `SlotGrid`, and a cell
 	// has to mean the same thing in both. Bound here only to hand them this
 	// panel's `onTrackSelect`.
 	const slotActionOptions = $derived({ onTrackSelect });
-
-	$effect(() => {
-		logger.debug('Showing tracks', {
-			component: 'TracksPanelV6',
-			numTracks: session.numTracks,
-			visible: visibleTracks.length,
-			filterMode: clipStateStore.filterMode
-		});
-	});
 
 	function handleTrackSelect(trackIndex: number) {
 		logger.debug('🎯 TracksPanelV6: Selecting track:', { component: 'TracksPanelV6', trackIndex });
@@ -357,20 +334,8 @@
 	 * grid resolves, and a formula for it was off by the master's whole
 	 * column once the master joined the block (2026-10-24).
 	 */
-	let pinnedEl = $state<HTMLDivElement | null>(null);
+	// Measured by `use:boxSize` on the pinned block.
 	let pinnedWidth = $state(0);
-
-	$effect(() => {
-		const el = pinnedEl;
-		if (!el || typeof ResizeObserver === 'undefined') return;
-		const measure = () => {
-			pinnedWidth = el.getBoundingClientRect().width;
-		};
-		measure();
-		const ro = new ResizeObserver(measure);
-		ro.observe(el);
-		return () => ro.disconnect();
-	});
 
 	function handlePanelPointerDown(e: PointerEvent) {
 		if (panelPointers.size === 0) {
@@ -470,7 +435,7 @@
 			     at the row's right end, two strip columns wide. -->
 			<div
 				class="pinned-cols"
-				bind:this={pinnedEl}
+				use:boxSize={{ axis: 'width', onSize: (w) => (pinnedWidth = w) }}
 				style="grid-column: {visibleTracks.length + 1} / span {PINNED_COLS}; grid-row: 1 / -1;"
 			>
 				<div class="new-track-col"><NewTrackButtons /></div>
@@ -488,7 +453,7 @@
 			<div
 				class="slots-section"
 				data-debug="slots-section"
-				bind:this={slotSectionEl}
+				use:boxSize={{ keepLastNonZero: true, onSize: (h) => (slotSectionHeightPx = h) }}
 				style={rowPitchPx > 0 ? `--session-row-h: ${rowPitchPx}px;` : ''}
 			>
 				<div class="slots-row" data-debug="slots-row" style={slotRowStyle}>
@@ -496,10 +461,7 @@
 						<div class="slot-col" style="grid-column: {col + 1};">
 							<SlotGrid
 								trackPath={`tracks/${trackIndex}`}
-								trackColor={trackInk(
-									rgbToHex(v3Store.tracks.get(`tracks/${trackIndex}`)?.color ?? 0x808080),
-									paintModeReactive()
-								)}
+								trackColor={trackInkFor(`tracks/${trackIndex}`)}
 								{trackIndex}
 								isGroup={clipStateStore.isGroupTrack(trackIndex)}
 								onSelect={(slotIndex) => selectSlot(trackIndex, slotIndex, slotActionOptions)}
@@ -530,10 +492,7 @@
 							class:is-track-selected={session.selectedTrackIndex === trackIndex}
 							data-debug="stop-button"
 							data-track-stop={trackIndex}
-							style="grid-column: {col + 1}; --stop-ink: {trackInk(
-								rgbToHex(v3Store.tracks.get(`tracks/${trackIndex}`)?.color ?? 0x808080),
-								paintModeReactive()
-							)};"
+							style="grid-column: {col + 1}; --stop-ink: {trackInkFor(`tracks/${trackIndex}`)};"
 							aria-label="Stop clips on {v3Store.tracks.get(`tracks/${trackIndex}`)?.name ??
 								`track ${trackIndex + 1}`}"
 							use:press={{

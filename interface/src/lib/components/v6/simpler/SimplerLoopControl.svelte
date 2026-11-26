@@ -17,6 +17,11 @@
 	import { paintTokens } from '$lib/utils/paintTokens';
 	import { paintPeaks } from '$lib/utils/waveformPaint';
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
+	import { getPeaks, cancelPeaks } from '$lib/services/clipWaveformService';
+	import { logger } from '$lib/utils/logger';
+	import { useDeviceProperties } from '$lib/components/v6/central/useDeviceProperties.svelte';
+
+	const PEAK_BINS = 1024;
 
 	// Simpler parameter indices (matching SimplerCentralView)
 	const SIMPLER_PARAMS = {
@@ -70,34 +75,20 @@
 		selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, SIMPLER_PARAMS.FADE)) ?? 0
 	);
 
-	// Slicing mode: Read properties (frame-based) via v3 path-keyed API.
-	let startMarker = $derived<number>(
-		(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.start_marker') as number | undefined : undefined) ?? 0
-	);
-	let endMarker = $derived<number>(
-		(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.end_marker') as number | undefined : undefined) ?? 0
-	);
-	let sampleLengthFrames = $derived<number>(
-		(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.length') as number | undefined : undefined) ?? 1
-	);
-	let sampleFilePath = $derived<string>(
-		(devicePath ? selectedTrackStore.propertyValue(devicePath, 'sample.file_path') as string | undefined : undefined) ?? ''
-	);
-
-	// PR-3.5.7-impl: own subscriptions for the four `sample.*` properties
-	// this control reads. SimplerCentralView also subscribes to these —
+	// Slicing mode: Read properties (frame-based) via v3 path-keyed API,
+	// subscribed here too. SimplerCentralView also subscribes to these —
 	// the refcount manager idempotently dedupes (refcount → 2, then → 1
 	// when one consumer leaves), no second wire subscribe.
-	$effect(() => {
-		if (!devicePath) return;
-		const release = [
-			selectedTrackStore.subscribeProperty(devicePath, 'sample.start_marker'),
-			selectedTrackStore.subscribeProperty(devicePath, 'sample.end_marker'),
-			selectedTrackStore.subscribeProperty(devicePath, 'sample.length'),
-			selectedTrackStore.subscribeProperty(devicePath, 'sample.file_path')
-		];
-		return () => release.forEach((fn) => fn());
-	});
+	const deviceProps = useDeviceProperties(() => devicePath, [
+		'sample.start_marker',
+		'sample.end_marker',
+		'sample.length',
+		'sample.file_path'
+	]);
+	let startMarker = $derived(deviceProps.get('sample.start_marker', 0));
+	let endMarker = $derived(deviceProps.get('sample.end_marker', 0));
+	let sampleLengthFrames = $derived(deviceProps.get('sample.length', 1));
+	let sampleFilePath = $derived(deviceProps.get('sample.file_path', ''));
 
 	// Unified normalized values (0-1) for display - adapts based on mode
 	let sampleStart = $derived(
@@ -122,6 +113,8 @@
 	// Keep the previous waveform visible until a new fetch resolves —
 	// avoids flicker on rapid sample swaps.
 	let peakData = $state<Peaks | null>(null);
+	// The container's last observed size; the draw effect depends on it.
+	let size = $state({ w: 0, h: 0 });
 
 	// Display values (cache updates optimistically)
 	let displayStart = $derived(sampleStart);
@@ -328,21 +321,18 @@
 			return;
 		}
 		let cancelled = false;
-		import('$lib/services/clipWaveformService').then(
-			({ getPeaks, cancelPeaks }) => {
+		getPeaks(path, PEAK_BINS)
+			.then((data) => {
 				if (cancelled) return;
-				getPeaks(path, 1024).then((data) => {
-					if (cancelled) return;
-					peakData = data;
-				});
-				return () => {
-					cancelled = true;
-					cancelPeaks(path, 1024);
-				};
-			}
-		);
+				peakData = data;
+			})
+			.catch((err) => {
+				if (cancelled) return;
+				logger.warn('SimplerLoopControl: peak fetch failed', err);
+			});
 		return () => {
 			cancelled = true;
+			cancelPeaks(path, PEAK_BINS);
 		};
 	});
 
@@ -369,6 +359,9 @@
 		if (!container) return;
 
 		const dpr = window.devicePixelRatio || 1;
+		// Read the observed size so a resize re-runs this draw; measure the
+		// box itself so the first draw (before the observer reports) is right.
+		void size;
 		const w = container.clientWidth;
 		const h = container.clientHeight;
 		if (w === 0 || h === 0) return;
@@ -428,15 +421,13 @@
 		}
 	});
 
-	// Container resize → redraw. Tracked separately so the draw effect
-	// above doesn't need to take a width/height dep that would force it
-	// to read DOM measurements every reactive tick.
+	// Container resize → redraw: the observer writes the measured size,
+	// which the draw effect above reads.
 	$effect(() => {
 		const container = containerRef;
 		if (!container) return;
 		const ro = new ResizeObserver(() => {
-			// Touch a $state to trigger the draw effect.
-			peakData = peakData ? { ...peakData } : null;
+			size = { w: container.clientWidth, h: container.clientHeight };
 		});
 		ro.observe(container);
 		return () => ro.disconnect();

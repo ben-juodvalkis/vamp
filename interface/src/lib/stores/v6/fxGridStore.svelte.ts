@@ -22,8 +22,8 @@ import { matchesSlot, pickSlotDevice } from '$lib/utils/deviceSlotMatch';
 import { fxChainStore } from './fxChainStore.svelte';
 import { effectSource } from '$lib/services/effectSources.svelte';
 import { v3ErrorBannerStore } from './v3ErrorBannerStore.svelte';
+import { writeParam } from '$lib/services/paramWrite';
 import {
-	armParam,
 	armSpeculative,
 	consumeSpeculative,
 	clearSpeculativeForSlot
@@ -190,17 +190,11 @@ export class FXGridState {
 			// Send OSC writes so Live applies the user's intent. The arm
 			// inside setParamValue suppresses the echo that would
 			// otherwise overwrite our seeded value with Live's pre-write
-			// state. We can't call `this.deps.setParamValue` here because
-			// its applyParamValue would no-op (the device's params Map
-			// hasn't been reactively published yet); we send the wire
-			// directly and arm by hand. The seeded value the hook returns
-			// covers the optimistic local read.
+			// state. Not optimistic: applyParamValue would no-op (the
+			// device's params Map hasn't been reactively published yet);
+			// the seeded value the hook returns covers the local read.
 			for (const [paramIndex, value] of speculative) {
-				const paramPath = `${device.devicePath}/params/${paramIndex}`;
-				armParam(paramPath, value);
-				if (v3Store.generation !== 0) {
-					send('/looping/v3/param/set', [paramPath, value, v3Store.generation]);
-				}
+				writeParam(`${device.devicePath}/params/${paramIndex}`, value, { optimistic: false });
 			}
 			return speculative;
 		});

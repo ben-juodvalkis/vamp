@@ -7,6 +7,8 @@
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
   import { createSliderThrottle } from '$lib/utils/sliderThrottle';
   import { fitText } from '$lib/utils/fitText';
+  import { drag, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
+  import { isTap, relativeDragValue, dragSpan } from './padGesture';
 
   // Minimal track interface for meter visualization
   interface MeterTrack {
@@ -170,22 +172,17 @@
   let showFill = $derived(!track && !handleLine);
 
   let isDragging = $state(false);
-  let container: HTMLDivElement;
 
   // The words on the slider: its name, or Live's value while it is dragged.
   let shownTitle = $derived(isDragging && readout ? readout : title);
 
-  // Local state for smooth interaction
-  let localValue = $state(value);
+  // The shown value: the prop, overridden by the finger while it drags and
+  // re-synced whenever the prop changes (a track switch, Live's echo).
+  let localValue = $derived(value);
 
-  // Sync from props (props only change on track switch - no observers!)
-  $effect(() => {
-    localValue = value;
-  });
-
-  // Track start position for relative dragging
-  let startPointer = 0;
+  // Value and time at touch-down, for the relative drag and the tap rule.
   let startValue = 0;
+  let downAt = 0;
 
   // Frame-synchronized throttle for smooth updates
   const throttle = createSliderThrottle((value: number) => {
@@ -194,13 +191,6 @@
 
   // Cancel any pending rAF on unmount — guards against drag-interrupt leaks (#392).
   onDestroy(throttle.cancel);
-
-  // Tap detection state
-  let tapStartTime = $state(0);
-  let tapStartX = $state(0);
-  let tapStartY = $state(0);
-  const TAP_TIME_THRESHOLD = 200; // ms
-  const TAP_MOVEMENT_THRESHOLD = 5; // pixels
 
   // Computed for display (guard against division by zero if min >= max)
   let fillPercent = $derived(max > min ? ((localValue - min) / (max - min)) * 100 : 0);
@@ -235,7 +225,7 @@
   // Use provided centerValue, or default to midpoint of range
   let effectiveCenterValue = $derived(centerValue ?? (min + max) / 2);
   let centerPercent = $derived(max > min ? ((effectiveCenterValue - min) / (max - min)) * 100 : 50);
-  let fillFromCenter = $derived(() => {
+  let fillFromCenter = $derived.by(() => {
     if (!centerOrigin) return null;
     const current = fillPercent;
     const center = centerPercent;
@@ -255,7 +245,7 @@
   // ink and stay readable. Empty fill → fully clipped (inverse hidden).
   let inverseClip = $derived.by(() => {
     if (centerOrigin) {
-      const f = fillFromCenter();
+      const f = fillFromCenter;
       if (!f || f.height <= 0) return 'inset(0 0 100% 0)';
       const near = f.bottom;                    // gap before the fill (bottom/left)
       const far = 100 - (f.bottom + f.height);  // gap after the fill (top/right)
@@ -271,76 +261,52 @@
 
   const axis = $derived(dragAxis ?? orientation);
 
-  function handlePointerDown(event: PointerEvent) {
-    event.preventDefault(); // Prevent scrolling and default behavior
-    isDragging = true;
-
-    // Store start position and current value for relative dragging
-    startPointer = axis === 'vertical' ? event.clientY : event.clientX;
-    startValue = localValue;
-
-    // Store tap detection data
-    tapStartTime = Date.now();
-    tapStartX = event.clientX;
-    tapStartY = event.clientY;
-
-    container.setPointerCapture(event.pointerId);
-    throttle.start();
-
-    onDown?.();
-  }
-
-  function handlePointerMove(event: PointerEvent) {
-    if (!isDragging) return;
-    event.preventDefault(); // Prevent scrolling during drag
-    updatePositionRelative(event);
-  }
-
-  function handlePointerUp(event: PointerEvent) {
-    isDragging = false;
-    container.releasePointerCapture(event.pointerId);
-
-    // Check for tap detection
-    const tapDuration = Date.now() - tapStartTime;
-    const tapMovementX = Math.abs(event.clientX - tapStartX);
-    const tapMovementY = Math.abs(event.clientY - tapStartY);
-    const isTap = tapDuration < TAP_TIME_THRESHOLD &&
-                  tapMovementX < TAP_MOVEMENT_THRESHOLD &&
-                  tapMovementY < TAP_MOVEMENT_THRESHOLD;
-
-    // If it's a tap and we have an onTap handler, call it
-    if (isTap && onTap) {
-      onTap();
+  /**
+   * The drag (ADR-427): `use:drag` owns the pointer, so a second finger on
+   * the slider neither moves it nor ends the first finger's drag. It opens
+   * at touch-down (`immediate`) — the whole control is the value, and the
+   * press is drawn as a drag from the first instant — and a release that
+   * was quick and barely moved is a tap.
+   */
+  const sliderDrag = {
+    commit: 'immediate' as const,
+    binding: 'capture' as const,
+    onStart: ({ event }: DragInfo) => {
+      event?.preventDefault();
+      isDragging = true;
+      startValue = localValue;
+      downAt = performance.now();
+      throttle.start();
+      onDown?.();
+    },
+    onMove: (info: DragInfo) => updatePositionRelative(info),
+    onEnd: ({ dx, dy, reason }: DragEndInfo) => {
+      isDragging = false;
+      // Unmounted mid-drag: the throttle is cancelled by onDestroy, and
+      // nothing is written against whatever is mounted next.
+      if (reason === 'teardown') return;
+      const tap = reason === 'up' && isTap(dx, dy, performance.now() - downAt);
+      if (tap && onTap) onTap();
+      // Send final value immediately
+      throttle.flush();
+      if (onRelease && !tap && localValue !== startValue) onRelease(localValue);
     }
+  };
 
-    // Send final value immediately
-    throttle.flush();
-
-    if (onRelease && !isTap && localValue !== startValue) onRelease(localValue);
-  }
-
-  function updatePositionRelative(event: PointerEvent) {
-    const rect = container.getBoundingClientRect();
-
+  function updatePositionRelative({ dx, dy, width, height }: DragInfo) {
     // Guard against invalid min/max
     if (max <= min) return;
-
-    // Calculate delta from start position
-    const currentPointer = axis === 'vertical' ? event.clientY : event.clientX;
-    const length = axis === 'vertical' ? rect.height : rect.width;
-    const size = effectiveTravel ? Math.max(length, effectiveTravel) : length;
-    const delta = ((currentPointer - startPointer) / size) * sensitivity;
-
-    // Apply delta to start value (invert for vertical). A knob takes the
-    // vertical alone, up clockwise, over its height or the box travel.
-    const knobSize = effectiveTravel ? Math.max(rect.height, effectiveTravel) : rect.height;
-    const normalizedDelta = knobFace
-      ? -(event.clientY - tapStartY) / knobSize * sensitivity
-      : axis === 'vertical' ? -delta : delta;
-    const normalizedValue = (startValue - min) / (max - min);
-    const newNormalizedValue = Math.max(0, Math.min(1, normalizedValue + normalizedDelta));
-    const newValue = min + (newNormalizedValue * (max - min));
-
+    // A knob takes the vertical alone, up clockwise, over its height or the
+    // box travel; a slider its own axis over its length or the box travel.
+    const vertical = knobFace || axis === 'vertical';
+    const newValue = relativeDragValue({
+      startValue,
+      delta: vertical ? dy : dx,
+      size: dragSpan(vertical ? height : width, effectiveTravel),
+      min,
+      max,
+      sensitivity
+    });
     // Update local state immediately for visual feedback
     localValue = newValue;
 
@@ -355,11 +321,7 @@
     <div
       class="knob-container"
       class:ghost={isGhost}
-      bind:this={container}
-      onpointerdown={handlePointerDown}
-      onpointermove={handlePointerMove}
-      onpointerup={handlePointerUp}
-      onpointercancel={handlePointerUp}
+      use:drag={sliderDrag}
       role="slider"
       tabindex="0"
       aria-label="{valueText ? `${title} ${valueText}` : title}: {localValue.toFixed(2)}"
@@ -393,11 +355,7 @@
   <div
     class="slider-container"
     class:ghost={isGhost}
-    bind:this={container}
-    onpointerdown={handlePointerDown}
-    onpointermove={handlePointerMove}
-    onpointerup={handlePointerUp}
-    onpointercancel={handlePointerUp}
+    use:drag={sliderDrag}
     role="slider"
     tabindex="0"
     aria-label="{title}: {localValue.toFixed(2)}"
@@ -435,7 +393,7 @@
     {#if showFill}
       {#if centerOrigin}
         <!-- Center origin mode: fill expands from center line -->
-        {@const fill = fillFromCenter()}
+        {@const fill = fillFromCenter}
         {#if fill}
           <div
             class="slider-fill {orientation}"
@@ -554,9 +512,6 @@
     border-radius: var(--radius-sm);
     cursor: pointer;
     overflow: hidden;
-    /* Same reason as DeviceXY's `.xy-container`: without it a touch drag is
-       claimed as a pan and cancelled a few px in. */
-    touch-action: none;
     transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
       border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--slider-bg-override, var(--surface-well));
@@ -880,8 +835,6 @@
     width: 100%;
     height: 100%;
     cursor: pointer;
-    /* Same reason as the box's: a touch drag must not be claimed as a pan. */
-    touch-action: none;
     border-radius: var(--radius-sm);
   }
   .knob-container:focus {

@@ -210,14 +210,23 @@ import traceback
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from . import sequencer_math as sm
-from . import sequencer_shuffle as shuffle
+from ._common import LOM_ERRORS, read_all_notes
+from .component_util import first_time, safe_class_name
 from .DrumPadChainComponent import PadChainWatcher
 from .drum_vm_resolve import find_track_drum_rack
 from .LOMListeners import _safe_int_id
+from .listener_bag import ListenerBag
+from .sequencer_temperature import (  # noqa: F401  (BASE_MODEL_FIELDS re-exported)
+    BASE_MODEL_FIELDS,
+    MIDI_PITCH_MAX,
+    TemperatureMixin,
+    note_id,
+    note_pitch,
+)
 
 logger = logging.getLogger("looping")
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 # --- wire -----------------------------------------------------------------
 
@@ -261,15 +270,8 @@ SIMPLER_CLASS_NAME = "OriginalSimpler"
 SIMPLER_TRANSPOSE_NAME = "Transpose"
 INSTRUMENT_RACK_CLASS_NAME = "InstrumentGroupDevice"
 OCTAVE_SEMITONES = 12
-MIDI_PITCH_MAX = 127
 PITCH_COARSE_MIN = -48
 PITCH_COARSE_MAX = 48
-#: Note fields kept in the temperature base model so a return to 0
-#: restores the whole note, not just its pitch (permute ADR-015).
-BASE_MODEL_FIELDS = (
-    "pitch", "start_time", "duration", "velocity", "mute",
-    "probability", "velocity_deviation", "release_velocity",
-)
 
 #: Parameter long names per role — the contract with the device (mirror of
 #: ``interface/src/lib/config/permuteLayout.ts``).
@@ -354,7 +356,7 @@ class _ClipState:
         "pitch_coarse_home", "pitch_coarse_written",
         "mute_applied", "muted_ids", "gain_home", "gain_rezero",
         "chance_applied", "base_model", "expected",
-        "temp_loop_cb", "temp_notes_cb", "temp_variation_pending", "temp_notes_changed",
+        "temp_listeners", "temp_variation_pending", "temp_notes_changed",
     )
 
     def __init__(self, clip, clip_id: int, slot_idx: int, is_midi: bool, is_audio: bool) -> None:
@@ -384,8 +386,9 @@ class _ClipState:
         # pitch the engine last wrote (the own-write signature).
         self.base_model: Optional[Dict[int, dict]] = None
         self.expected: Optional[Dict[int, int]] = None
-        self.temp_loop_cb = None
-        self.temp_notes_cb = None
+        # The clip's ``loop_jump`` / ``notes`` listeners while Temperature
+        # holds it (``_temp_attach``).
+        self.temp_listeners = ListenerBag("SequencerComponent", remove_level=logging.DEBUG)
         self.temp_variation_pending = False
         self.temp_notes_changed = False
 
@@ -510,7 +513,7 @@ class _LagStats:
 # --- component --------------------------------------------------------------
 
 
-class SequencerComponent:
+class SequencerComponent(TemperatureMixin):
     """The engine behind every thin Permute device in the set.
 
     Args:
@@ -1613,228 +1616,6 @@ class SequencerComponent:
                 changed = True
         return changed
 
-    # --- temperature (permute ADR-015) ---------------------------------------------------
-
-    def _temperature(self, inst: _Instance) -> float:
-        try:
-            return max(0.0, min(1.0, float(inst.values.get("temperature") or 0.0)))
-        except (TypeError, ValueError):
-            return 0.0
-
-    def _on_temperature_changed(self, inst: _Instance) -> None:
-        """The slider moved: 0 → hot captures + varies, hot → 0 restores;
-        a change while hot only shapes the next variation."""
-        new = self._temperature(inst)
-        was = inst.temperature_last
-        inst.temperature_last = new
-        if inst.pad_note is not None:
-            return  # inert on a pad (ADR-435): one pitch has nothing to swap
-        cs = inst.clip_state
-        if cs is None or not cs.is_midi:
-            return
-        if was <= 0.0 < new:
-            self._temp_enable(inst, cs)
-        elif was > 0.0 >= new:
-            self._temp_restore(inst, cs, with_octave=True)
-
-    def _temp_start(self, inst: _Instance) -> None:
-        """Transport start / clip arrival with a hot slider: capture the
-        clip (if not yet) and write a variation."""
-        inst.temperature_last = self._temperature(inst)
-        cs = inst.clip_state
-        if inst.pad_note is not None or cs is None or not cs.is_midi or inst.temperature_last <= 0.0:
-            return
-        self._temp_enable(inst, cs)
-
-    def _temp_enable(self, inst: _Instance, cs: _ClipState) -> None:
-        if cs.base_model is None:
-            vec = self._read_notes(inst, cs.clip)
-            if vec is None:
-                return
-            cs.base_model = self._build_base_model(cs, vec)
-            cs.expected = None
-            self._temp_attach(inst, cs)
-        self._temp_variation(inst, cs)
-
-    def _temp_variation(self, inst: _Instance, cs: _ClipState) -> None:
-        """A fresh variation from the base: every known note back to its
-        base pitch (plus its octave), then a new swap over those only."""
-        temperature = self._temperature(inst)
-        if cs.base_model is None or temperature <= 0.0:
-            return
-        vec = self._read_notes(inst, cs.clip)
-        if vec is None:
-            return
-        prev = self._pitch_signature(vec)
-        base_notes = []
-        for note in vec:
-            nid = self._note_id(note)
-            base = cs.base_model.get(nid) if nid is not None else None
-            if base is None:
-                continue  # an overdub not yet folded in: never swapped
-            note.pitch = self._shifted(cs, nid, base["pitch"])
-            base_notes.append(note)
-        pattern = shuffle.generate_swap_pattern(base_notes, temperature, self._rng)
-        shuffle.apply_swap_pattern(base_notes, pattern)
-        self._settle_pads(inst, cs, vec, prev)
-        if self._apply_notes(inst, cs, vec):
-            self._counters["temp_variations"] += 1
-
-    def _temp_restore(self, inst: _Instance, cs: _ClipState, with_octave: bool = True) -> None:
-        """Rewrite the base model verbatim (its octave kept while a pitch
-        step holds it, unless ``with_octave`` is False — the stop path,
-        which puts back the true base) and drop the model."""
-        self._temp_detach(cs)
-        model, cs.base_model, cs.expected = cs.base_model, None, None
-        cs.temp_variation_pending = False
-        cs.temp_notes_changed = False
-        if not model:
-            return
-        vec = self._read_notes(inst, cs.clip)
-        if vec is None:
-            return
-        prev = self._pitch_signature(vec)
-        changed = False
-        for note in vec:
-            nid = self._note_id(note)
-            base = model.get(nid) if nid is not None else None
-            if base is None:
-                continue
-            target = self._shifted(cs, nid, base["pitch"]) if with_octave else int(base["pitch"])
-            if self._note_pitch(note) != target:
-                note.pitch = target
-                changed = True
-        if self._settle_pads(inst, cs, vec, prev):
-            changed = True
-        if changed and not self._apply_notes(inst, cs, vec):
-            return
-        if not with_octave:
-            cs.pitch_deltas = {}
-            cs.pitch_applied = False
-            cs.pitch_shift = 0
-
-    def _service_temperature(self, inst: _Instance) -> None:
-        """Deferred halves of the clip observers (they fire in a
-        notification): a loop jump → a fresh variation; a ``notes``
-        change → tell our own write from a user edit by content."""
-        cs = inst.clip_state
-        if cs is None or cs.base_model is None:
-            return
-        if self._temperature(inst) <= 0.0:
-            return
-        if cs.temp_notes_changed:
-            cs.temp_notes_changed = False
-            vec = self._read_notes(inst, cs.clip)
-            if vec is not None and self._is_external_change(vec, cs.expected):
-                self._temp_rebaseline(inst, cs, vec)
-                cs.temp_variation_pending = False
-                return
-        if cs.temp_variation_pending:
-            cs.temp_variation_pending = False
-            self._temp_variation(inst, cs)
-
-    def _temp_rebaseline(self, inst: _Instance, cs: _ClipState, vec) -> None:
-        """The user edited the clip while hot: untouched notes (still at
-        the pitch our last swap left them) go back to base first, the
-        edited and added notes define the new composition, then a fresh
-        variation keeps playback hot."""
-        expected = cs.expected or {}
-        model = cs.base_model or {}
-        for note in vec:
-            nid = self._note_id(note)
-            if nid is None:
-                continue
-            base = model.get(nid)
-            exp = expected.get(nid)
-            if base is not None and exp is not None and self._note_pitch(note) == exp:
-                note.pitch = self._shifted(cs, nid, base["pitch"])
-        cs.base_model = self._build_base_model(cs, vec)
-        cs.expected = None
-        self._counters["temp_rebaselines"] += 1
-        logger.debug("SequencerComponent: %s re-baselined from a user edit", inst.device_path)
-        self._temp_variation(inst, cs)
-
-    def _build_base_model(self, cs: _ClipState, vec) -> Dict[int, dict]:
-        model: Dict[int, dict] = {}
-        for note in vec:
-            nid = self._note_id(note)
-            pitch = self._note_pitch(note)
-            if nid is None or pitch is None:
-                continue
-            entry = {}
-            for field in BASE_MODEL_FIELDS:
-                v = getattr(note, field, None)
-                if v is None and isinstance(note, dict):
-                    v = note.get(field)
-                if v is not None:
-                    entry[field] = v
-            # True base pitch: the pitch sequencer's per-note octave removed.
-            entry["pitch"] = pitch - (cs.pitch_deltas.get(nid, 0) if cs.pitch_applied else 0)
-            model[nid] = entry
-        return model
-
-    @staticmethod
-    def _shifted(cs: _ClipState, nid: int, base_pitch) -> int:
-        """A base pitch as it should read on the clip now: plus the octave
-        this engine holds on that note, clamped to MIDI."""
-        delta = cs.pitch_deltas.get(nid, 0) if cs.pitch_applied else 0
-        return max(0, min(MIDI_PITCH_MAX, int(base_pitch) + delta))
-
-    def _pitch_signature(self, vec) -> Dict[int, int]:
-        sig: Dict[int, int] = {}
-        for note in vec:
-            nid, pitch = self._note_id(note), self._note_pitch(note)
-            if nid is not None and pitch is not None:
-                sig[nid] = pitch
-        return sig
-
-    def _is_external_change(self, vec, expected: Optional[Dict[int, int]]) -> bool:
-        """A different id set, or a note repitched away from what we last
-        wrote, is the user's; an exact match is our own write."""
-        if expected is None:
-            return True
-        sig = self._pitch_signature(vec)
-        if len(sig) != len(expected):
-            return True
-        for nid, pitch in sig.items():
-            if nid not in expected or expected[nid] != pitch:
-                return True
-        return False
-
-    def _temp_attach(self, inst: _Instance, cs: _ClipState) -> None:
-        clip = cs.clip
-
-        def _on_loop_jump(cs=cs):
-            cs.temp_variation_pending = True
-
-        def _on_notes(cs=cs):
-            cs.temp_notes_changed = True
-
-        for attr, cb, slot in (("loop_jump", _on_loop_jump, "temp_loop_cb"), ("notes", _on_notes, "temp_notes_cb")):
-            add = getattr(clip, "add_%s_listener" % attr, None)
-            if not callable(add):
-                self._warn_once(inst.device_path, "temp:" + attr, "clip has no add_%s_listener" % attr)
-                continue
-            try:
-                add(cb)
-                setattr(cs, slot, cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(inst.device_path, "temp:" + attr, "add_%s_listener raised: %s" % (attr, e))
-
-    def _temp_detach(self, cs: _ClipState) -> None:
-        for attr, slot in (("loop_jump", "temp_loop_cb"), ("notes", "temp_notes_cb")):
-            cb = getattr(cs, slot)
-            if cb is None:
-                continue
-            setattr(cs, slot, None)
-            remove = getattr(cs.clip, "remove_%s_listener" % attr, None)
-            if not callable(remove):
-                continue
-            try:
-                remove(cb)
-            except _LOM_ERRORS:
-                pass
-
     # --- note + clip I/O ------------------------------------------------------------
 
     def _read_notes(self, inst: _Instance, clip, whole: bool = False):
@@ -1842,15 +1623,15 @@ class SequencerComponent:
         pitch (ADR-435): ``get_notes_extended(pitch, 1, …)`` where the
         clip offers that form, else the full read filtered; ``whole``
         reads past the pad's scope (its unmute, which must find the ids
-        the kit's Temperature moved off the pad). The full read tries
-        ``get_all_notes_extended`` with arguments first, then bare (older
-        builds and stubs; ClipNotesComponent's idiom). ``None`` when the
-        LOM raised."""
-        try:
-            length = float(getattr(clip, "length", 0.0)) or float(1 << 14)
-        except _LOM_ERRORS:
-            length = float(1 << 14)
+        the kit's Temperature moved off the pad). The full read is
+        ``_common.read_all_notes``, the bare call (the only form Live
+        accepts, measured on the rig 2026-11-25). ``None`` when the LOM
+        raised."""
         if inst.pad_note is not None and not whole:
+            try:
+                length = float(getattr(clip, "length", 0.0)) or float(1 << 14)
+            except _LOM_ERRORS:
+                length = float(1 << 14)
             try:
                 return clip.get_notes_extended(inst.pad_note, 1, 0.0, length)
             except (TypeError, AttributeError):
@@ -1858,16 +1639,9 @@ class SequencerComponent:
             except RuntimeError as e:
                 self._warn_once(inst.device_path, "notes_read", "get_notes_extended raised: %s" % e)
                 return None
-        try:
-            vec = clip.get_all_notes_extended(0, 128, 0.0, length)
-        except TypeError:
-            try:
-                vec = clip.get_all_notes_extended()
-            except _LOM_ERRORS as e:
-                self._warn_once(inst.device_path, "notes_read", "get_all_notes_extended raised: %s" % e)
-                return None
-        except _LOM_ERRORS as e:
-            self._warn_once(inst.device_path, "notes_read", "get_all_notes_extended raised: %s" % e)
+        vec, err = read_all_notes(clip)
+        if err is not None:
+            self._warn_once(inst.device_path, "notes_read", "get_all_notes_extended raised: %s" % err)
             return None
         if inst.pad_note is not None and not whole and vec is not None:
             vec = [n for n in vec if self._note_pitch(n) == inst.pad_note]
@@ -1889,25 +1663,9 @@ class SequencerComponent:
             self._warn_once(inst.device_path, "notes_apply", "apply_note_modifications raised: %s" % e)
             return False
 
-    @staticmethod
-    def _note_id(note) -> Optional[int]:
-        nid = getattr(note, "note_id", None)
-        if nid is None and isinstance(note, dict):
-            nid = note.get("note_id")
-        try:
-            return int(nid) if nid is not None else None
-        except (TypeError, ValueError):
-            return None
+    _note_id = staticmethod(note_id)
 
-    @staticmethod
-    def _note_pitch(note) -> Optional[int]:
-        p = getattr(note, "pitch", None)
-        if p is None and isinstance(note, dict):
-            p = note.get("pitch")
-        try:
-            return int(p) if p is not None else None
-        except (TypeError, ValueError):
-            return None
+    _note_pitch = staticmethod(note_pitch)
 
     @staticmethod
     def _note_probability(note) -> Optional[float]:
@@ -2117,12 +1875,7 @@ class SequencerComponent:
         except (_LOM_ERRORS, ValueError):
             return None
 
-    @staticmethod
-    def _safe_class_name(device) -> str:
-        try:
-            return getattr(device, "class_name", "") or ""
-        except _LOM_ERRORS:
-            return ""
+    _safe_class_name = staticmethod(safe_class_name)
 
     @staticmethod
     def _safe_bool(obj, attr: str) -> bool:
@@ -2146,11 +1899,8 @@ class SequencerComponent:
             return []
 
     def _warn_once(self, key: str, context: str, message: str) -> None:
-        k = (key, context)
-        if k in self._warned:
-            return
-        self._warned.add(k)
-        logger.warning("SequencerComponent %s: %s: %s", key, context, message)
+        if first_time(self._warned, (key, context)):
+            logger.warning("SequencerComponent %s: %s: %s", key, context, message)
 
     # --- lifecycle --------------------------------------------------------------------
 

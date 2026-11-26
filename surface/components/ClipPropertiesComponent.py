@@ -149,7 +149,14 @@ import math
 from typing import Callable, Dict, List, Optional, Tuple
 
 from . import path_resolver
+from .detail_clip import (
+    SCALAR_BOOL01, SCALAR_FLOAT, SCALAR_INT,
+    DetailClipWatch, encode_scalar, focus_path, parse_clip_arg,
+)
+from ._common import LOM_ERRORS
+from .component_util import parse_int_arg as _parse_int_arg
 from .LOMListeners import _is_stale_handle_error
+from .listener_bag import ListenerBag
 from .path_resolver import ResolveStatus
 
 logger = logging.getLogger("looping")
@@ -162,7 +169,7 @@ logger = logging.getLogger("looping")
 # Live has already torn down (focused clip deletion). It is not
 # importable at module scope in Live's bundled Python, so we catch
 # TypeError (its base) plus the pre-existing LOM error shapes.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum) -----------------------------------------
@@ -289,26 +296,22 @@ class ClipPropertiesComponent:
         self._focused_clip = None
         self._focused_path: Optional[str] = None
 
-        # ``attr_name -> bound callback`` for the per-clip property listeners
-        # on ``_focused_clip``. Empty when nothing is focused.
-        self._prop_listeners: Dict[str, Callable[[], None]] = {}
-        # ``attr_name -> callback`` for ``_WARP_ATTRS`` on a focused audio clip.
-        self._warp_listeners: Dict[str, Callable[[], None]] = {}
+        # The per-clip property listeners on ``_focused_clip``, tagged by
+        # attribute name. Empty when nothing is focused.
+        self._prop_listeners = ListenerBag(
+            "ClipPropertiesComponent", on_remove_error=self._warn_detach,
+        )
+        # The ``_WARP_ATTRS`` listeners on a focused audio clip.
+        self._warp_listeners = ListenerBag(
+            "ClipPropertiesComponent", on_remove_error=self._warn_detach,
+        )
 
         # ``(attr_name, context) -> True`` once warned, for de-dupe.
         self._warned: set = set()
 
         # Song-scoped detail_clip listener. Attach on ``song.view``.
-        self._view = self._safe_song_view()
-        self._detail_listener_attached = False
-        if self._view is not None:
-            try:
-                self._view.add_detail_clip_listener(
-                    self._on_detail_clip_changed,
-                )
-                self._detail_listener_attached = True
-            except _LOM_ERRORS as e:
-                self._warn_once("detail_clip", "attach", e)
+        self._detail = DetailClipWatch(self._song, self._on_detail_clip_changed, self._warn_once)
+        self._view = self._detail.view
 
         # If a clip is already focused at construction, seed everything.
         self._refocus()
@@ -319,12 +322,6 @@ class ClipPropertiesComponent:
 
     # --- song.view / detail_clip listener ---------------------------------
 
-    def _safe_song_view(self):
-        try:
-            return self._song.view
-        except _LOM_ERRORS as e:
-            self._warn_once("song.view", "read", e)
-            return None
 
     def _on_detail_clip_changed(self) -> None:
         """Fires when ``song.view.detail_clip`` changes.
@@ -342,11 +339,7 @@ class ClipPropertiesComponent:
         new_clip = self._read_detail_clip()
         new_path: Optional[str] = None
         if new_clip is not None:
-            try:
-                new_path = path_resolver.clip_path_for(self._song, new_clip)
-            except _LOM_ERRORS as e:
-                self._warn_once("clip_path_for", "refocus", e)
-                new_path = None
+            new_path = focus_path(self._song, new_clip, self._warn_once)
 
         # Detach from previous clip regardless of whether the new
         # clip resolves — a stale listener set on a gone clip leaks
@@ -367,37 +360,21 @@ class ClipPropertiesComponent:
             self._emit_warp_markers()
 
     def _read_detail_clip(self):
-        """Return ``song.view.detail_clip`` or ``None`` on any LOM quirk."""
-        if self._view is None:
-            return None
-        try:
-            clip = self._view.detail_clip
-        except _LOM_ERRORS as e:
-            self._warn_once("detail_clip", "read", e)
-            return None
-        return clip
+        """``song.view.detail_clip``, or ``None`` on any LOM quirk."""
+        return self._detail.read()
 
     # --- per-clip property listeners --------------------------------------
 
     def _attach_property_listeners(self, clip) -> None:
         """Attach a property listener per _ATTRS entry to ``clip``. Skip-with-warning per attr."""
         for attr_name in _ATTR_NAMES:
-            add = getattr(clip, "add_%s_listener" % attr_name, None)
-            if not callable(add):
-                self._warn_once(
-                    attr_name, "attach-missing",
-                    AttributeError(
-                        "no add_%s_listener on clip" % attr_name,
-                    ),
-                )
-                continue
-            cb = self._make_property_listener(attr_name)
-            try:
-                add(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(attr_name, "attach", e)
-                continue
-            self._prop_listeners[attr_name] = cb
+            self._prop_listeners.add(
+                clip, attr_name, self._make_property_listener(attr_name), tag=attr_name,
+                on_error=lambda e, a=attr_name: self._warn_once(a, "attach", e),
+                on_missing=lambda a=attr_name: self._warn_once(
+                    a, "attach-missing", AttributeError("no add_%s_listener on clip" % a),
+                ),
+            )
 
     def _detach_property_listeners(self) -> None:
         """Detach every currently-attached property listener.
@@ -407,42 +384,22 @@ class ClipPropertiesComponent:
         torn down we swallow the per-attr error; there is nothing
         to clean up anyway.
         """
-        clip = self._focused_clip
-        if clip is None:
-            self._prop_listeners.clear()
-            self._warp_listeners.clear()
-            return
-        for listeners in (self._prop_listeners, self._warp_listeners):
-            self._detach_from(clip, listeners)
+        self._prop_listeners.clear()
+        self._warp_listeners.clear()
 
-    def _detach_from(self, clip, listeners: Dict[str, Callable[[], None]]) -> None:
-        for attr_name in list(listeners.keys()):
-            cb = listeners.pop(attr_name, None)
-            if cb is None:
-                continue
-            remove = getattr(clip, "remove_%s_listener" % attr_name, None)
-            if not callable(remove):
-                continue
-            try:
-                remove(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(attr_name, "detach", e)
+    def _warn_detach(self, attr_name: str, exc: BaseException) -> None:
+        self._warn_once(attr_name, "detach", exc)
+
 
     def _attach_warp_listeners(self, clip) -> None:
         """Observe ``_WARP_ATTRS`` on an audio clip; a MIDI clip gets none."""
         if not self._is_audio_clip(clip):
             return
         for attr_name in _WARP_ATTRS:
-            add = getattr(clip, "add_%s_listener" % attr_name, None)
-            if not callable(add):
-                continue
-            cb = self._on_warp_changed
-            try:
-                add(cb)
-            except _LOM_ERRORS as e:
-                self._warn_once(attr_name, "attach", e)
-                continue
-            self._warp_listeners[attr_name] = cb
+            self._warp_listeners.add(
+                clip, attr_name, self._on_warp_changed, tag=attr_name,
+                on_error=lambda e, a=attr_name: self._warn_once(a, "attach", e),
+            )
 
     def _on_warp_changed(self) -> None:
         if self._disconnected:
@@ -918,33 +875,9 @@ class ClipPropertiesComponent:
     def _parse_clip_from_args(
         self, args, attr_name: str,
     ) -> Tuple[Optional[object], Optional[str]]:
-        """Resolve ``args[0]`` as a clipPath → clip object.
-
-        Returns ``(clip, path)`` on success, ``(None, None)`` on any
-        rejection (empty args, non-string path, resolve failure).
-        Logs a warning per rejection class.
-        """
-        if not args:
-            logger.warning(
-                "ClipPropertiesComponent set %s: empty args, ignoring",
-                attr_name,
-            )
-            return None, None
-        raw = args[0]
-        if not isinstance(raw, str):
-            logger.warning(
-                "ClipPropertiesComponent set %s: clipPath not a string: %r",
-                attr_name, raw,
-            )
-            return None, None
-        r = path_resolver.resolve_clip(self._song, raw)
-        if not r.ok:
-            logger.warning(
-                "ClipPropertiesComponent set %s: clipPath %r unresolved: %s "
-                "(%s)", attr_name, raw, r.status.value, r.detail,
-            )
-            return None, None
-        return r.obj, raw
+        """Resolve ``args[0]`` as a clipPath: ``(clip, path)``, or
+        ``(None, None)`` after a warning per rejection."""
+        return parse_clip_arg(self._song, args, "ClipPropertiesComponent", attr_name)
 
     def _parse_float_write(
         self, args, attr_name: str,
@@ -1038,26 +971,20 @@ class ClipPropertiesComponent:
         self._detach_property_listeners()
 
         # detail_clip listener on song.view.
-        if self._detail_listener_attached and self._view is not None:
-            try:
-                self._view.remove_detail_clip_listener(
-                    self._on_detail_clip_changed,
-                )
-            except _LOM_ERRORS as e:
-                if _is_stale_handle_error(e):
-                    logger.debug(
-                        "ClipPropertiesComponent detail_clip detach: "
-                        "stale LOM handle (already torn down): %s", e,
-                    )
-                else:
-                    logger.warning(
-                        "ClipPropertiesComponent detail_clip detach "
-                        "failed: %s", e,
-                    )
-            self._detail_listener_attached = False
+        self._detail.detach()
 
 
 # --- module helpers -------------------------------------------------------
+
+
+_SCALAR_FOR_WIRE: Dict[str, str] = {
+    _WIRE_FLOAT_NONNEG: SCALAR_FLOAT,
+    _WIRE_INT_WARP_MODE: SCALAR_INT,
+    _WIRE_BOOL01: SCALAR_BOOL01,
+    _WIRE_INT_PITCH_COARSE: SCALAR_INT,
+    _WIRE_INT_PITCH_FINE: SCALAR_INT,
+    _WIRE_FLOAT_GAIN: SCALAR_FLOAT,
+}
 
 
 def _encode_wire(wire_type: str, raw):
@@ -1066,46 +993,7 @@ def _encode_wire(wire_type: str, raw):
     Returns ``None`` if the value cannot be coerced. The wire shape
     is ``(clipPath, name, value)`` — a single scalar, not a tuple.
     """
-    if wire_type == _WIRE_FLOAT_NONNEG:
-        try:
-            return float(raw)
-        except (TypeError, ValueError):
-            return None
-    if wire_type == _WIRE_INT_WARP_MODE:
-        try:
-            return int(raw)
-        except (TypeError, ValueError):
-            return None
-    if wire_type == _WIRE_BOOL01:
-        try:
-            return 1 if bool(raw) else 0
-        except Exception:
-            return None
-    if wire_type == _WIRE_INT_PITCH_COARSE:
-        try:
-            return int(raw)
-        except (TypeError, ValueError):
-            return None
-    if wire_type == _WIRE_INT_PITCH_FINE:
-        try:
-            return int(raw)
-        except (TypeError, ValueError):
-            return None
-    if wire_type == _WIRE_FLOAT_GAIN:
-        try:
-            return float(raw)
-        except (TypeError, ValueError):
-            return None
-    return None
-
-
-def _parse_int_arg(args, index: int) -> Optional[int]:
-    if len(args) <= index:
-        return None
-    try:
-        return int(args[index])
-    except (TypeError, ValueError):
-        return None
+    return encode_scalar(_SCALAR_FOR_WIRE.get(wire_type), raw)
 
 
 def _parse_bool01_arg(args, index: int) -> Optional[bool]:

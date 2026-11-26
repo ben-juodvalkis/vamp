@@ -437,3 +437,65 @@ def test_mark_hot_after_disconnect_noop(wired_with_display):
     mut.disconnect()
     mut.mark_hot("tracks/0/devices/0/params/0")
     assert mut._hot_paths == {}
+
+
+# --- a write Live will not echo ---------------------------------------------
+
+
+def test_suppression_expires_unfired(wired, monkeypatch):
+    """A flag armed for an echo that never came does not swallow a real
+    change after ``SUPPRESS_TTL_SEC``."""
+    import components.MutationComponent as mc
+
+    _reg, mut, _song, t1, _t2, emits = wired
+    now = [1000.0]
+    monkeypatch.setattr(mc.time, "monotonic", lambda: now[0])
+    mut.arm_suppression(301)
+    now[0] += mc.SUPPRESS_TTL_SEC + 0.01
+    t1.devices[0].parameters[0].set_value(0.6)
+    v3 = [e for e in emits if e[0] == V3_PARAM_VALUE_ADDRESS]
+    assert len(v3) == 1 and v3[0][1][1] == pytest.approx(0.6)
+
+
+def test_suppression_inside_its_window_still_swallows(wired, monkeypatch):
+    import components.MutationComponent as mc
+
+    _reg, mut, _song, t1, _t2, emits = wired
+    now = [1000.0]
+    monkeypatch.setattr(mc.time, "monotonic", lambda: now[0])
+    mut.arm_suppression(301)
+    now[0] += mc.SUPPRESS_TTL_SEC / 2
+    t1.devices[0].parameters[0].set_value(0.6)
+    assert [e for e in emits if e[0] == V3_PARAM_VALUE_ADDRESS] == []
+
+
+def test_a_same_value_write_does_not_arm_and_the_next_change_echoes(wired):
+    """DevicesComponent writing the value a parameter already holds: Live
+    fires nothing, so arming would swallow the next real change."""
+    from components.DevicesComponent import DevicesComponent
+
+    _reg, mut, song, t1, _t2, emits = wired
+    devices = DevicesComponent(song=song, emit=lambda a, args: None)
+    devices.set_mutation(mut)
+    # value 0.25. StubParam's plain attribute write fires nothing, as Live
+    # does for an unchanged value.
+    param = t1.devices[0].parameters[0]
+    devices._write(param, 0.25, "test", 301)
+    assert mut._suppress == {}
+    param.set_value(0.9)  # a change from Live's own UI
+    v3 = [e for e in emits if e[0] == V3_PARAM_VALUE_ADDRESS]
+    assert len(v3) == 1 and v3[0][1][1] == pytest.approx(0.9)
+
+
+def test_a_changing_write_still_arms(wired):
+    from components.DevicesComponent import DevicesComponent
+
+    _reg, mut, song, _t1, _t2, _emits = wired
+    devices = DevicesComponent(song=song, emit=lambda a, args: None)
+    devices.set_mutation(mut)
+
+    class _P:
+        value, min, max = 0.25, 0.0, 1.0
+
+    devices._write(_P(), 0.5, "test", 301)
+    assert 301 in mut._suppress

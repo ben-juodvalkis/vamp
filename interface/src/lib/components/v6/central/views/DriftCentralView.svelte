@@ -2,6 +2,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import { useDeviceProperties } from '$lib/components/v6/central/useDeviceProperties.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
@@ -284,12 +285,8 @@
     );
   }
 
-  let voiceMode = $derived<number>((devicePath ? selectedTrackStore.propertyValue(devicePath, 'voice_mode_index') as number | undefined : undefined) ?? 0);
-
-  $effect(() => {
-    if (!devicePath) return;
-    return selectedTrackStore.subscribeProperty(devicePath, 'voice_mode_index');
-  });
+  const deviceProps = useDeviceProperties(() => devicePath, ['voice_mode_index']);
+  let voiceMode = $derived(deviceProps.get('voice_mode_index', 0));
 
   /**
    * Drift's modulation sources, matrix targets and voice count: device

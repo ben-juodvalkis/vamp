@@ -86,6 +86,7 @@ import re
 import time
 from typing import Callable, Optional, Tuple
 
+from ._common import coerce_str, LOM_ERRORS
 from . import alc_resolver
 from .TrackMetadataComponent import (  # ADR-439: written here, on a load's ack path
     TRACK_PRESET_DATA_KEY,
@@ -103,7 +104,7 @@ logger = logging.getLogger("looping")
 # Tuple of exceptions every LOM touch must catch. ``TypeError`` covers
 # ``Boost.Python.ArgumentError`` (TypeError subclass) raised when a
 # C++ handle is torn down — see CLAUDE.md merge-gate rule (9).
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # LOM identity helper. Resolved at import time with a graceful fallback
@@ -163,15 +164,7 @@ _LRU_MAX_ENTRIES = 64
 _LRU_TTL_SECONDS = 30.0
 
 
-def _coerce_str(x) -> str:
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 def _is_alc(path: str) -> bool:

@@ -209,12 +209,15 @@ Touch-first (iPad Safari).
 - **Hold a folder → load a random preset** from it (`adapter.getRandomPreset`, a
   uniform pick over the whole subtree). **Lock** keeps the browser open
   after a load; otherwise it closes once the pick has been read (below).
-  - `HOLD_TO_RANDOM_MS` is **500ms**. It was 200ms — a bare tap/press
+  - The gesture is `useHoldPick.svelte.ts` (`HoldPick`), on `use:press` for
+    folder tiles and section headers alike. The hold is `HOLD_MS` from
+    `actions/pressMachine` (**500ms**; the component's own
+    `HOLD_TO_RANDOM_MS` until 2026-11-25). It was 200ms — a bare tap/press
     discriminator — and at that length a progress bar is a flicker, so it wore a
     charge *ring* instead. 500ms is long enough to be read as a gauge, so it now
     takes the **same rising `.hold-fill`** as ClipCentralView's 800ms Delete /
     Replace Inst / Dup Trk gates. One hold idiom across the app rather than two.
-  - **The pick is rolled at pointerdown, not at the fire** (`pickRandomFor`), so
+  - **The pick is rolled at pointerdown, not at the fire** (`HoldPick.folderPress`), so
     its name can show on the tile *while the bar is still climbing*. That is what
     makes the 500ms a decision rather than a wait: you read what you're about to
     get and can still back out by lifting off early. The fire **awaits that same
@@ -226,12 +229,12 @@ Touch-first (iPad Safari).
     where the pick is unreadable in advance.
     Speculating on every folder press costs one catalog read that a drill-in
     needs anyway and is cached thereafter. An aborted press discards its pick
-    unused — `pickRandomFor` attaches a label-only `.then().catch()` purely so
+    unused — `folderPress` attaches a label-only `.then().catch()` purely so
     that discard can't surface as an unhandled rejection; the real error still
     reaches `loadRandomFromFolder`, which awaits the pick and owns the banner.
   - **Charge** (`.folder-tile.charging`): mounts a `.hold-fill` that climbs the
     tile bottom-to-top over exactly the hold window (duration bound inline from
-    `HOLD_TO_RANDOM_MS`, so motion and timer cannot drift) and lands full on the
+    `HOLD_MS`, so motion and timer cannot drift) and lands full on the
     fire. `forwards`, so the filled look survives the async pick instead of
     dropping back for a frame. The label carries `z-index: 1` so the rising fill
     passes behind it rather than swallowing it. Three labels compete on the tile,
@@ -240,19 +243,21 @@ Touch-first (iPad Safari).
     `clearCharge()` retires the fill and the speculative label together — they
     must never outlive each other, or a tile is left named after a preset it
     never loaded.
-    The charge **outlives the finger**: `endFolderPress` clears it only when
-    the press ended *before* the fire. Releasing the moment the bar completes
+    The charge **outlives the finger**: a release clears it only when the
+    press ended *before* the fire (`info.held` false). Releasing the moment the bar completes
     is the normal way to use the gesture — the fill topping out is the cue to
     let go — and the pick may still be awaiting a cold catalog fetch, so
     clearing on release would empty the tile before the reveal lands.
-    `cancelFolderPress` (`pointerleave`/`pointercancel`) follows the same rule —
-    past the fire the pick is committed and still owns the tile, and a finger
-    drifting off a tile edge mid-hold is ordinary on iPad, not an abort.
+    A cancel (a pan the browser claims) or 12px of travel follows the same
+    rule — past the fire the pick is committed and still owns the tile;
+    before it the press aborts with no tap. Drifting off a tile's edge is
+    not an abort by itself (the hand-rolled `pointerleave` handler went with
+    the move to `use:press`).
     The catch this creates: re-pressing a tile that is still charging assigns
     `chargingFolder` the value it already holds, which toggles no class and
     would leave a `forwards` fill parked at its end state — so that one path
     (and only that one) nulls it and re-arms on the next frame.
-  - **Press token** (`pressToken`): `getRandomPreset` awaits a possibly-cold
+  - **Press token** (`HoldPick`'s token, `hold.owns(token)`): `getRandomPreset` awaits a possibly-cold
     `/api/places/<id>.json`, so a press can resolve long after the finger moved on.
     Hold A past the fire, release, press B, and A's late resolution would wipe
     B's charge and label the screen with A's pick. Every visual write in
@@ -261,7 +266,7 @@ Touch-first (iPad Safari).
     is what that asks for. Same guard `loadCurrentLevel` uses (`navToken`).
   - **Reveal** (`.folder-tile.picked`): the held tile takes the preset grammar
     and its label becomes the preset that loaded, for `PRESET_REVEAL_MS` (750ms,
-    declared in the component beside `HOLD_TO_RANDOM_MS`). **This is the payoff
+    declared in the component). **This is the payoff
     of the gesture** — a random pick is the one choice you cannot know in
     advance — so on the random path, and only there, the browser waits out this
     window before closing (`handlePostLoad(PRESET_REVEAL_MS)`). One constant
@@ -272,7 +277,7 @@ Touch-first (iPad Safari).
   - **Hold a section header → a random preset from that section** (2026-09-24,
     the user's call). The grouped screen's headers (ADR-403, full-width and
     packed alike — one `sectionHead` snippet) take the same gesture: the same
-    `HOLD_TO_RANDOM_MS` fill climbing the header, the pick in the header's name
+    `HOLD_MS` fill climbing the header, the pick in the header's name
     slot (count hidden) while it climbs and through the reveal, and the same
     `loadRandomFromFolder` → `commitPresetLoad(preset, PRESET_REVEAL_MS)` tail,
     so lock, replace mode and the linger behave identically. Three differences,
@@ -287,10 +292,10 @@ Touch-first (iPad Safari).
       actually loaded, so one ring is on screen; a lift before the fire hands
       it back). On iPad the finger holding the header covers the header's
       label — the tile is the readable half.
-    - **`use:press` (ADR-427), not the folder tile's hand-rolled handlers:**
-      `onDown` rolls and charges, `onHold` fires, and a release before the hold,
-      a pan the browser claims, or 12px of travel aborts. A tap on a header
-      still does nothing. The packed cell's header is `position: relative`
+    - **A tap on a header does nothing** (a folder tile's drills in). Both
+      run on `use:press` (ADR-427): `onDown` rolls and charges, `onHold`
+      fires, and a release before the hold, a pan the browser claims, or
+      12px of travel aborts. The packed cell's header is `position: relative`
       (was `static`) so the fill anchors to it rather than the band.
 - **Optimistic close.** A committed pick closes the browser without waiting for
   Live. `commitPresetLoad` closes first and awaits afterwards.
@@ -325,7 +330,10 @@ Touch-first (iPad Safari).
   squares. (The type catalogs' `×N` grouped-variant badge went with them.)
 - Cross-column drag is gone (no columns). Scale/Key mode is opened externally via
   `browserModeStore.isScalePersistent`, not a rail button.
-- Key mode carries a **Detect key** button in the bar controls (ADR-446): it sends
+- Key mode is `ScalePicker.svelte` (the Detected strip, roots, scales) and
+  `ScaleKeyControls.svelte` (Following / Locked and Detect, in the bar),
+  sharing the request state in `keyDetect.svelte.ts`. It carries a
+  **Detect key** button in the bar controls (ADR-446): it sends
   `/looping/v3/session/scale/detect [1]`, the surface reads the launched clips,
   decides the key by votes and sets it, and the answer (`session.scaleDetected`)
   draws a *Detected* strip above the roots — key, band, `· set`, the runner-up as
@@ -471,7 +479,7 @@ Pure/stateless helpers, unit-tested under `src/__tests__/unit/utils/`:
 | `drillDownModel.ts` | **Pure.** `screenKind` (folders vs presets vs categories), `buildCrumbs` / `pathForCrumb` (breadcrumb math), `replaceLanding` (ADR-441 — what a replace-instrument open does with its catalog answer: `land` on the patch's folder, `reskin` a pane that was among samples back to the Place's presets, or `none`), `railBands` (the rail's three bands over Recent + the Places), `computeGridLayout` — the shared adaptive tile-grid solver (picks column count for comfortable, roughly-square, fully-packed tiles that fill the stage and scroll only when they'd shrink below the min tap size) — plus the ADR-403 pair: `groupPresetsByOrigin` (recovers each flattened preset's origin subfolder from its `path`, right-anchored non-contiguous match of `currentPath`; loose bucket first, named groups alpha) and `computeGroupedGridLayout` (sectioned variant of the grid solver, identical scoring/weights so grouped tiles match plain-grid tiles exactly in the scrolling regime), `packGroupedSections` (ADR-409 — bins sections into `full`/`packed` row-bands so small sections share a row; big sections keep their own), and the ADR-404 windowing set: `computeVisibleWindow` / `computeGroupedVisibleWindow` (row window + spacer pads from the solver's exact geometry; grouped variant also collapses whole off-screen sections and always keeps a partially-visible section's sticky header renderable) with `windowsEqual` / `groupedWindowsEqual` (skip state writes when the window didn't move). Tested — including the invariant that windowed DOM height equals full-render height at every scroll position. |
 | `presetLoader.ts` | Preset load orchestration: `TrackPrepManager`, `loadPresetWithVariant`, `loadAudioClipFromPath`, `replaceAudioClip`. A sample or clip picked in a Place is colored audio with no role (`audio: true`); a preset passes its Place's role (`placeRole`); a Recent sample replay is colored from its own path. **Prep on commit (ADR-397):** `selectCategory` marks ready without prepping; `preprepForCurrentMode` preps a landing-pad track for MIDI/Simpler modes (`prepareTrack('instrument')`) on each drill-from-root (`enterFolder`) and each switch tap (`setBrowseMode`) — liberal by design, since Python's create-or-reuse reuses an empty track and only creates a fresh one once the prepped one is dirtied. Audio mode + folder-less roots + Recent still prep at load time. `loadTarget` (the Simpler vs Audio arm of the browse switch) branches a picked sample: `clip` → `loadAudioClipFromPath` (raw → `prepareForPreset('audio','')` + `clip/load_file`; `.alc` → `prepareForPreset('audio', alcPath)`, Browser creates the clip's track, metadata preserved — ADR-394) then adds to Recent; `simpler` → `loadCaptureIntoSimpler` (a Simpler inserted on a fresh MIDI track; auto-adds to Recent). Recent audio entries carry `loadTarget` so re-selection replays them identically. |
 | `vendorModel.ts` | **Pure.** Vendor lookups (`findVendorById` / `findVendorByVendorId`), `BrowserVendor`, `VENDOR_BUTTON_INDEX_OFFSET`, `SPECIAL_BUTTON_TYPES`. Tested. |
-| *(deleted)* `revealController.ts` | Held the reveal-then-close timer. Retired with the optimistic close — there is no delay left to own, and its `scrollPresetIntoView` had already been dead (it queried an attribute nothing emits; see the code-quality audit). `PRESET_REVEAL_MS` moved into the component beside `HOLD_TO_RANDOM_MS`. |
+| *(deleted)* `revealController.ts` | Held the reveal-then-close timer. Retired with the optimistic close — there is no delay left to own, and its `scrollPresetIntoView` had already been dead (it queried an attribute nothing emits; see the code-quality audit). `PRESET_REVEAL_MS` moved into the component. |
 
 ## Stores
 
@@ -494,13 +502,16 @@ projection (`get browseMode` / `setBrowseMode`): `midi`↔instruments,
 ## Grid layout
 
 `computeGridLayout` is the single source of truth for BOTH folder and preset grids.
-The component measures the stage (`ResizeObserver`) and feeds width/height/count +
-comfort constraints; the solver returns `{ columns, rows, scrolls, tileWidth,
-tileHeight }`, applied via `--cols` / `--tile-h`.
+The component measures the stage (`ResizeObserver`) and feeds the stage size and
+the screen's counts to `browserGridLayout` (drillDownModel), which picks the
+solver and the comfort constraints; the solver returns `{ columns, rows,
+scrolls, tileWidth, tileHeight }`, applied via `--cols` / `--tile-h`. The tile
+gap, padding and header sizes are `BROWSER_GRID` there. Row windowing is
+`useVirtualWindows.svelte.ts` (`VirtualWindows`), fed the same geometry.
 
-Two comfort profiles live in the component: `FOLDER_COMFORT` (`minTile` 150,
+Two comfort profiles live in drillDownModel: `FOLDER_COMFORT` (`minTile` 150,
 `minTileHeight` 110) for the folder grid, and the denser `PRESET_COMFORT`
-(`minTile` 112, `minTileHeight` 78) for preset grids — a leaf can hold thousands
+(`minTile` 112, `minTileHeight` 92) for preset grids — a leaf can hold thousands
 of patches, so scan density beats tile size there. Both use `targetAspect` 1.5.
 The preset floors are what `.preset-tile`'s tighter padding and `.tile-name`'s
 `clamp()` floor are sized against; move one and re-check the others.

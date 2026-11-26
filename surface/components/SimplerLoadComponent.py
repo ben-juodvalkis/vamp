@@ -48,6 +48,8 @@ from typing import Callable, Dict, Optional, Tuple
 from . import alc_resolver
 from . import path_resolver
 from . import sample_normalize
+from ._common import LOM_ERRORS, coerce_str
+from .component_util import begin_undo_step, emit_error, end_undo_step
 from .drum_vm_functions import DEVICE_TYPE_INSTRUMENT, DEVICE_TYPE_MIDI_EFFECT, device_type
 
 logger = logging.getLogger("looping")
@@ -111,9 +113,8 @@ V3_ERROR_REPLACE_SAMPLE_FAILED = "replace-sample-failed"
 SIMPLER_DEVICE_NAME = "Simpler"
 
 
-
 # Tuple of exceptions every LOM touch catches. Same as DeviceLoadComponent.
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 class SimplerLoadComponent:
@@ -518,20 +519,10 @@ class SimplerLoadComponent:
     def _begin_undo_step(self) -> bool:
         """Open an undo step; ``False`` when Live refused, so the caller
         does not close a step that never opened."""
-        try:
-            self._song.begin_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("SimplerLoadComponent: begin_undo_step raised %s: %s", type(e).__name__, e)
-            return False
-        return True
+        return begin_undo_step("SimplerLoadComponent", self._song)
 
     def _end_undo_step(self, began: bool) -> None:
-        if not began:
-            return
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning("SimplerLoadComponent: end_undo_step raised %s: %s", type(e).__name__, e)
+        end_undo_step("SimplerLoadComponent", self._song, began)
 
     def _apply_peak_normalization(self, simpler, file_path: str) -> None:
         """Peak-normalize the Simpler sample to -1 dBFS.
@@ -638,105 +629,58 @@ class SimplerLoadComponent:
         return str(file_path)
 
     def _find_track_index(self, clip_path: str) -> int:
-        """Parse ``tracks/<N>`` prefix out of a clip path.
+        """The ``N`` of a clip path's ``tracks/<N>`` prefix, or ``-1`` when
+        the path does not start with one or no such track is in the song.
 
-        Clip paths are ``tracks/<N>/slots/<M>/clip`` by grammar; the
-        ``tracks`` token + integer index is the cheapest way to get
-        the position index for ``create_midi_track``. We don't walk
-        ``song.tracks`` by identity because the path is already the
-        canonical index and this handler runs *before* the create, so
-        the index list hasn't shifted yet.
+        The path is already the canonical index and this runs *before*
+        the create, so the index list hasn't shifted yet; resolving it
+        (``path_resolver.resolve_track``) also rejects a stale clipPath
+        naming an index past the end of the track list.
         """
         parts = clip_path.split("/")
-        # Expected shape: ["tracks", "<N>", "slots", "<M>", "clip"].
-        # We also accept any longer prefix that starts with tracks/<N>
-        # for defensiveness; the only requirement is the first two
-        # segments.
         if len(parts) < 2 or parts[0] != "tracks":
             return -1
-        try:
-            idx = int(parts[1])
-        except (TypeError, ValueError):
+        track_path = "tracks/%s" % parts[1]
+        if not path_resolver.resolve_track(self._song, track_path).ok:
             return -1
-        if idx < 0:
-            return -1
-        # Verify the index is actually addressable in the current song
-        # before we hand it off to create_midi_track — avoids a
-        # non-obvious failure mode where a stale clipPath names an idx
-        # past the end of the track list.
-        try:
-            tracks_len = len(self._song.tracks)
-        except _LOM_ERRORS as e:
-            logger.warning(
-                "SimplerLoadComponent: song.tracks read raised: %s: %s",
-                type(e).__name__, e,
-            )
-            return -1
-        if idx >= tracks_len:
-            return -1
-        return idx
+        return int(parts[1])
 
     def _get_track_at(self, index: int):
         """Return ``song.tracks[index]`` or ``None`` on failure."""
-        try:
-            tracks = self._song.tracks
-        except _LOM_ERRORS as e:
-            logger.warning(
-                "SimplerLoadComponent: song.tracks read raised: %s: %s",
-                type(e).__name__, e,
-            )
+        if index < 0:
             return None
-        if index < 0 or index >= len(tracks):
-            return None
-        return tracks[index]
+        r = path_resolver.resolve_track(self._song, "tracks/%d" % index)
+        return r.obj if r.ok else None
 
     def _resolve_track_by_path(self, track_path: str):
-        """Resolve a ``tracks/<N>`` path to ``(track, index)``.
+        """Resolve a ``tracks/<N>`` path to ``(track, index)`` through
+        ``path_resolver.resolve_track``.
 
-        Returns ``(None, -1)`` and emits a typed error on any failure:
-        malformed shape, index out of range, LOM read raise.
+        Returns ``(None, -1)`` and emits ``track-index-unresolved`` on any
+        failure: ``index-out-of-range`` when the grammar holds but no such
+        track exists, ``expected tracks/<N>`` for anything else (a
+        malformed index, ``master``, a return, a longer path).
 
         Used by ``handle_replace_sample_onto_track`` when the caller
         already knows the target track's path (e.g. from
         ``prepareTrack('midi')`` in the UI).
         """
+        r = path_resolver.resolve_track(self._song, track_path)
         parts = track_path.split("/")
-        if len(parts) != 2 or parts[0] != "tracks":
-            self._emit_error(
-                V3_ERROR_TRACK_INDEX_UNRESOLVED,
-                path=track_path,
-                detail="expected tracks/<N>",
-                address=V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS,
-            )
-            return None, -1
-        try:
-            idx = int(parts[1])
-        except (TypeError, ValueError):
-            self._emit_error(
-                V3_ERROR_TRACK_INDEX_UNRESOLVED,
-                path=track_path,
-                detail="non-integer-index",
-                address=V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS,
-            )
-            return None, -1
-        if idx < 0:
-            self._emit_error(
-                V3_ERROR_TRACK_INDEX_UNRESOLVED,
-                path=track_path,
-                detail="negative-index",
-                address=V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS,
-            )
-            return None, -1
-        track = self._get_track_at(idx)
-        if track is None:
-            self._emit_error(
-                V3_ERROR_TRACK_INDEX_UNRESOLVED,
-                path=track_path,
-                detail="index-out-of-range",
-                address=V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS,
-            )
-            return None, -1
-        return track, idx
+        if r.ok and len(parts) == 2 and parts[0] == "tracks":
+            return r.obj, int(parts[1])
+        detail = (
+            "index-out-of-range"
+            if r.status is path_resolver.ResolveStatus.NOT_FOUND and parts[0] == "tracks"
+            else "expected tracks/<N>"
+        )
+        self._emit_error(
+            V3_ERROR_TRACK_INDEX_UNRESOLVED,
+            path=track_path,
+            detail=detail,
+            address=V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS,
+        )
+        return None, -1
 
     # --- dedupe helpers ---------------------------------------------------
 
@@ -832,42 +776,11 @@ class SimplerLoadComponent:
         address: str = V3_SIMPLER_REPLACE_SAMPLE_ADDRESS,
     ) -> None:
         """Emit ``/looping/v3/error [address, code, path, detail]``.
-
-        Same four-arg shape as DeviceLoadComponent. ``address`` defaults
-        to the clip-flow address so existing callers don't need to pass
-        it; the capture-flow handler threads
-        ``V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS`` through so its
-        errors correlate correctly on the UI side.
-        """
+        ``address`` defaults to the clip flow's; the capture flow passes its
+        own so its errors correlate on the UI side."""
         if self._disconnected:
             return
-        logger.warning(
-            "SimplerLoadComponent: emit error code=%r path=%r detail=%r address=%r",
-            code, path, detail, address,
-        )
-        try:
-            self._emit(
-                V3_ERROR_ADDRESS,
-                (address, code, path, detail),
-            )
-        except Exception as e:
-            logger.warning(
-                "SimplerLoadComponent: emit %s failed: %s",
-                V3_ERROR_ADDRESS, e,
-            )
+        emit_error("SimplerLoadComponent", self._emit, address, code, path, detail)
 
 
-def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; ``None`` → ``""``.
-
-    Mirrors ``DeviceLoadComponent._coerce_str``. Kept local so the
-    resolver pipeline doesn't pick up a cross-module dependency.
-    """
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str

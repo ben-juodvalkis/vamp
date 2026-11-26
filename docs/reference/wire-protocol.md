@@ -154,10 +154,10 @@ delivery rides on handshake accept (§5.5), not resync.
 
 | Address                                   | Dir     | Args                                                              | Semantics |
 | ----------------------------------------- | ------- | ----------------------------------------------------------------- | --------- |
-| `/looping/v3/devices/added`               | Surf→UI | `devicePath:string, name:string, className:string, generation:int` | Device insert hint. The full picture rides in the associated `state/full` or `state/invalidate`. |
-| `/looping/v3/devices/removed`             | Surf→UI | `devicePath:string, generation:int`                               | Device delete hint. |
-| `/looping/v3/tracks/added`                | Surf→UI | `trackPath:string, name:string, generation:int`                   | Track insert hint. |
-| `/looping/v3/tracks/removed`              | Surf→UI | `trackPath:string, generation:int`                                | Track delete hint. |
+| `/looping/v3/devices/added`               | —       | —                                                                 | **Retired.** Specified as a device insert hint; nothing sends it (no sender in `surface/`, the bridge or `owner/`, 2026-11-25) and the UI has no handler. Inserts arrive as `state/full` / `state/invalidate`. |
+| `/looping/v3/devices/removed`             | —       | —                                                                 | **Retired**, as `devices/added`. |
+| `/looping/v3/tracks/added`                | —       | —                                                                 | **Retired**, as `devices/added`. |
+| `/looping/v3/tracks/removed`              | —       | —                                                                 | **Retired**, as `devices/added`. |
 | `/looping/v3/track/has_arrangement_clips` | Surf→UI | `trackPath:string, flag:int(0\|1)`                                | `1` when `len(track.arrangement_clips) > 0`. Master / returns never emit this. |
 | `/looping/v3/track/set_role`              | UI→Surf | `trackPath:string, role:string`                                   | **3.7.0.** Record the rail this track's instrument was loaded from (`"drum"`, `"perc"`, `"bass"`, …). Persisted by Live in the track's own key-value store (`Track.set_data`), so it survives save/reload and a track duplicate — the UI no longer re-derives it each session from a 2.46 MB catalog fetch. `""` clears it (Live's store has no delete: writing `None` stores `None`, so both `""` and `None` read back as "no role"). **No generation gate** — a role is recorded *by* the load that just happened, not echoed back by a client, and the write rides the prepare-ack path where a generation advance is already in flight. Master and returns are refused (`path-not-supported`): they carry no instrument, so no rail. Errors: `write-rejected` (arg-count, or the LOM raised — e.g. a pre-12 Live with no data store, in which case the UI degrades to its catalog fallback), `path-not-found`. |
 | `/looping/v3/track/role`                  | Surf→UI | `trackPath:string, role:string`                                   | **3.7.0.** Write-path echo of the above. Cold-start value rides the T record; this is the mid-session update. |
@@ -1062,6 +1062,31 @@ pointer-id targets. They keep their v2 arg shapes; only the
 track mute/solo/arm, send volumes, master volume, and
 `song.view.selected_track` writes all live here.
 
+One row per family. The attribute addresses are **bidirectional**: the
+UI writes the address and the surface's listener echoes the same
+address and args (on change, on its init-emit and on handshake accept).
+
+| Address | Dir | Args | Owner · semantics |
+| ------- | --- | ---- | ----------------- |
+| `/looping/v3/session/{is_playing, metronome, session_record, loop}` | both | `0\|1` | `SessionComponent`. Transport, metronome, session overdub, arrangement loop. |
+| `/looping/v3/session/{loop_start, loop_length}` | both | `beats:float` | `SessionComponent`. Live's loop is start + length; the UI's store keeps start + end and converts. |
+| `/looping/v3/session/{signature_num, signature_den}` | both | `int` | `SessionComponent`. Numerator 1..99; denominator one of 1, 2, 4, 8, 16. The two halves travel separately. |
+| `/looping/v3/session/{scale_root, scale_name, scale_mode}` | both | `int 0..11` · `string` · `0\|1` | `SessionComponent` (writes of root and name go through `KeyDetectComponent`, below). `scale_name` is one of Live's 35 names. |
+| `/looping/v3/session/groove_amount` | both | `float 0..1` | `SessionComponent`. The global groove amount. |
+| `/looping/v3/session/{play_cmd, stop_cmd, continue_cmd}` | UI→Surf | none | `SessionComponent`. `song.start_playing` / `stop_playing` / `continue_playing`; the result comes back on `is_playing`. |
+| `/looping/session/tempo` | both | `bpm:float` | `SessionComponent`. The one pre-v3 address still on the wire (legacy name, kept for wire compatibility); 20..999, validate-and-reject, one-shot echo suppression for a drag. |
+| `/looping/v3/track/{name, color, arm, mute, solo, pan, volume}` | both | `trackPath:string, value` | `TrackMetadataComponent`. Regular tracks only (`master` / `returns/<N>` → `path-not-supported`). `color` is `0xRRGGBB`; `arm`/`mute`/`solo` `0\|1`; `pan` −1..1; `volume` the mixer's 0..1. Value changes; no generation advance. |
+| `/looping/v3/track/{input_routing_type, input_routing_channel}` | both | `trackPath:string, displayName:string` | `TrackMetadataComponent`. Live's routing display names; an unknown one is `write-rejected` (`invalid-routing`). |
+| `/looping/v3/track/send` | UI→Surf | `trackPath:string, sendIndex:int, value:float` | `TrackMetadataComponent`. Write-only (`mixer_device.sends[N].value`); no echo. |
+| `/looping/v3/track/meter` | Surf→UI | `trackPath:string, left:float, right:float` | `MetersComponent`. Output meters, 30 Hz per track, drop-intermediate; no generation. |
+| `/looping/v3/master/{name, color, volume, pan, mute}` | both | `value` (no path: master is a singleton) | `MasterComponent`. `master.mute` raises in Live 12; the surface guards it. |
+| `/looping/v3/master/meter` | Surf→UI | `left:float, right:float` | `MetersComponent`. As `track/meter`. |
+| `/looping/v3/selected_track` | Surf→UI | `trackPath:string` | `SelectedTrackComponent`. Live's selected track (`tracks/<N>` or `master`; returns are not emitted). The UI's optimistic selection drops a stale echo for an earlier tap. |
+| `/looping/v3/selected_scene` | Surf→UI | `sceneIndex:int` | `SelectedTrackComponent`. Live's selected scene. |
+| `/looping/v3/selected_clip` | UI→Surf | `trackPath:string, sceneIndex:int` | `SelectedTrackComponent`. Highlights that clip slot (`song.view.highlighted_clip_slot`) and reveals its clip; the answer is `selected_scene`. Errors on `/looping/v3/error`. |
+| `/looping/v3/view/focus` | UI→Surf | `viewName:string` | `ViewComponent`. `application.view.focus_view`; one of Live's `available_main_views`, anything else `write-rejected`. Fire-and-forget. |
+| `/looping/v3/clip/duplicate_region` | UI→Surf | `slotPath:string` | `ClipsComponent`. Doubles the looped region inside the slot's MIDI clip, in place. |
+
 **Global launch quantization** (2026-07-27, ADR-411) joins the same
 `SessionComponent` attr family:
 
@@ -1773,8 +1798,8 @@ source (§2.8): a tile names a native device instead of a preset file; arities
 are unchanged. 3.11.0 (2026-09-26) is the loads that name their Place
 (§2.8, §2.9): two optional trailing args on `prepare_for_preset` and
 `device/load`; record arities are unchanged.
-Kept in lockstep with `DebugComponent.PROTOCOL_VERSION` and
-`SurfaceHelloComponent.PROTOCOL_VERSION`.
+`DebugComponent.PROTOCOL_VERSION` and
+`SurfaceHelloComponent.PROTOCOL_VERSION` are derived from its head.
 
 **Negotiating down is nominal for anything that reads `state/full`.**
 The web UI therefore advertises `["3.13.0"]` alone: against an older

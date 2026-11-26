@@ -7,6 +7,7 @@
 	import { startPlacesLive, openSettingsOnFirstRun } from '$lib/services/placesLive';
 	import { watchEffectSources } from '$lib/services/effectSources.svelte';
 	import { openSettingsFromHash } from '$lib/stores/v6/settingsStore.svelte';
+	import { logger } from '$lib/utils/logger';
 
 	// Import client without auto-connect
 	import { connectToLive } from '$lib/api/simpleClient';
@@ -58,90 +59,102 @@
 		noteReactiveTick();
 	});
 
-	// Initialize theme store and WebSocket connection on mount
-	onMount(async () => {
-		// Theme manager auto-initializes in its constructor
-		// Just ensure it's imported for initialization
+	// Initialize theme store and WebSocket connection on mount.
+	//
+	// The listeners registered once the socket is up (the settings hash, the
+	// dev debug shortcut) push their removal onto `cleanups`, and the one
+	// function onMount returns runs them all, so no listener outlives the
+	// layout and nothing is parked on `globalThis` to find later. onMount
+	// itself stays synchronous: an async onMount returns a Promise, which
+	// Svelte cannot use as a teardown.
+	onMount(() => {
+		const cleanups: Array<() => void> = [];
+		let disposed = false;
 
-		showPerf = new URLSearchParams(window.location.search).get('perf') === '1';
+		void (async () => {
+			// Theme manager auto-initializes in its constructor
+			// Just ensure it's imported for initialization
 
-		// Start WebSocket connection and wait for it to establish
-		await connectToLive();
+			showPerf = new URLSearchParams(window.location.search).get('perf') === '1';
 
-		// Client-side watchdog: reports tab visibility changes, rAF stalls,
-		// and network flips to bridge.log. Safe to start post-connect — if
-		// the socket drops, send() queues and flushes on reconnect.
-		startClientWatchdog();
+			// Start WebSocket connection and wait for it to establish
+			await connectToLive();
+			if (disposed) return;
 
-		// Drive the reactivity probe. setInterval keeps running as long
-		// as the event loop is alive, so a diverging counter isolates a
-		// dead effect scheduler from a dead tab.
-		probeTimer = window.setInterval(() => {
-			reactiveProbe = noteSchedulerTick();
-		}, 1000);
+			// Client-side watchdog: reports tab visibility changes, rAF stalls,
+			// and network flips to bridge.log. Safe to start post-connect — if
+			// the socket drops, send() queues and flushes on reconnect.
+			startClientWatchdog();
 
-		// Now that WebSocket is connected, initialize stores and services that need it
-		// Note: devicesStoreV6 removed - selectedTrackStore receives updates automatically via simpleClient routing
-		console.log('[+layout] WebSocket connected - selectedTrackStore will receive updates automatically');
+			// Drive the reactivity probe. setInterval keeps running as long
+			// as the event loop is alive, so a diverging counter isolates a
+			// dead effect scheduler from a dead tab.
+			probeTimer = window.setInterval(() => {
+				reactiveProbe = noteSchedulerTick();
+			}, 1000);
 
-		// Initialize all services (including instrument display coordinator)
-		console.log('[+layout] Initializing all services...');
-		initializeAllServices();
+			// Now that WebSocket is connected, initialize stores and services that need it
+			// Note: devicesStoreV6 removed - selectedTrackStore receives updates automatically via simpleClient routing
+			logger.debug('WebSocket connected - selectedTrackStore will receive updates automatically', { component: '+layout' });
 
-		// The Places catalog's freshness stream from the Mac, and the
-		// first-run verdict: with nothing saved there, Settings opens by
-		// itself as the onboarding checklist (onboarding.plan.md §7).
-		startPlacesLive();
-		watchEffectSources();
-		void openSettingsOnFirstRun();
+			// Initialize all services (including instrument display coordinator)
+			logger.debug('Initializing all services...', { component: '+layout' });
+			initializeAllServices();
 
-		// `#settings[/<section>]` opens Settings: Vamp for Mac's "Settings…"
-		// (ADR-520). Cleared once read, so the next one changes the hash again.
-		const settingsFromHash = () => {
-			if (openSettingsFromHash(window.location.hash)) {
-				history.replaceState(history.state, '', window.location.pathname + window.location.search);
-			}
-		};
-		settingsFromHash();
-		window.addEventListener('hashchange', settingsFromHash);
+			// The Places catalog's freshness stream from the Mac, and the
+			// first-run verdict: with nothing saved there, Settings opens by
+			// itself as the onboarding checklist (onboarding.plan.md §7).
+			startPlacesLive();
+			watchEffectSources();
+			void openSettingsOnFirstRun();
 
-		// ROW 13a (2026-04-21): clipStateStore.requestRefresh() deleted —
-		// empty-track / filter state now $derives from v3Store.tracks,
-		// which is seeded by the handshake-accept state/full emission.
-
-		// Removed: Fire button long hold audio track prep
-		// Audio track preparation now handled by Audio button in GestureBrowser sidebar
-
-		// Setup debugging tools (auto-start in dev mode)
-		if (import.meta.env.DEV) {
-			console.log('[Debug] 🔧 Development mode - enabling freeze detection');
-			
-			// Add global debugging functions to window for manual inspection
-			(globalThis as any).debugFreeze = () => {
-				console.log(freezeDetector.generateReport());
-				return freezeDetector.getMetrics();
-			};
-			
-			console.log('[Debug] 💡 Use debugFreeze() in the console to inspect performance');
-			
-			// Add keyboard shortcut for quick debug (Ctrl+Shift+D)
-			const handleKeyDown = (event: KeyboardEvent) => {
-				if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-					event.preventDefault();
-					console.log('=== QUICK DEBUG REPORT (Ctrl+Shift+D) ===');
-					(globalThis as any).debugFreeze();
+			// `#settings[/<section>]` opens Settings: Vamp for Mac's "Settings…"
+			// (ADR-520). Cleared once read, so the next one changes the hash again.
+			const settingsFromHash = () => {
+				if (openSettingsFromHash(window.location.hash)) {
+					history.replaceState(history.state, '', window.location.pathname + window.location.search);
 				}
 			};
-			
-			window.addEventListener('keydown', handleKeyDown);
+			settingsFromHash();
+			window.addEventListener('hashchange', settingsFromHash);
+			cleanups.push(() => window.removeEventListener('hashchange', settingsFromHash));
 
-			// Cleanup keyboard listener (store reference for onDestroy)
-			(globalThis as any).__debugKeydownCleanup = () => {
-				window.removeEventListener('keydown', handleKeyDown);
-			};
-		}
+			// ROW 13a (2026-04-21): clipStateStore.requestRefresh() deleted —
+			// empty-track / filter state now $derives from v3Store.tracks,
+			// which is seeded by the handshake-accept state/full emission.
+
+			// Setup debugging tools (auto-start in dev mode)
+			if (import.meta.env.DEV) {
+				logger.debug('Development mode - enabling freeze detection', { component: '+layout' });
+
+				// Add global debugging functions to window for manual inspection
+				(globalThis as any).debugFreeze = () => {
+					logger.debug(freezeDetector.generateReport(), { component: '+layout' });
+					return freezeDetector.getMetrics();
+				};
+
+				logger.debug('Use debugFreeze() in the console to inspect performance', { component: '+layout' });
+
+				// Add keyboard shortcut for quick debug (Ctrl+Shift+D)
+				const handleKeyDown = (event: KeyboardEvent) => {
+					if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+						event.preventDefault();
+						logger.debug('=== QUICK DEBUG REPORT (Ctrl+Shift+D) ===', { component: '+layout' });
+						(globalThis as any).debugFreeze();
+					}
+				};
+
+				window.addEventListener('keydown', handleKeyDown);
+				cleanups.push(() => window.removeEventListener('keydown', handleKeyDown));
+			}
+		})();
+
+		return () => {
+			disposed = true;
+			for (const cleanup of cleanups) cleanup();
+		};
 	});
-	
+
 	// Cleanup on component destroy
 	onDestroy(() => {
 		if (probeTimer !== null) {
@@ -158,8 +171,6 @@
 		// Clean up debugging tools
 		if (import.meta.env.DEV) {
 			freezeDetector.stop();
-			// Clean up keyboard listener if it was registered
-			(globalThis as any).__debugKeydownCleanup?.();
 		}
 	});
 </script>

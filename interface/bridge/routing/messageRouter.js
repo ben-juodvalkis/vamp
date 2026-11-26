@@ -3,7 +3,7 @@
  *
  * Routes messages to appropriate backends based on OSC address patterns:
  * - Python Control Surface - addresses listed in `osc.backendScope.pythonSurface`
- *   in constants.json, plus the `/live/*` family (AbletonOSC legacy names the
+ *   (handed in through `configureRouting`), plus the `/live/*` family (AbletonOSC legacy names the
  *   surface still answers) routed via the explicit scope entries
  * - looping-recorder - addresses listed in `osc.backendScope.loopingRecorder`
  * - MIDI Converter - `/midi/*`
@@ -27,13 +27,13 @@
  */
 
 const { logger } = require('../utils/logger');
-const { loadConstants } = require('../utils/constants');
 
 // --- backendScope: opt-in overrides of the default prefix routing ---------
 //
-// Loaded once at module require time from constants.json. A missing
-// file or missing `backendScope` section is treated as "no overrides"
-// — the router still works, just with the pre-Gate-1 prefix rules.
+// Handed in once by the orchestrator (`configureRouting`, from the config it
+// loaded: constants.json with constants.local.json laid over it) rather than
+// read here when the file is required. A test hands in its own. Until it is
+// configured nothing routes: every address is 'none', logged once.
 //
 // Entry forms (Gate 5+):
 //   - exact literal address, e.g. `/looping/protocol/version`
@@ -49,34 +49,46 @@ const { loadConstants } = require('../utils/constants');
  * @typedef {{ exact: Set<string>, prefixes: string[] }} BackendScope
  */
 
-/** @param {string} backendName @returns {BackendScope} */
-function loadBackendScope(backendName) {
-    try {
-        const constants = loadConstants();
-        const entries = (constants.osc && constants.osc.backendScope && constants.osc.backendScope[backendName]) || [];
-        /** @type {string[]} */
-        const exact = [];
-        /** @type {string[]} */
-        const prefixes = [];
-        for (const entry of entries) {
-            if (typeof entry !== 'string') continue;
-            if (entry.endsWith('*')) {
-                prefixes.push(entry.slice(0, -1));
-            } else {
-                exact.push(entry);
-            }
+/** @param {unknown} entries @returns {BackendScope} */
+function compileScope(entries) {
+    /** @type {string[]} */
+    const exact = [];
+    /** @type {string[]} */
+    const prefixes = [];
+    for (const entry of Array.isArray(entries) ? entries : []) {
+        if (typeof entry !== 'string') continue;
+        if (entry.endsWith('*')) {
+            prefixes.push(entry.slice(0, -1));
+        } else {
+            exact.push(entry);
         }
-        return { exact: new Set(exact), prefixes };
-    } catch (e) {
-        logger.warn(`messageRouter: could not load backendScope.${backendName} from constants.json`, {
-            error: /** @type {Error} */ (e).message
-        });
-        return { exact: new Set(), prefixes: [] };
     }
+    return { exact: new Set(exact), prefixes };
 }
 
-const pythonSurfaceScope = loadBackendScope('pythonSurface');
-const loopingRecorderScope = loadBackendScope('loopingRecorder');
+const EMPTY_SCOPE = compileScope([]);
+let pythonSurfaceScope = EMPTY_SCOPE;
+let loopingRecorderScope = EMPTY_SCOPE;
+let configured = false;
+let warnedUnconfigured = false;
+
+/**
+ * Set the routing scopes from `osc.backendScope`. A missing block or backend
+ * is "no addresses" for that backend, logged.
+ *
+ * @param {{ pythonSurface?: string[], loopingRecorder?: string[] } | undefined} backendScope
+ */
+function configureRouting(backendScope) {
+    const scope = backendScope && typeof backendScope === 'object' ? backendScope : {};
+    for (const name of ['pythonSurface', 'loopingRecorder']) {
+        if (!Array.isArray(scope[name])) {
+            logger.warn(`messageRouter: osc.backendScope.${name} is missing; nothing routes there`);
+        }
+    }
+    pythonSurfaceScope = compileScope(scope.pythonSurface);
+    loopingRecorderScope = compileScope(scope.loopingRecorder);
+    configured = true;
+}
 
 /** @param {string} address @param {BackendScope} scope */
 function matchesScope(address, scope) {
@@ -149,6 +161,10 @@ const ROUTING_RULES = [
  * @returns {string} Routing target: 'pythonSurface', 'loopingRecorder', or 'none' for unknown addresses
  */
 function getRoutingTarget(address) {
+    if (!configured && !warnedUnconfigured) {
+        warnedUnconfigured = true;
+        logger.error('messageRouter: routing used before configureRouting; every address drops');
+    }
     for (const rule of ROUTING_RULES) {
         if (rule.match(address)) {
             if (rule.onMatch) rule.onMatch(address);
@@ -159,5 +175,6 @@ function getRoutingTarget(address) {
 }
 
 module.exports = {
+    configureRouting,
     getRoutingTarget
 };

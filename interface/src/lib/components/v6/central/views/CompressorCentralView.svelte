@@ -34,6 +34,7 @@
   import CompressorControl from '../../device-panel/CompressorControl.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+  import { useDeviceProperties } from '$lib/components/v6/central/useDeviceProperties.svelte';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import { setContext } from 'svelte';
   import FaceGrid from '../FaceGrid.svelte';
@@ -55,18 +56,12 @@
   // colour (a grey scheme of its own until the rollout).
   let liveInk = $derived(compressor.color);
 
-  // Mount property subscriptions inline (per useFxGridSlot contract).
-  // The $effect re-runs when devicePath changes; teardown releases
-  // both props so the refcount manager fires unsubscribe on last release.
-  $effect(() => {
-    const path = compressor.devicePath;
-    if (!path) return;
-    const releases = [
-      selectedTrackStore.subscribeProperty(path, 'available_input_routing_types'),
-      selectedTrackStore.subscribeProperty(path, 'input_routing_type')
-    ];
-    return () => releases.forEach((fn) => fn());
-  });
+  // The sidechain routing properties, subscribed while the view is mounted
+  // on a device (re-subscribed when its path changes).
+  const deviceProps = useDeviceProperties(() => compressor.devicePath, [
+    'available_input_routing_types',
+    'input_routing_type'
+  ]);
 
   // Initial UI state before the first param echo lands. This was a lookup
   // into data/device-configs.json with 0 as the `?? fallback` — but that
@@ -108,9 +103,8 @@
   // Property reads go through v3 propertyValue (path-keyed). Values
   // arrive as JSON strings per ADR-002 amendment.
   let availableTypes = $derived.by(() => {
-    const path = compressor.devicePath;
-    if (!path) return [] as any[];
-    const value = selectedTrackStore.propertyValue(path, 'available_input_routing_types');
+    if (!compressor.devicePath) return [] as any[];
+    const value = deviceProps.raw('available_input_routing_types');
     const parsed = parsePropertyValue(value);
     const allTypes = parsed?.available_input_routing_types || parsed;
 
@@ -132,9 +126,8 @@
   });
 
   let inputRoutingType = $derived.by(() => {
-    const path = compressor.devicePath;
-    if (!path) return null;
-    const value = selectedTrackStore.propertyValue(path, 'input_routing_type');
+    if (!compressor.devicePath) return null;
+    const value = deviceProps.raw('input_routing_type');
     const parsed = parsePropertyValue(value);
     return parsed?.input_routing_type || parsed;
   });

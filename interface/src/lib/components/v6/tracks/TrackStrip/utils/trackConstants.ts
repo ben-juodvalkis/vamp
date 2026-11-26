@@ -17,17 +17,3 @@ export const MASTER_TRACK_DEFAULTS = {
     name: 'Master',
     color: 0xff8800
 } as const;
-
-export const TRACK_PROPERTIES = [
-    'volume',
-    'mute',
-    'solo',
-    'arm',
-    'name',
-    'color'
-] as const;
-
-export const TRACK_LISTENERS = [
-    'output_meter_left',
-    ...TRACK_PROPERTIES
-] as const;

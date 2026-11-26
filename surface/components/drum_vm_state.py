@@ -12,9 +12,12 @@ component.
 
 from __future__ import annotations
 
+import logging
+
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .drum_vm_functions import VirtualMacro
+from .listener_bag import ListenerBag
 
 
 class _Member:
@@ -157,7 +160,8 @@ class _RackState:
         # A pad's own Permute holds its term on ``pads[note].shift``.
         self.shift = 0
         self.dirty = False
-        self.listeners: List[Tuple[str, Callable[[], None]]] = []
+        # The rack's own ``macros_mapped`` / ``name`` listeners.
+        self.listeners = ListenerBag("DrumVirtualMacroComponent", remove_level=logging.DEBUG)
         self.subscribed: Set[str] = set()
         self.reseed_scheduled = False
         # Per-pad deviations for the continuous functions, function name →
@@ -165,8 +169,8 @@ class _RackState:
         # equivalent is ``pads`` above; these survive a re-resolve the same
         # way, because ``members`` is rebuilt from the LOM and they are not.
         self.edits: Dict[str, Dict[Tuple[int, str], _MemberEdit]] = {}
-        # (parameter, callback) for every member value listener attached.
-        self.member_listeners: List[Tuple[object, Callable[[], None]]] = []
+        # Every member value listener attached (on the parameter).
+        self.member_listeners = ListenerBag("DrumVirtualMacroComponent", remove_level=logging.DEBUG)
         # Function names whose members fired since the last absorb.
         self.edited: Set[str] = set()
         self.absorb_scheduled = False
@@ -180,7 +184,7 @@ class _RackState:
         # (instrument, callback) for every pad instrument's ``name`` listener
         # (ADR-439): a swap made in Live's own UI renames the instrument and
         # nothing else fires, so this is what re-emits the census.
-        self.name_listeners: list[tuple[object, Callable[[], None]]] = []
+        self.name_listeners = ListenerBag("DrumVirtualMacroComponent", remove_level=logging.DEBUG)
         # The rack's own ``name`` when the held values and the per-pad
         # records were last seeded. A preset load into the same rack device
         # changes it (Live names the device after the preset), and

@@ -22,7 +22,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { getRoutingTarget } from '../../../../bridge/routing/messageRouter.js';
+import constants from '$config/constants.json';
+import { configureRouting, getRoutingTarget } from '../../../../bridge/routing/messageRouter.js';
+
+// The router reads no config: the bridge hands it its backendScope, and this
+// test the tracked file's.
+configureRouting(constants.osc.backendScope);
 
 /**
  * One row per OSC address the UI sends. Inbound addresses (DAW → UI)

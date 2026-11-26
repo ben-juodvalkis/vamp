@@ -75,10 +75,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, Tuple
 
+from ._common import LOM_ERRORS
+
 logger = logging.getLogger("looping")
 
 
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --------------------------------------------------------------------------

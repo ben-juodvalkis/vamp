@@ -1,5 +1,7 @@
 <script lang="ts">
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
+  import { drag, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
+  import { pastSlop, relativeOrb } from './padGesture';
 
   // Frame-synchronized XY throttle for angle/radius (handles both together)
   let orbRafId: number | null = null;
@@ -24,17 +26,11 @@
   }: Props = $props();
 
   let isDragging = $state(false);
-  let container: HTMLDivElement;
 
-  // Local state for smooth interaction
-  let localAngle = $state(angle);
-  let localRadius = $state(radius);
-
-  // Sync from props (props only change on track switch - no observers!)
-  $effect(() => {
-    localAngle = angle;
-    localRadius = radius;
-  });
+  // The shown dot: the props, overridden by the finger while it drags and
+  // re-synced whenever they change.
+  let localAngle = $derived(angle);
+  let localRadius = $derived(radius);
 
   // Convert angle and radius to cartesian coordinates for display
   const handleX = $derived(50 + localRadius * 40 * Math.cos((localAngle * 360 - 90) * Math.PI / 180));
@@ -72,77 +68,56 @@
 
   // Relative drag (2026-11-20, the user's call): touch-down never jumps the
   // dot. The finger's travel moves it from where it was, one to one with the
-  // drawn disc, clamped to the rim; a tap writes nothing.
-  const TAP_SLOP = 5; // px
-  let downX = 0;
-  let downY = 0;
-  let startNX = 0; // the dot at touch-down, unit disc, +x right, +y down
-  let startNY = 0;
+  // drawn disc, clamped to the rim; a tap writes nothing. `use:drag` owns the
+  // pointer (ADR-427), so a second finger neither drives nor ends the drag.
+  let startAngle = 0;
+  let startRadius = 0;
   let unitPx = 1; // pixels per unit of radius, as drawn
   let hasMoved = false;
 
-  function handlePointerDown(event: PointerEvent) {
-    event.preventDefault();
-    isDragging = true;
-    hasMoved = false;
-    container.setPointerCapture(event.pointerId);
-    const rect = container.getBoundingClientRect();
-    // The handle rides 40 viewBox units out at radius 1; the SVG fits its
-    // 100-unit box to the shorter side.
-    unitPx = (Math.min(rect.width, rect.height) / 100) * 40;
-    downX = event.clientX;
-    downY = event.clientY;
-    const a = localAngle * 2 * Math.PI;
-    startNX = localRadius * Math.sin(a);
-    startNY = -localRadius * Math.cos(a);
-  }
-
-  function handlePointerMove(event: PointerEvent) {
-    if (!isDragging) return;
-    event.preventDefault();
-    if (!hasMoved) {
-      if (Math.abs(event.clientX - downX) < TAP_SLOP && Math.abs(event.clientY - downY) < TAP_SLOP) return;
-      hasMoved = true;
-      startOrbThrottle();
+  const orbDrag = {
+    commit: 'immediate' as const,
+    binding: 'capture' as const,
+    onStart: ({ event, width, height }: DragInfo) => {
+      event?.preventDefault();
+      isDragging = true;
+      hasMoved = false;
+      // The handle rides 40 viewBox units out at radius 1; the SVG fits its
+      // 100-unit box to the shorter side.
+      unitPx = (Math.min(width, height) / 100) * 40;
+      startAngle = localAngle;
+      startRadius = localRadius;
+    },
+    onMove: ({ dx, dy }: DragInfo) => {
+      if (!hasMoved) {
+        if (!pastSlop(dx, dy)) return;
+        hasMoved = true;
+        startOrbThrottle();
+      }
+      const next = relativeOrb({ startAngle, startRadius, dx, dy, unitPx, lastAngle: localAngle });
+      localAngle = next.angle;
+      localRadius = next.radius;
+      // Queue for frame-synchronized send
+      orbPendingAngle = localAngle;
+      orbPendingRadius = localRadius;
+    },
+    onEnd: ({ reason }: DragEndInfo) => {
+      isDragging = false;
+      // Unmounted mid-drag: stop the frame loop, write nothing.
+      if (reason === 'teardown') {
+        orbActive = false;
+        if (orbRafId) cancelAnimationFrame(orbRafId);
+        orbRafId = null;
+      } else if (hasMoved) flushOrbThrottle();
+      hasMoved = false;
     }
-    updatePosition(event);
-  }
-
-  function handlePointerUp(event: PointerEvent) {
-    isDragging = false;
-    if (container.hasPointerCapture(event.pointerId)) container.releasePointerCapture(event.pointerId);
-    if (hasMoved) flushOrbThrottle();
-    hasMoved = false;
-  }
-
-  function updatePosition(event: PointerEvent) {
-    let nx = startNX + (event.clientX - downX) / unitPx;
-    let ny = startNY + (event.clientY - downY) / unitPx;
-    const r = Math.hypot(nx, ny);
-    if (r > 1) {
-      nx /= r;
-      ny /= r;
-    }
-    localRadius = Math.min(1, r);
-    // At the center the angle is undefined: keep the last one.
-    if (r > 1e-4) {
-      localAngle = ((Math.atan2(nx, -ny) / (2 * Math.PI)) + 1) % 1;
-    }
-
-    // Queue for frame-synchronized send
-    orbPendingAngle = localAngle;
-    orbPendingRadius = localRadius;
-  }
+  };
 </script>
 
 <div class="orb-control">
   <div
     class="orb-container"
-    bind:this={container}
-    onpointerdown={handlePointerDown}
-    onpointermove={handlePointerMove}
-    onpointerup={handlePointerUp}
-    onpointercancel={handlePointerUp}
+    use:drag={orbDrag}
     role="slider"
     tabindex="0"
     aria-label="{title}: Angle {(localAngle * 360).toFixed(0)}°, Radius {(localRadius * 100).toFixed(0)}%"
@@ -208,7 +183,6 @@
     width: 100%;
     height: 100%;
     cursor: grab;
-    touch-action: none;
   }
 
   .orb-container:focus {

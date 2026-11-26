@@ -27,6 +27,7 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
+import { authenticate } from '../lib/bridgeClient.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCENES_DIR = join(REPO_ROOT, 'scripts', 'shot', 'scenes');
@@ -55,6 +56,9 @@ const outPath = join(SCENES_DIR, `${name}.json`);
 console.log(`[capture] connecting to ${url}`);
 
 const ws = new WebSocket(url);
+// Listening before open: the challenge is the connection's first frame.
+const authed = authenticate(ws);
+authed.catch(() => {}); // awaited on open; an error exits first
 
 const scene = {
 	name,
@@ -68,8 +72,16 @@ let sawTree = false;
 
 const send = (address, args) => ws.send(JSON.stringify({ address, args }));
 
-ws.on('open', () => {
-	console.log('[capture] connected — sending handshake hello');
+ws.on('open', async () => {
+	// The bridge refuses a hello from a client that has not answered its
+	// auth challenge, so answer it first.
+	try {
+		console.log(`[capture] connected — bridge auth: ${await authed}`);
+	} catch (err) {
+		console.error(`[capture] ${err.message}`);
+		process.exit(1);
+	}
+	console.log('[capture] sending handshake hello');
 	send('/looping/v3/handshake/hello', UI_SUPPORTED_VERSIONS);
 });
 

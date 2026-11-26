@@ -29,10 +29,10 @@ undefined names today, so this is a real gate rather than a baseline.
 
 It asserts something narrower than "every attribute set in ``__init__`` is
 mentioned in ``disconnect()``". That looser question has three standing
-answers here — ``AlcClipProbe``, ``NoteEditProbe``, ``SelectionProbe`` — and
-all three are noise: those classes define no teardown method, so there is
-nothing to call and nothing to fix. Asserting the loose form would mean
-shipping a three-entry allowlist that hides the one shape that matters.
+answers here — ``AlcClipProbe`` and the since-deleted ``NoteEditProbe`` and
+``SelectionProbe`` — and all were noise: those classes define no teardown
+method, so there is nothing to call and nothing to fix. Asserting the loose
+form would mean shipping an allowlist that hides the one shape that matters.
 
 The narrow form has no allowlist and no exceptions: *if a component defines a
 teardown method, it must be called.* Checked against history, that is exactly
@@ -127,7 +127,9 @@ def _is_self_attr(node: ast.AST, name: str | None = None) -> bool:
 
 
 def _components_built(fns: Dict[str, ast.FunctionDef]) -> Dict[str, tuple]:
-    """``self._x = SomeClass(...)`` across __init__ and the setup helpers it calls."""
+    """``self._x = SomeClass(...)`` across __init__ and the setup helpers it
+    calls, and whether it was built inside ``self._own(...)`` — which puts
+    it on the list ``disconnect()`` walks (2026-11-25)."""
     entry = fns["__init__"]
     helpers = sorted(
         node.func.attr
@@ -141,7 +143,13 @@ def _components_built(fns: Dict[str, ast.FunctionDef]) -> Dict[str, tuple]:
         for node in ast.walk(fns[method]):
             if not (isinstance(node, ast.Assign) and isinstance(node.value, ast.Call)):
                 continue
-            func = node.value.func
+            call = node.value
+            owned = _is_self_attr(call.func, "_own") and len(call.args) == 1
+            if owned:
+                call = call.args[0]
+                if not isinstance(call, ast.Call):
+                    continue
+            func = call.func
             cls_name = (
                 func.id if isinstance(func, ast.Name)
                 else func.attr if isinstance(func, ast.Attribute)
@@ -152,7 +160,7 @@ def _components_built(fns: Dict[str, ast.FunctionDef]) -> Dict[str, tuple]:
                 continue
             for target in node.targets:
                 if _is_self_attr(target):
-                    built.setdefault(target.attr, (cls_name, node.lineno, method))
+                    built.setdefault(target.attr, (cls_name, node.lineno, method, owned))
     return built
 
 
@@ -201,8 +209,8 @@ def analyse_teardown_parity(source: str) -> list:
     known = _surface_class_methods()
 
     gaps = []
-    for attr, (cls_name, lineno, method) in sorted(built.items()):
-        if attr in torn:
+    for attr, (cls_name, lineno, method, owned) in sorted(built.items()):
+        if attr in torn or owned:
             continue
         available = known.get(cls_name, set()) & TEARDOWN_METHODS
         if available:
@@ -227,5 +235,22 @@ def test_every_component_with_teardown_is_torn_down():
         pytest.fail(
             f"{len(gaps)} component(s) constructed but never torn down:\n{detail}\n"
             "Every component that defines disconnect()/close()/stop()/shutdown() "
-            "must be released in LoopingSurface.disconnect()."
+            "must be built inside self._own(...) or released in "
+            "LoopingSurface.disconnect()."
         )
+
+
+def test_owned_components_are_what_disconnect_walks():
+    """``_own`` only means something while ``disconnect()`` walks the list
+    it fills, and while it is the components that get ``_own``-ed."""
+    src = LOOPING_SURFACE.read_text()
+    tree = ast.parse(src)
+    cls = next(n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == "LoopingSurface")
+    fns = {n.name: n for n in cls.body if isinstance(n, ast.FunctionDef)}
+    walks = [
+        n for n in ast.walk(fns["disconnect"])
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "reversed"
+    ]
+    assert walks, "disconnect() no longer walks self._components in reverse"
+    owned = [a for a, v in _components_built(fns).items() if v[3]]
+    assert len(owned) > 30, owned

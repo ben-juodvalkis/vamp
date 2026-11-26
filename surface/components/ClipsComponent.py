@@ -51,7 +51,9 @@ from typing import Callable, Optional, Tuple
 
 from . import alc_resolver
 from . import path_resolver
-from .LOMListeners import _is_stale_handle_error
+from ._common import LOM_ERRORS, coerce_str
+from .component_util import begin_undo_step, emit_error, end_undo_step
+from .listener_bag import ListenerBag
 from .PlayheadComponent import read_file_span
 from .path_resolver import ResolveStatus
 
@@ -62,7 +64,7 @@ logger = logging.getLogger("looping")
 # Includes ``TypeError`` to cover ``Boost.Python.ArgumentError`` (a
 # ``TypeError`` subclass) raised when a C++ handle is torn down — see
 # [CLAUDE.md] merge-gate rule (9).
-_LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
+_LOM_ERRORS = LOM_ERRORS
 
 
 # --- wire addresses (closed-enum; renames fail at import time) ------------
@@ -186,16 +188,7 @@ def _file_stem(path: str) -> str:
     return os.path.splitext(os.path.basename(path))[0]
 
 
-def _coerce_str(x) -> str:
-    """Coerce an OSC arg to ``str``. Bytes → utf-8; ``None`` → ``""``."""
-    if x is None:
-        return ""
-    if isinstance(x, bytes):
-        try:
-            return x.decode("utf-8")
-        except UnicodeDecodeError:
-            return x.decode("utf-8", errors="replace")
-    return str(x)
+_coerce_str = coerce_str
 
 
 def _parse_slot_path(path: str) -> Optional[Tuple[str, int]]:
@@ -286,13 +279,13 @@ class ClipsComponent:
         # ``(slot, callback)`` — detach goes through
         # ``slot.remove_has_clip_listener``. Pattern mirrors
         # LOMListeners._param_value_listeners.
-        self._has_clip_listeners: dict = {}
+        self._has_clip_listeners = ListenerBag("ClipsComponent")
         # Parallel bookkeeping for the per-slot ``is_triggered``
         # listener. Same key shape and same rebind lifecycle as
         # ``_has_clip_listeners`` — kept in its own map so a Live build
         # (or a test stub) that exposes one listener and not the other
         # still gets everything it can support.
-        self._is_triggered_listeners: dict = {}
+        self._is_triggered_listeners = ListenerBag("ClipsComponent")
         # In-process pub/sub for ``has_clip`` flips. Other components
         # (PlayheadComponent today, future ClipPropertiesComponent etc.)
         # register a ``cb(slot_path, has_clip)`` callback to react to
@@ -1248,19 +1241,15 @@ class ClipsComponent:
         (older Live builds or test stubs that haven't opted in), log
         once and move on — the rest of the attach walk still succeeds.
         """
-        add_listener = getattr(slot, "add_has_clip_listener", None)
-        if not callable(add_listener):
-            return
         cb = self._make_has_clip_callback(slot, slot_path)
-        try:
-            add_listener(cb)
-        except _LOM_ERRORS as e:
+
+        def _failed(e, slot_path=slot_path):
             logger.warning(
                 "ClipsComponent: add_has_clip_listener %s failed: %s",
                 slot_path, e,
             )
-            return
-        self._has_clip_listeners[slot_path] = (slot, cb)
+
+        self._has_clip_listeners.add(slot, "has_clip", cb, tag=slot_path, on_error=_failed)
 
     def _make_has_clip_callback(self, slot, slot_path: str):
         """Build the listener closure. Separated so tests can verify
@@ -1329,19 +1318,15 @@ class ClipsComponent:
         slot-scoped: it also covers an EMPTY slot queued to record,
         where there is no clip object to observe yet.
         """
-        add_listener = getattr(slot, "add_is_triggered_listener", None)
-        if not callable(add_listener):
-            return
         cb = self._make_is_triggered_callback(slot, slot_path)
-        try:
-            add_listener(cb)
-        except _LOM_ERRORS as e:
+
+        def _failed(e, slot_path=slot_path):
             logger.warning(
                 "ClipsComponent: add_is_triggered_listener %s failed: %s",
                 slot_path, e,
             )
-            return
-        self._is_triggered_listeners[slot_path] = (slot, cb)
+
+        self._is_triggered_listeners.add(slot, "is_triggered", cb, tag=slot_path, on_error=_failed)
 
     def _make_is_triggered_callback(self, slot, slot_path: str):
         def _on_is_triggered():
@@ -1380,30 +1365,9 @@ class ClipsComponent:
             )
 
     def _detach_all_is_triggered_listeners(self) -> None:
-        """Detach every ``is_triggered`` listener we attached.
-
-        Same swallow-and-clear contract as the ``has_clip`` twin: a
-        torn-down handle can't have its listener removed, but the
-        bookkeeping entry must go so the next attach walk builds into
-        a clean map.
-        """
-        for slot_path, (slot, cb) in list(self._is_triggered_listeners.items()):
-            remove_listener = getattr(slot, "remove_is_triggered_listener", None)
-            if callable(remove_listener):
-                try:
-                    remove_listener(cb)
-                except _LOM_ERRORS as e:
-                    if _is_stale_handle_error(e):
-                        logger.debug(
-                            "ClipsComponent: remove_is_triggered_listener "
-                            "%s: stale LOM handle (already torn down): %s",
-                            slot_path, e,
-                        )
-                    else:
-                        logger.warning(
-                            "ClipsComponent: remove_is_triggered_listener "
-                            "%s failed: %s", slot_path, e,
-                        )
+        """Detach every ``is_triggered`` listener we attached. A torn-down
+        handle's failure is swallowed, and the bookkeeping still goes so
+        the next attach walk builds into a clean bag."""
         self._is_triggered_listeners.clear()
 
     def _detach_all_slot_listeners(self) -> None:
@@ -1419,34 +1383,10 @@ class ClipsComponent:
         self._detach_all_is_triggered_listeners()
 
     def _detach_all_has_clip_listeners(self) -> None:
-        """Detach every ``has_clip`` listener we attached.
-
-        Swallows per-slot detach failures — a torn-down C++ handle
-        can't have its listener removed, but the bookkeeping entry
-        must still go away so the next ``_attach_all_slot_listeners``
-        has a clean map to build into.
-        """
-        for slot_path, (slot, cb) in list(self._has_clip_listeners.items()):
-            remove_listener = getattr(slot, "remove_has_clip_listener", None)
-            if callable(remove_listener):
-                try:
-                    remove_listener(cb)
-                except _LOM_ERRORS as e:
-                    if _is_stale_handle_error(e):
-                        # Slot's C++ handle already torn down (track
-                        # delete / scene delete). Listener is gone on
-                        # the LOM side; bookkeeping still gets cleared
-                        # below.
-                        logger.debug(
-                            "ClipsComponent: remove_has_clip_listener "
-                            "%s: stale LOM handle (already torn "
-                            "down): %s", slot_path, e,
-                        )
-                    else:
-                        logger.warning(
-                            "ClipsComponent: remove_has_clip_listener "
-                            "%s failed: %s", slot_path, e,
-                        )
+        """Detach every ``has_clip`` listener we attached. A torn-down
+        handle's failure is swallowed (stale at DEBUG, anything else at
+        WARNING), and the bookkeeping still goes so the next
+        ``_attach_all_slot_listeners`` has a clean bag to build into."""
         self._has_clip_listeners.clear()
 
     def rebind(self) -> None:
@@ -1895,25 +1835,11 @@ class ClipsComponent:
 
     def _begin_undo_step(self) -> bool:
         """Open an undo step; ``False`` when Live refused, so nothing closes
-        a step that never opened (DeviceLoadComponent's rule)."""
-        try:
-            self._song.begin_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning(
-                "ClipsComponent: begin_undo_step raised %s: %s", type(e).__name__, e,
-            )
-            return False
-        return True
+        a step that never opened."""
+        return begin_undo_step("ClipsComponent", self._song)
 
     def _end_undo_step(self, began: bool) -> None:
-        if not began:
-            return
-        try:
-            self._song.end_undo_step()
-        except _LOM_ERRORS as e:
-            logger.warning(
-                "ClipsComponent: end_undo_step raised %s: %s", type(e).__name__, e,
-            )
+        end_undo_step("ClipsComponent", self._song, began)
 
     def _emit_error(
         self,
@@ -1922,27 +1848,10 @@ class ClipsComponent:
         path: str,
         detail: str,
     ) -> None:
-        """Emit ``/looping/v3/error [address, code, path, detail]``.
-
-        Four-arg shape — same as DevicesComponent /
-        DeviceLoadComponent / ClipPropertiesComponent.
-        """
+        """Emit ``/looping/v3/error [address, code, path, detail]``."""
         if self._disconnected:
             return
-        logger.warning(
-            "ClipsComponent: emit error addr=%r code=%r path=%r detail=%r",
-            originating_address, code, path, detail,
-        )
-        try:
-            self._emit(
-                V3_ERROR_ADDRESS,
-                (originating_address, code, path, detail),
-            )
-        except Exception as e:
-            logger.warning(
-                "ClipsComponent: emit %s failed: %s",
-                V3_ERROR_ADDRESS, e,
-            )
+        emit_error("ClipsComponent", self._emit, originating_address, code, path, detail)
 
     # --- lifecycle --------------------------------------------------------
 

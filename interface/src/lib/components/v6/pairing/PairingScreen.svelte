@@ -11,6 +11,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { pairingStore } from '$lib/stores/pairing.svelte';
+	import { fetchPairState, fetchPairStatus, requestPairing, sendPairCode } from './pairingClient';
 
 	type Phase = 'idle' | 'asking' | 'limited' | 'waiting' | 'approved' | 'refused' | 'expired';
 
@@ -48,8 +49,7 @@
 
 	async function check() {
 		try {
-			const res = await fetch(`/api/pair/status?id=${encodeURIComponent(requestId)}`, { cache: 'no-store' });
-			settle((await res.json())?.state ?? '');
+			settle(await fetchPairStatus(requestId));
 		} catch {
 			/* the Mac's server restarting: the next poll asks again */
 		}
@@ -59,19 +59,14 @@
 		phase = 'asking';
 		note = '';
 		try {
-			const res = await fetch('/api/pair/request', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ name })
-			});
-			const body = await res.json();
-			if (body?.trusted) return location.reload();
-			if (res.status === 429) {
+			const answer = await requestPairing(name);
+			if (answer.trusted) return location.reload();
+			if (answer.status === 429) {
 				phase = 'limited';
-				note = `Asked too often. Try again in ${Math.ceil((body?.retryInMs ?? 10000) / 1000)} s.`;
+				note = `Asked too often. Try again in ${Math.ceil((answer.retryInMs ?? 10000) / 1000)} s.`;
 				return;
 			}
-			requestId = body.id;
+			requestId = answer.id ?? '';
 			code = '';
 			phase = 'waiting';
 			stopPoll();
@@ -85,17 +80,12 @@
 	async function sendCode() {
 		note = '';
 		try {
-			const res = await fetch('/api/pair/code', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ id: requestId, code })
-			});
-			const body = await res.json();
-			if (body?.state === 'wrong') {
-				note = `Not that code. ${body.triesLeft} ${body.triesLeft === 1 ? 'try' : 'tries'} left.`;
+			const answer = await sendPairCode(requestId, code);
+			if (answer.state === 'wrong') {
+				note = `Not that code. ${answer.triesLeft} ${answer.triesLeft === 1 ? 'try' : 'tries'} left.`;
 				code = '';
 			} else {
-				settle(body?.state ?? '');
+				settle(answer.state ?? '');
 			}
 		} catch {
 			note = 'The Mac did not answer.';
@@ -106,8 +96,7 @@
 		name = guessName();
 		const onRequired = () => pairingStore.markRequired();
 		window.addEventListener('pairing-required', onRequired);
-		fetch('/api/pair/state', { cache: 'no-store' })
-			.then((r) => r.json())
+		fetchPairState()
 			.then((s) => {
 				if (s?.pairing && !s?.trusted) pairingStore.markRequired();
 			})

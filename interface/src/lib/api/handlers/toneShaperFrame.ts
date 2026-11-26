@@ -6,6 +6,7 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
+import { toFiniteNumber } from './oscTypeHelpers';
 import {
 	applyToneShaperFrame,
 	TONE_SHAPER_BANDS,
@@ -24,20 +25,11 @@ export function handleToneShaperFrame(address: string, args: OSCArg[]): void {
 		logger.warn('toneshaper frame of the wrong shape', { address, length: args.length });
 		return;
 	}
-	const numbers = args.slice(1).map(toNumber);
+	const numbers = args.slice(1).map(toFiniteNumber);
 	if (numbers.some((n) => n === null)) {
 		logger.warn('toneshaper frame with a non-numeric band', { address });
 		return;
 	}
 	const values = numbers as number[];
 	applyToneShaperFrame(args[0], values.slice(0, TONE_SHAPER_BANDS), values.slice(TONE_SHAPER_BANDS));
-}
-
-function toNumber(v: OSCArg): number | null {
-	if (typeof v === 'number') return v;
-	if (typeof v === 'string') {
-		const n = Number(v);
-		return Number.isFinite(n) ? n : null;
-	}
-	return null;
 }

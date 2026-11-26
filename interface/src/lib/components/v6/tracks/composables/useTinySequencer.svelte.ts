@@ -56,7 +56,7 @@ export interface TinySequencerState {
  * no params, and must read as a fresh device, never as "every step off".
  */
 function readRole(layout: PermuteLayout, role: PermuteRole): number {
-	return v3Store.paramByPath.get(layout.paths[role])?.value ?? PERMUTE_PARAM_DEFAULTS[role];
+	return v3Store.param(layout.paths[role])?.value ?? PERMUTE_PARAM_DEFAULTS[role];
 }
 
 /** The thumbnail's state for one Permute record: its two patterns, lengths, and live step positions. */

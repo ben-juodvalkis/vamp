@@ -60,6 +60,8 @@
     } from './TrackStrip/utils/slotActionZone';
     import { logger } from '$lib/utils/logger';
     import { press } from '$lib/actions/press';
+    import { boxSize } from '$lib/actions/boxSize';
+    import { sessionRowPitch } from '$lib/utils/sessionRowPitch';
 
     /** The scrolling box — NOT the whole rail, which now also holds
      *  the STOP ALL strip. Measuring this one keeps the row pitch
@@ -101,39 +103,12 @@
     let sectionHeightPx = $state(0);
     // Mini: the rows' own box, the stop footer already out of it.
     let railHeightPx = $state(0);
+    // Both measured by `use:boxSize` (the rail's height only when mini).
     const rowPitchPx = $derived(
-        renderedRows <= 0
-            ? 0
-            : mini
-              ? railHeightPx / renderedRows
-              : sectionHeightPx / (renderedRows + 1)
+        mini
+            ? sessionRowPitch(railHeightPx, renderedRows, 0)
+            : sessionRowPitch(sectionHeightPx, renderedRows)
     );
-
-    $effect(() => {
-        const el = rail;
-        if (!mini || !el || typeof ResizeObserver === 'undefined') return;
-        const measure = () => {
-            const h = el.getBoundingClientRect().height;
-            if (h > 0) railHeightPx = h;
-        };
-        measure();
-        const ro = new ResizeObserver(measure);
-        ro.observe(el);
-        return () => ro.disconnect();
-    });
-
-    $effect(() => {
-        const el = section;
-        if (!el || typeof ResizeObserver === 'undefined') return;
-        const measure = () => {
-            const h = el.getBoundingClientRect().height;
-            if (h > 0) sectionHeightPx = h;
-        };
-        measure();
-        const ro = new ResizeObserver(measure);
-        ro.observe(el);
-        return () => ro.disconnect();
-    });
 
     // Persist the window store's read-side clamp whenever the legal range
     // changes — which is on the scene count OR the visible-row count,
@@ -166,19 +141,6 @@
      *  finger sees and the strip the hit test uses are one edge. */
     let railWidthPx = $state(0);
     const actionWidthPx = $derived(mini ? 0 : actionStripWidth(railWidthPx));
-
-    $effect(() => {
-        const el = rail;
-        if (!el || typeof ResizeObserver === 'undefined') return;
-        const measure = () => {
-            const w = el.getBoundingClientRect().width;
-            if (w > 0) railWidthPx = w;
-        };
-        measure();
-        const ro = new ResizeObserver(measure);
-        ro.observe(el);
-        return () => ro.disconnect();
-    });
 
     const selectedSceneIndex = $derived(session.selectedSceneIndex);
 
@@ -325,12 +287,15 @@
 
 <div
     bind:this={section}
+    use:boxSize={{ keepLastNonZero: true, onSize: (h) => (sectionHeightPx = h) }}
     class="rail-section"
     data-debug="scene-rail-section"
     style={rowPitchPx > 0 ? `--session-row-h: ${rowPitchPx}px;` : ''}
 >
     <div
         bind:this={rail}
+        use:boxSize={{ keepLastNonZero: true, enabled: mini, onSize: (h) => (railHeightPx = h) }}
+        use:boxSize={{ axis: 'width', keepLastNonZero: true, onSize: (w) => (railWidthPx = w) }}
         class="scene-rail"
         data-debug="scene-rail"
         onpointerdown={gestures.handlePointerDown}

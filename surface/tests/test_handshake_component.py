@@ -188,11 +188,16 @@ def test_each_hello_mints_new_session(component, emits):
     assert [emits[0][1][1], emits[1][1][1]] == ["sess-0001", "sess-0002"]
 
 
+def _live_sessions(hs):
+    hs._evict_stale_sessions()
+    return list(hs._sessions)
+
+
 def test_active_sessions_tracked(component):
     hs, _gen = component
     hs.handle_hello(("3.0.0",), None)
     hs.handle_hello(("3.0.0",), None)
-    assert len(hs.active_session_ids()) == 2
+    assert len(_live_sessions(hs)) == 2
 
 
 def test_stale_sessions_evicted(component, fake_clock):
@@ -201,26 +206,7 @@ def test_stale_sessions_evicted(component, fake_clock):
     # Advance clock past the timeout.
     fake_clock[0] += DEFAULT_SESSION_TIMEOUT_SECONDS + 1
     # Any subsequent access that runs eviction should clear it.
-    assert hs.active_session_ids() == []
-
-
-def test_touch_marks_active(component, fake_clock):
-    """A touched session survives past the original timeout window."""
-    hs, _gen = component
-    hs.handle_hello(("3.0.0",), None)
-    sid = hs.active_session_ids()[0]
-
-    # Advance 25s (under the 30s window), touch, then advance another 20s.
-    fake_clock[0] += 25
-    assert hs.touch(sid) is True
-    fake_clock[0] += 20  # 45s since hello, but only 20s since touch
-
-    assert sid in hs.active_session_ids()
-
-
-def test_touch_unknown_session_returns_false(component):
-    hs, _gen = component
-    assert hs.touch("nonexistent") is False
+    assert _live_sessions(hs) == []
 
 
 # --- disconnect -----------------------------------------------------------
@@ -230,7 +216,7 @@ def test_disconnect_clears_sessions(component):
     hs, _gen = component
     hs.handle_hello(("3.0.0",), None)
     hs.disconnect()
-    assert hs.active_session_ids() == []
+    assert _live_sessions(hs) == []
 
 
 def test_disconnect_makes_handler_noop(component, emits):
@@ -296,7 +282,7 @@ def test_accept_hook_fires_after_accept_emit(component, emits):
     hs, _gen = component
     calls: list[str] = []
 
-    def hook():
+    def hook(session_id=None, client_etag=None):
         # Capture the ordering: emits should already contain the accept
         # reply by the time we're invoked — the UI sees accept *then*
         # state/full on the wire.
@@ -317,7 +303,7 @@ def test_accept_hook_fires_on_every_accept(component, emits):
     hs, _gen = component
     count = [0]
 
-    def hook():
+    def hook(session_id=None, client_etag=None):
         count[0] += 1
 
     hs.set_state_full_on_accept(hook)

@@ -1,13 +1,14 @@
 /**
  * useTrackData Composable
  *
- * Track state and actions for TrackStrip. All scalars now flow through
+ * Track state and actions for TrackStrip (a regular track or a group; the
+ * master is drawn by MasterTrack, which reads its own record). All scalars
+ * now flow through
  * the v3 normalized store:
  *   - name/color/mute/solo/arm/panning/hasMidiInput/hasAudioInput via
  *     `/looping/v3/track/<attr>` listener fires (PR-5a/5d/5e)
  *   - volume on the T-record of the v3 state/full bundle (ROW 6.5,
- *     arity 10). For master, `/looping/v3/master/volume` writes to
- *     `v3Store.tracks.get('master')`.
+ *     arity 10).
  *   - meter off the dedicated v3 meter wire (PR-5c)
  *
  * The legacy `useMaxTrackObserver` hook is GONE (2026-09-11). Its comment
@@ -26,7 +27,7 @@ import { setTrackMute } from '$lib/services/trackCommands';
 import { sendSelectClip } from '$lib/services/clipCommands';
 import { selectTrack } from '$lib/services/trackCommands';
 import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
-import { TRACK_DEFAULTS, MASTER_TRACK_DEFAULTS } from '../TrackStrip/utils/trackConstants';
+import { TRACK_DEFAULTS } from '../TrackStrip/utils/trackConstants';
 import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
@@ -64,9 +65,7 @@ function readPermuteMuteCurrent(trackPath: string): boolean {
     const stepIdx0 = permuteStepStore.get(permute.devicePath).mute;
     if (stepIdx0 < 0 || stepIdx0 >= MUTE_STEP_INDICES.length) return false;
     const stepParamIdx = MUTE_STEP_INDICES[stepIdx0];
-    const stepValue = v3Store.paramByPath.get(
-        `${permute.devicePath}/params/${stepParamIdx}`
-    )?.value;
+    const stepValue = v3Store.param(`${permute.devicePath}/params/${stepParamIdx}`)?.value;
     // Step plays when value === 1; "muted" is the absence of that.
     return stepValue !== undefined && stepValue !== 1;
 }
@@ -77,7 +76,6 @@ type TrackView = {
 
 export interface UseTrackDataOptions {
     trackIndex: number;
-    isMaster?: boolean;
     onTrackSelect?: (trackIndex: number) => void;
 }
 
@@ -176,8 +174,7 @@ export async function selectTrackByIndex(
     // highlight, central view, and FX grid update immediately. The echo
     // from Ableton confirms or corrects this when it arrives.
     if (!wasAlreadySelected) {
-        session.selectTrackOptimistically(trackIndex);
-        selectedTrackStore.handleTrackSelected(trackIndex);
+        selectedTrackStore.selectTrackLocally(trackIndex);
     }
     // Aim the pedal at this track's running clip, when it has one.
     //
@@ -202,55 +199,24 @@ export async function selectTrackByIndex(
 }
 
 export function useTrackData(options: UseTrackDataOptions): UseTrackDataReturn {
-    const { trackIndex, isMaster = false, onTrackSelect } = options;
+    const { trackIndex, onTrackSelect } = options;
     const trackPath = `tracks/${trackIndex}`;
 
     // PR-5c — meter comes off the v3 meter store, written by
-    // `/looping/v3/{track,master}/meter` fires. `meterLevel` is the L
-    // channel (UI shows a single bar), matching the scalar semantics
-    // the legacy `output_meter_left` → `meterLevel` mapping had.
-    const meterRecord = $derived(
-        meterStore.get(isMaster ? 'master' : trackPath)
-    );
+    // `/looping/v3/track/meter` fires. `meterLevel` is the L channel (UI
+    // shows a single bar), matching the scalar semantics the legacy
+    // `output_meter_left` → `meterLevel` mapping had.
+    const meterRecord = $derived(meterStore.get(trackPath));
     const meterLevel = $derived(meterRecord?.left ?? 0);
 
-    // v3 store-sourced metadata. Master rides path `master`; regular
-    // tracks ride `tracks/<N>`. The store IS the optimistic value
+    // v3 store-sourced metadata, on `tracks/<N>`. The store IS the optimistic value
     // during an interaction — `setTrackMute` / `setTrackSolo` apply
     // locally before sending OSC (ADR-358), so we don't need a
     // parallel optimistic field here.
-    const storeRecord = $derived(
-        v3Store.tracks.get(isMaster ? 'master' : trackPath)
-    );
+    const storeRecord = $derived(v3Store.tracks.get(trackPath));
 
     const track: TrackView = $derived.by(() => {
         const rec = storeRecord;
-        if (isMaster) {
-            return {
-                ...MASTER_TRACK_DEFAULTS,
-                index: trackIndex,
-                name: 'Master',
-                volume: rec?.volume ?? MASTER_TRACK_DEFAULTS.volume,
-                pan: rec?.panning ?? MASTER_TRACK_DEFAULTS.pan,
-                meterLevel,
-                mute: rec?.mute ?? MASTER_TRACK_DEFAULTS.mute,
-                isMaster: true,
-                isReturn: false,
-                isGroup: false,
-                groupParentIndex: -1,
-                deviceCount: 0,
-                clipCount: 0,
-                foldState: false,
-                isVisible: true,
-                canBeArmed: false,
-                hasAudioInput: false,
-                hasAudioOutput: true,
-                hasMidiInput: false,
-                hasMidiOutput: false,
-                playingSlotIndex: -1,
-                firedSlotIndex: -1
-            };
-        }
         return {
             index: trackIndex,
             name: rec?.name ?? `Track ${trackIndex + 1}`,
@@ -289,9 +255,7 @@ export function useTrackData(options: UseTrackDataOptions): UseTrackDataReturn {
     // is currently sitting on a muted step. Used by TrackClipView to
     // grey out the playing-clip render — same per-moment visibility
     // the retired MiniSequencer offered, scoped to a boolean.
-    const permuteMutedNow = $derived(
-        isMaster ? false : readPermuteMuteCurrent(trackPath)
-    );
+    const permuteMutedNow = $derived(readPermuteMuteCurrent(trackPath));
     // GRATICULE (§2.5): the old hex+alpha-suffix borderStyle is retired — the
     // strip wash and ink border now derive purely in CSS via .glass-card over
     // the --track-color var, so there is a single source of truth per track.
@@ -308,14 +272,12 @@ export function useTrackData(options: UseTrackDataOptions): UseTrackDataReturn {
             // clip. Callers can still say otherwise.
             aimAtPlayingClip: true,
             ...options,
-            isMaster,
             onTrackSelect
         });
     }
 
     function handleMuteToggle(event?: MouseEvent | PointerEvent) {
         event?.stopPropagation();
-        if (isMaster) return;
         setTrackMute(trackPath, !track.mute);
     }
 

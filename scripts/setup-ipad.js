@@ -10,6 +10,8 @@ const path = require('path');
 // The config, with this Mac's constants.local.json laid over it.
 const { loadConstants } = require('../interface/bridge/utils/constants');
 const constants = loadConstants();
+const PAGE_PORT = constants.padLink.pagePort;
+const STATUS_PORT = constants.http.statusPagePort;
 
 /**
  * Fire-and-forget GUI launch — detached and unref'd so it never joins our process tree.
@@ -72,7 +74,7 @@ function launchPerformanceApps() {
 }
 
 /**
- * Everything that has to wait for the preview server to be listening on :8889.
+ * Everything that has to wait for the preview server to be listening on padLink.pagePort.
  */
 async function announceReady() {
     console.log('\n' + '='.repeat(70));
@@ -83,8 +85,8 @@ async function announceReady() {
 
     console.log('\n📄 iPad Status Page (Prominent URL Display):');
     console.log(process.env.VAMP_MAC_APP
-        ? '   🌐 http://localhost:8890/ (not opened: Vamp for Mac\'s menu shows the same)'
-        : '   🌐 Opening in browser: http://localhost:8890/');
+        ? `   🌐 http://localhost:${STATUS_PORT}/ (not opened: Vamp for Mac's menu shows the same)`
+        : `   🌐 Opening in browser: http://localhost:${STATUS_PORT}/`);
     console.log('   📱 Large, prominent iPad URLs with copy-to-clipboard');
     console.log('   🔄 Auto-refreshes every 30 seconds');
 
@@ -93,8 +95,8 @@ async function announceReady() {
     const bestIP = getBestIPadIP();
     // Started by Vamp for Mac, whose menu is the status page: no Safari windows.
     if (!process.env.VAMP_MAC_APP) {
-        launch('open', ['-a', 'Safari', 'http://localhost:8890/']);
-        launch('open', ['-a', 'Safari', `http://${bestIP}:8889`]);
+        launch('open', ['-a', 'Safari', `http://localhost:${STATUS_PORT}/`]);
+        launch('open', ['-a', 'Safari', `http://${bestIP}:${PAGE_PORT}`]);
     }
 
     console.log('\n📱 iPad Setup Instructions:');
@@ -103,15 +105,15 @@ async function announceReady() {
     console.log('   3. Once: pick Vamp as a Control Surface in Live → Settings → Link, Tempo & MIDI');
     console.log('   4. Use status page URLs for iPad Safari connection:');
 
-    displayInterfaces(8889);
+    displayInterfaces(PAGE_PORT);
 
     if (bestIP === 'localhost') {
         console.log('\n📵 No address an iPad can reach: connect it by USB-C, or join this Mac\'s Wi-Fi.');
     } else {
-        console.log(`\n🎯 Open on the iPad: http://${bestIP}:8889`);
+        console.log(`\n🎯 Open on the iPad: http://${bestIP}:${PAGE_PORT}`);
     }
 
-    console.log(`\n   Bridge on port ${constants.osc.webSocket.port}, the iPad app on port 8889.`);
+    console.log(`\n   Bridge on port ${constants.osc.webSocket.port}, the iPad app on port ${PAGE_PORT}.`);
     console.log('   Settings → Connection on the page says whether Live has answered.');
     console.log('='.repeat(70) + '\n');
 }
@@ -147,7 +149,7 @@ async function setupiPad() {
 
     // Step 1: Display initial network detection
     console.log('📡 Detecting network interfaces...');
-    const initialInterfaces = displayInterfaces(8889);
+    const initialInterfaces = displayInterfaces(PAGE_PORT);
 
     if (!initialInterfaces.usb && !initialInterfaces.wifi) {
         console.log('\n⚠️  Warning: No suitable network interface detected.');
@@ -174,7 +176,7 @@ async function setupiPad() {
     // restart policy for the length of the session.
     console.log('\n⚡ Starting COMPLETE SYSTEM setup...');
     console.log('🎵 Starting OSC bridge...');
-    console.log('🖥️  Starting preview server on port 8889...\n');
+    console.log(`🖥️  Starting preview server on port ${PAGE_PORT}...\n`);
 
     const setupProcess = spawn('npm', ['run', 'setup-ipad-core'], {
         stdio: ['inherit', 'pipe', 'pipe'],
@@ -190,7 +192,7 @@ async function setupiPad() {
         // Detect when the preview server starts. Guarded so a restart of the
         // preview leg (concurrently --restart-tries -1) doesn't re-run the
         // announcement and re-open Safari.
-        if (!previewStarted && output.includes('Local:') && output.includes('8889')) {
+        if (!previewStarted && output.includes('Local:') && output.includes(String(PAGE_PORT))) {
             previewStarted = true;
             announceReady().catch((error) => {
                 console.error('⚠️  Post-startup step failed:', error.message);

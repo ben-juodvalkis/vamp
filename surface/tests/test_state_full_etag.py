@@ -322,21 +322,25 @@ def test_hello_without_an_etag_passes_none_through():
     assert seen["client_etag"] is None
 
 
-def test_hello_tolerates_a_pre_3_5_0_accept_hook():
-    """A hook with the old zero-arg signature must still fire.
-
-    Guards the wiring seam: a partially-updated surface should degrade
-    to a full send, not raise on the control thread.
-    """
+def test_hello_runs_the_accept_hook_once_when_it_raises_a_type_error():
+    """A ``TypeError`` raised inside the hook is the hook's own failure,
+    logged once. It used to read as an old zero-argument signature and
+    re-ran the whole accept chain without the ETag (code review,
+    2026-11-25), re-emitting every seed that had already gone out."""
     calls = []
     hs = HandshakeComponent(
         emit=lambda addr, args: None,
         generation_component=GenerationComponent(),
         session_id_factory=lambda: "sess-1",
     )
-    hs.set_state_full_on_accept(lambda: calls.append("fired"))
-    hs.handle_hello(["3.5.0", "etag:0x1"], ("127.0.0.1", 1))
-    assert calls == ["fired"]
+
+    def hook(session_id=None, client_etag=None):
+        calls.append((session_id, client_etag))
+        raise TypeError("raised inside a seed")
+
+    hs.set_state_full_on_accept(hook)
+    hs.handle_hello(["3.5.0", "etag:0x1"], ("127.0.0.1", 1))  # must not raise
+    assert calls == [("sess-1", 1)]
 
 
 def test_a_hello_carrying_only_an_etag_is_a_version_mismatch():
@@ -408,14 +412,19 @@ def test_resync_with_only_a_session_id():
     assert seen == [("sess-1", None)]
 
 
-def test_resync_tolerates_a_pre_3_5_0_callback():
-    """Wiring seam, same as the accept hook."""
+def test_resync_runs_the_callback_once_when_it_raises_a_type_error():
+    """Same rule as the accept hook: no retry without the ETag."""
     from components.DevicesComponent import DevicesComponent
     calls = []
     comp = DevicesComponent(song=None, emit=lambda a, b: None)
-    comp.set_state_full_on_resync(lambda: calls.append("fired"))
-    comp.handle_v3_state_resync(["sess-1", "etag:0x1"], None)
-    assert calls == ["fired"]
+
+    def chain(session_id=None, client_etag=None):
+        calls.append((session_id, client_etag))
+        raise TypeError("raised inside a seed")
+
+    comp.set_state_full_on_resync(chain)
+    comp.handle_v3_state_resync(["sess-1", "etag:0x1"], None)  # must not raise
+    assert calls == [("sess-1", 1)]
 
 
 def test_resync_survives_a_raising_callback():

@@ -9,6 +9,7 @@
 	 * instance are for a bug report, not for playing, so they ride small
 	 * under it.
 	 */
+	import { fetchPairedDevices, forgetPairedDevice, type PairedDevice } from '$lib/components/v6/pairing/pairingClient';
 	import { onMount } from 'svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 	import { handshakeState } from '$lib/stores/v3/handshakeState.svelte';
@@ -51,21 +52,18 @@
 	// --- Paired devices (ADR-491) -------------------------------------------
 	// Devices that paired once to drive Vamp off the cable. Forgetting one
 	// applies on its next connection; an open session is never cut.
-	type PairedDevice = { hash: string; name: string; address: string; lastUsed: number };
 	let devices = $state<PairedDevice[]>([]);
 	let devicesState = $state<'loading' | 'ready' | 'failed'>('loading');
 	async function loadDevices() {
 		try {
-			const res = await fetch('/api/pair/devices', { cache: 'no-store' });
-			if (!res.ok) throw new Error(String(res.status));
-			devices = (await res.json()).devices ?? [];
+			devices = await fetchPairedDevices();
 			devicesState = 'ready';
 		} catch {
 			devicesState = 'failed';
 		}
 	}
 	async function forget(query: string) {
-		await fetch(`/api/pair/devices?${query}`, { method: 'DELETE' }).catch(() => {});
+		await forgetPairedDevice(query);
 		await loadDevices();
 	}
 	onMount(() => void loadDevices());

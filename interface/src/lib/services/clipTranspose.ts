@@ -28,12 +28,7 @@
  */
 
 import { send } from '$lib/api/simpleClient';
-import {
-	addOscMessageListener,
-	removeOscMessageListener,
-	type OscBusMessage
-} from '$lib/api/connection/oscMessageBus';
-import { generateRequestId } from './trackPreparation';
+import { oscRequest } from '$lib/api/connection/oscRequest';
 import { V3_CLIP_SET_PITCH_COARSE_ADDRESS } from '$lib/api/handlers/v3Clip';
 import { requireFocusedClip } from '$lib/stores/session.svelte';
 import { clipPropertiesStore } from '$lib/stores/v6/clipPropertiesStore.svelte';
@@ -267,32 +262,24 @@ function transposeDrumRackPitch(device: DeviceRecord, semitones: number): void {
  * did. Never rejects: a missing answer resolves `timeout`.
  */
 export function transposeTrackKit(trackPath: string, semitones: number): Promise<TrackTransposeResult> {
-	const requestId = generateRequestId();
-	return new Promise<TrackTransposeResult>((resolve) => {
-		let settled = false;
-		const settle = (result: TrackTransposeResult) => {
-			if (settled) return;
-			settled = true;
-			removeOscMessageListener(handler);
-			clearTimeout(timer);
-			resolve(result);
-		};
-		const handler = (msg: OscBusMessage) => {
-			if (msg?.address !== V3_TRACK_TRANSPOSE_REPLY_ADDRESS || !msg.args) return;
-			if (msg.args[0] !== requestId) return;
-			const result = String(msg.args[1] ?? '') as TrackTransposeResult;
+	return oscRequest<TrackTransposeResult>({
+		address: V3_TRACK_TRANSPOSE_ADDRESS,
+		idPrefix: 'transpose',
+		args: [trackPath, semitones],
+		replies: [V3_TRACK_TRANSPOSE_REPLY_ADDRESS],
+		timeoutMs: TRACK_TRANSPOSE_TIMEOUT_MS,
+		onReply: (_address, args) => {
+			const result = String(args[1] ?? '') as TrackTransposeResult;
 			logger.debug('transposeTrackKit: reply', {
 				component: 'clipTranspose',
 				trackPath,
 				result,
-				detail: msg.args[2],
-				pitch: msg.args[3]
+				detail: args[2],
+				pitch: args[3]
 			});
-			settle(result);
-		};
-		addOscMessageListener(handler);
-		send(V3_TRACK_TRANSPOSE_ADDRESS, [requestId, trackPath, semitones]);
-		const timer = setTimeout(() => settle('timeout'), TRACK_TRANSPOSE_TIMEOUT_MS);
+			return { value: result };
+		},
+		onTimeout: () => ({ value: 'timeout' })
 	});
 }
 

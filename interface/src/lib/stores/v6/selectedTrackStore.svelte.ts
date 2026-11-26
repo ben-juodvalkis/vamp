@@ -10,6 +10,7 @@
  */
 
 import { send } from '$lib/api/simpleClient';
+import { writeParam } from '$lib/services/paramWrite';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 import type { InstrumentType } from '$lib/services/instrumentService';
 import { VM_PAD_FX, padDeviceStubs, parseVmPadFx, vmPadChainProperty } from '$lib/services/drumVirtualMacros';
@@ -19,19 +20,17 @@ import { logger } from '$lib/utils/logger';
 // bottom of this file) instead of a `private` field on SelectedTrackStore
 // — audit hotspot #9 decoupling. fxGridStore.svelte.ts re-exports it.
 import { FXGridState } from './fxGridStore.svelte';
-import { slotRegistry } from './slotRegistry.svelte';
 import { fxChainStore, RACK_PICK } from './fxChainStore.svelte';
+import { session, onSelectedTrackChange } from '$lib/stores/session.svelte';
 import {
 	v3Store,
 	UNSET_GENERATION,
-	applyParamValue,
 	applyPropertyValue,
 	padDevicesAt,
 	chainDevicesAt
 } from '$lib/stores/v3/normalized.svelte';
 import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import {
-	armParam,
 	disarmParam,
 	getArmedValue,
 	resetParamArming
@@ -88,8 +87,10 @@ function padFxParsed(raw: unknown): ReturnType<typeof parseVmPadFx> {
 }
 
 class SelectedTrackStore {
-	// Layer 1: Core Data
-	private _trackIndex = $state(0);
+	// Layer 1: Core Data — the selected track is the session store's
+	// (`session.selectedTrackIndex`, with its optimistic write and stale-
+	// echo latch); this store reads it and owns the side effects of a
+	// change (`onTrackChanged`, registered at the bottom of this file).
 
 	// Layer 2: Parameters — DeviceParameterStorage was once a per-store
 	// instance; the v3 path-keyed migration (closeout-6) made it
@@ -105,15 +106,15 @@ class SelectedTrackStore {
 	// ===== PUBLIC ACCESSORS =====
 
 	get trackIndex() {
-		return this._trackIndex;
+		return session.selectedTrackIndex;
 	}
 
 	/**
 	 * PR-3.5.2 (2026-04-15) — canonical trackPath for the currently
 	 * selected track, matching the v3 wire grammar in [04 §2.1](https://github.com/ben-juodvalkis/Looping/blob/dbae35ae/documentation/archive/m4l-to-python-v3/04-wire-protocol.md#2-path-grammar):
 	 *
-	 * - `_trackIndex >= 0`  → `tracks/<N>`
-	 * - `_trackIndex === -1` → `master`
+	 * - `trackIndex >= 0`  → `tracks/<N>`
+	 * - `trackIndex === -1` → `master`
 	 *
 	 * Returns tracks are not reachable via the current v2 selection
 	 * pipeline; when Phase 3.5 grows a dedicated track-select wire
@@ -126,10 +127,10 @@ class SelectedTrackStore {
 	 * UI, not `v3Store`. This getter is the path-keyed façade the
 	 * downstream `$derived` views (starting with `devicesByPath`)
 	 * compose against, so migrated consumers stop reading
-	 * `_trackIndex` through v2-cached state.
+	 * `trackIndex` through v2-cached state.
 	 */
 	get selectedTrackPath(): string {
-		return this._trackIndex === -1 ? 'master' : `tracks/${this._trackIndex}`;
+		return this.trackIndex === -1 ? 'master' : `tracks/${this.trackIndex}`;
 	}
 
 	/**
@@ -157,7 +158,7 @@ class SelectedTrackStore {
 	 * UI's job.
 	 *
 	 * Reactive dependencies: `v3Store.tracks` (rebuilt on every
-	 * state/full) and `_trackIndex` (mutated by selection handlers).
+	 * state/full) and `trackIndex` (the session store's selection).
 	 */
 	get trackType(): 'midi' | 'audio' | null {
 		const track = v3Store.tracks.get(this.selectedTrackPath);
@@ -197,7 +198,7 @@ class SelectedTrackStore {
 	 * should stay on {@link devices} until their callsite migrates.
 	 *
 	 * Reactive dependencies: `v3Store.tracks` (rebuilt on every
-	 * state/full) and `_trackIndex` (mutated by selection handlers).
+	 * state/full) and `trackIndex` (the session store's selection).
 	 *
 	 * @see selectedTrackPath for the track address this composes against.
 	 */
@@ -228,7 +229,7 @@ class SelectedTrackStore {
 	 * v2 identity fields vanish with v2 in Phase 4 PR-4a.
 	 *
 	 * Reactive dependencies: `v3Store.tracks` (rebuilt on every
-	 * state/full) and `_trackIndex` (mutated by selection handlers) —
+	 * state/full) and `trackIndex` (the session store's selection) —
 	 * same shape as {@link devicesByPath}, so preset swaps / device
 	 * reorder / track switches all re-derive cleanly.
 	 *
@@ -300,27 +301,32 @@ class SelectedTrackStore {
 	// ===== EVENT HANDLERS (from Max4Live) =====
 
 	/**
-	 * Narrow writer for `_trackIndex`, decoupled from the device-list
-	 * update path. Called by the v3 selected-track handler
-	 * (`/looping/v3/selected_track`). Does NOT reset FX grid, slot
-	 * registry, or parameter cache — track-switch side effects ride on
-	 * the v3 state/full structural republish, which arrives after
-	 * selection anyway.
+	 * Select a track from the UI: paints at once, and Live's echo confirms
+	 * it (`session.selectTrackOptimistically`, whose latch drops a stale
+	 * echo for an earlier tap). The track-change side effects run from
+	 * {@link onTrackChanged}, once per real change.
 	 */
+	selectTrackLocally(trackIndex: number): void {
+		session.selectTrackOptimistically(trackIndex);
+	}
+
+	/** @deprecated Use {@link selectTrackLocally}. Kept for call sites that
+	 *  still pair it with `session.selectTrackOptimistically`, where it is
+	 *  a no-op (the session already holds the index). */
 	handleTrackSelected(trackIndex: number): void {
-		if (trackIndex === this._trackIndex) return;
-		logger.debug('Track selection via /looping/v3/selected_track', {
-			from: this._trackIndex,
-			to: trackIndex
-		});
-		this._trackIndex = trackIndex;
+		this.selectTrackLocally(trackIndex);
+	}
+
+	/**
+	 * What a change of selected track resets: the FX grid's slot tables and
+	 * pending loads, and the param arms (keyed by full paramPath, they
+	 * belong to the old track and would otherwise linger for ARM_TTL_MS —
+	 * PR #401 review). Then the `track-changed` window event. Runs from the
+	 * session store's listener, never for a stale echo.
+	 */
+	onTrackChanged(trackIndex: number, previous: number): void {
+		logger.debug('Selected track changed', { from: previous, to: trackIndex });
 		fxGrid.resetForTrackChange();
-		slotRegistry.resetForTrackChange();
-		// Symmetry with fxGrid.resetForTrackChange: speculative entries
-		// are cleared per-slot above, but armed entries (keyed by full
-		// paramPath) belong to a different track and would otherwise
-		// linger for ARM_TTL_MS. Clearing here removes the asymmetry —
-		// see PR #401 review.
 		resetParamArming();
 		if (typeof window !== 'undefined') {
 			window.dispatchEvent(
@@ -419,7 +425,7 @@ class SelectedTrackStore {
 	/**
 	 * PR-3.5.1 (2026-04-15) — path-keyed parameter read.
 	 *
-	 * Reads directly from `v3Store.paramByPath`; no `deviceId`
+	 * Reads directly from `v3Store.param(path)`; no `deviceId`
 	 * resolver, no v2 fallback. Returns `undefined` when the path
 	 * isn't in the v3 tree yet (cold-start race before state/full
 	 * lands, or an invalidated subtree). Callers that render sliders
@@ -427,15 +433,15 @@ class SelectedTrackStore {
 	 * posture as the deprecated `getParameterValue` on miss, but
 	 * without the silent fall-through to v2-populated state.
 	 *
-	 * Reactive dependency: `v3Store.paramByPath` is a `$derived.by`
-	 * rebuilt on every tree mutation, so accessing it here is what
-	 * ties this method into Svelte's reactivity graph.
+	 * Reactive dependency: `v3Store.param` is a keyed read of the owning
+	 * device's params `SvelteMap`, so a caller re-runs when this record
+	 * changes and not on another parameter's echo.
 	 *
 	 * @see setParamValue for the companion write path.
 	 * @see paramPath for the `(Device, paramIndex)` composer.
 	 */
 	paramValue(paramPath: string): number | undefined {
-		return v3Store.paramByPath.get(paramPath)?.value;
+		return v3Store.param(paramPath)?.value;
 	}
 
 	/**
@@ -447,7 +453,7 @@ class SelectedTrackStore {
 	 * to a local format of `value` + `unit`. Companion to {@link paramValue}.
 	 */
 	paramDisplay(paramPath: string): string | undefined {
-		return v3Store.paramByPath.get(paramPath)?.displayValue;
+		return v3Store.param(paramPath)?.displayValue;
 	}
 
 	/**
@@ -460,7 +466,7 @@ class SelectedTrackStore {
 	 * will reconcile via echo-after-accept once the next state/full
 	 * lands.
 	 *
-	 * Optimistically writes the value into `v3Store.paramByPath`
+	 * Optimistically writes the value into the v3 store
 	 * before sending — `MutationComponent.on_param_value_changed`
 	 * suppresses echoes for UI-armed pids to prevent jitter loops, so
 	 * without the local write the store would stay stuck at the
@@ -484,20 +490,12 @@ class SelectedTrackStore {
 	 * @see paramValue for the companion read path.
 	 */
 	setParamValue(paramPath: string, value: number): Promise<void> {
-		if (v3Store.generation === UNSET_GENERATION) {
-			logger.debug('setParamValue dropped — v3 generation still UNSET', {
-				paramPath
-			});
-			return Promise.resolve();
-		}
-		// Arm before optimistic apply: incoming echoes/state-fulls during
-		// the round-trip won't overwrite our value until the surface's
-		// confirmation echo matches (or the arm ages out). This is what
-		// makes lossy-quantization controls (Echo, AutoPan) stay where
-		// the finger left them — see paramArming.svelte for details.
-		armParam(paramPath, value);
-		applyParamValue(paramPath, value);
-		send('/looping/v3/param/set', [paramPath, value, v3Store.generation]);
+		// Armed and optimistic (`writeParam`'s defaults): incoming
+		// echoes/state-fulls during the round trip won't overwrite our value
+		// until the surface's confirmation echo matches (or the arm ages
+		// out). This is what makes lossy-quantization controls (Echo,
+		// AutoPan) stay where the finger left them — see paramArming.svelte.
+		writeParam(paramPath, value);
 		return Promise.resolve();
 	}
 
@@ -515,7 +513,7 @@ class SelectedTrackStore {
 	paramValueArmed(paramPath: string): number | undefined {
 		const armed = getArmedValue(paramPath);
 		if (armed !== undefined) return armed;
-		return v3Store.paramByPath.get(paramPath)?.value;
+		return v3Store.param(paramPath)?.value;
 	}
 
 	/**
@@ -635,7 +633,7 @@ class SelectedTrackStore {
 	 * through without reopening the Device lookup. Migrated consumers
 	 * (PR-3.5.2a..n drain) hold a `DeviceRecord` from `devicesByPath`
 	 * and pass it directly — the record's `devicePath` is the
-	 * canonical trackRef, so the composer ignores `_trackIndex`
+	 * canonical trackRef, so the composer ignores `trackIndex`
 	 * entirely on that path. All three entry points converge on the
 	 * `<trackPath>/devices/<N>/params/<N>` shape defined by
 	 * [04 §2](https://github.com/ben-juodvalkis/Looping/blob/dbae35ae/documentation/archive/m4l-to-python-v3/04-wire-protocol.md#2-path-grammar).
@@ -664,7 +662,7 @@ class SelectedTrackStore {
 		if ('devicePath' in deviceOrPath) {
 			return `${deviceOrPath.devicePath}/params/${paramIndex}`;
 		}
-		const trackPath = `tracks/${this._trackIndex}`;
+		const trackPath = `tracks/${this.trackIndex}`;
 		return `${trackPath}/devices/${deviceOrPath.index}/params/${paramIndex}`;
 	}
 
@@ -674,23 +672,21 @@ class SelectedTrackStore {
 	 * Returns the display name for a single parameter at `paramPath`,
 	 * or `undefined` when the path isn't in the v3 tree yet (cold-start
 	 * race before state/full lands, invalidated subtree). Reads
-	 * directly off `v3Store.paramByPath`; no `deviceId` resolver, no v2
+	 * directly off `v3Store.param(path)`; no `deviceId` resolver, no v2
 	 * fallback, no Promise (the v2 method's `Promise<string[]>` was a
 	 * bridge round-trip artifact that no longer exists — names ride
 	 * every state/full chunk on the P record per
 	 * [04 §5](https://github.com/ben-juodvalkis/Looping/blob/dbae35ae/documentation/archive/m4l-to-python-v3/04-wire-protocol.md#5-state-full-tree-args-layout)).
 	 *
-	 * Reactive dependency: `v3Store.paramByPath` is a `$derived.by`
-	 * rebuilt on every tree mutation, so accessing it here ties this
-	 * method into Svelte's reactivity graph — a preset swap that bumps
-	 * generation re-derives paramByPath, and consumers re-read the
-	 * fresh names without a stale flash.
+	 * Reactive dependency: a keyed read of the owning device's params
+	 * (`v3Store.param`) — a preset swap that replaces the record re-runs
+	 * consumers, which re-read the fresh names without a stale flash.
 	 *
 	 * @see paramNamesForDevice for the whole-device variant.
 	 * @see paramValue for the value sibling.
 	 */
 	paramName(paramPath: string): string | undefined {
-		return v3Store.paramByPath.get(paramPath)?.name;
+		return v3Store.param(paramPath)?.name;
 	}
 
 	/**
@@ -700,7 +696,7 @@ class SelectedTrackStore {
 	 * than a hard-coded range.
 	 */
 	paramRange(paramPath: string): { min: number; max: number } | undefined {
-		const rec = v3Store.paramByPath.get(paramPath);
+		const rec = v3Store.param(paramPath);
 		return rec ? { min: rec.min, max: rec.max } : undefined;
 	}
 
@@ -721,7 +717,7 @@ class SelectedTrackStore {
 	 *
 	 * Overloads mirror {@link paramPath}: a `DeviceRecord` is the
 	 * canonical v3 input (its `devicePath` IS the lookup key); a v2
-	 * `Device` composes against the selected `_trackIndex` (load-
+	 * `Device` composes against the selected `trackIndex` (load-
 	 * bearing for Phase 3.5 mixed call sites — same trade-off
 	 * documented on `paramPath(Device, …)`); a raw devicePath string
 	 * lets lower-level helpers pass through without reopening the
@@ -741,7 +737,7 @@ class SelectedTrackStore {
 			devicePath = deviceOrPath.devicePath;
 		} else {
 			// v2 Device: compose against `selectedTrackPath` (handles
-			// `master` correctly for `_trackIndex === -1`), matching the
+			// `master` correctly for `trackIndex === -1`), matching the
 			// composition rule on `paramPath(Device, N)` modulo the
 			// master fix. Same load-bearing trade-off documented there:
 			// v2 device identity carries no track address, so the
@@ -777,6 +773,9 @@ export const fxGrid = new FXGridState({
 		return pad ? selectedTrackStore.subscribeProperty(pad.rackPath, vmPadChainProperty(pad.note)) : undefined;
 	}
 });
+
+// After `fxGrid` exists: a change of selected track resets it.
+onSelectedTrackChange((trackIndex, previous) => selectedTrackStore.onTrackChanged(trackIndex, previous));
 
 if (typeof window !== 'undefined' && import.meta.env.DEV) {
 	(window as unknown as { selectedTrackStore: typeof selectedTrackStore }).selectedTrackStore = selectedTrackStore;

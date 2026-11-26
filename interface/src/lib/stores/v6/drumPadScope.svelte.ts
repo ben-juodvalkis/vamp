@@ -468,7 +468,7 @@ export const drumPadScope = {
 // its view and reports `cancel`, which finds nothing to release), and a
 // Move hold still down releases into nothing when it lifts. Live's own
 // selected pad is not touched: shared state, and what the Move hold and
-// the CC 72 knob read. `selectedTrackStore.handleTrackSelected` is the
+// the CC 72 knob read. `selectedTrackStore.onTrackChanged` is the
 // one path every track change takes and it dispatches this event, which
 // keeps this store off the selection store's import graph.
 if (typeof window !== 'undefined') {

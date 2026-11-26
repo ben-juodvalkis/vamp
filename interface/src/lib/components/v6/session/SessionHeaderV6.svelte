@@ -25,7 +25,8 @@
   import { logger } from '$lib/utils/logger';
   import { session } from '$lib/stores/session.svelte.js';
   import { press } from '$lib/actions/press';
-  import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
+  import { drag as dragAction } from '$lib/actions/drag';
+  import { createStepDrag } from '$lib/actions/stepDrag';
   import {
     toggleTransport as sendTransportToggle,
     toggleMetronome as sendMetronomeToggle,
@@ -72,88 +73,45 @@
    * here before.
    *
    * The two views deliberately keep their own sensitivities — the central
-   * view's digits are much larger — but nothing else differs.
+   * view's digits are much larger — but nothing else differs: both are
+   * `createStepDrag`, which sends only when the rounded value changes.
    */
-  let isDragging = $state(false);
-  let dragStartTempo = $state(120);
+  let tempoActive = $state(false);
+  let signatureActive = $state<'numerator' | 'denominator' | null>(null);
 
-  let isDraggingTimeSignature = $state(false);
-  let dragStartNumerator = $state(4);
-  let dragStartDenominator = $state(4);
-  let timeSignatureDragMode = $state<'numerator' | 'denominator' | null>(null);
-  let lastTimeSignatureValue = $state<number | null>(null);
+  const tempoDrag = createStepDrag({
+    // Whole BPM, as the master view writes and as the header reads.
+    read: () => Math.round(session.tempo),
+    perPx: 0.5,
+    min: 20,
+    max: 999,
+    send: setTempo,
+    onActiveChange: (active) => (tempoActive = active)
+  });
 
-  const tempoDrag: DragOptions = {
-    commit: 'immediate',
-    touchAction: 'none',
-    onStart: () => {
-      isDragging = true;
-      dragStartTempo = Math.round(session.tempo);
+  const numeratorDrag = createStepDrag({
+    read: () => session.timeSignature.numerator,
+    perPx: 0.1,
+    min: 1,
+    max: 32,
+    send: (value) => {
+      logger.debug(`Setting numerator to ${value}`, { component: 'SessionHeaderV6' });
+      setSignatureNumerator(value);
     },
-    /** `dy` is pixels travelled UP from the press point. */
-    onMove: ({ dy }: DragInfo) => {
-      const sensitivity = 0.5; // BPM per pixel
-      const newTempo = Math.max(20, Math.min(999, dragStartTempo + dy * sensitivity));
-      // Whole BPM, as the master view writes and as the header reads.
-      setTempo(Math.round(newTempo));
+    onActiveChange: (active) => (signatureActive = active ? 'numerator' : null)
+  });
+
+  const denominatorDrag = createStepDrag({
+    read: () => session.timeSignature.denominator,
+    // Slower than the numerator: one denominator step is a doubling.
+    perPx: 0.05,
+    steps: [1, 2, 4, 8, 16],
+    send: (value) => {
+      logger.debug(`Setting denominator to ${value}`, { component: 'SessionHeaderV6' });
+      setSignatureDenominator(value);
     },
-    onEnd: () => {
-      isDragging = false;
-    }
-  };
-
-  function applyTimeSignatureDrag(deltaY: number) {
-    if (!isDraggingTimeSignature || !timeSignatureDragMode) return;
-    const sensitivity = 0.1; // Higher sensitivity to detect integer crossings better
-
-    if (timeSignatureDragMode === 'numerator') {
-      const rawValue = dragStartNumerator + deltaY * sensitivity;
-      const newNumerator = Math.max(1, Math.min(32, Math.round(rawValue)));
-
-      // Only send when we cross into a new integer AND it's different from last sent
-      if (newNumerator !== lastTimeSignatureValue) {
-        lastTimeSignatureValue = newNumerator;
-        logger.debug(`Setting numerator to ${newNumerator} (integer, from raw: ${rawValue.toFixed(2)})`, { component: 'SessionHeaderV6' });
-        setSignatureNumerator(newNumerator);
-      }
-    } else if (timeSignatureDragMode === 'denominator') {
-      // Valid denominators: 1, 2, 4, 8, 16
-      const validDenominators = [1, 2, 4, 8, 16];
-      const currentIndex = validDenominators.indexOf(dragStartDenominator);
-      const rawIndexChange = deltaY * sensitivity * 0.5; // Slower for discrete stepping
-      const newIndex = Math.max(0, Math.min(validDenominators.length - 1, Math.round(currentIndex + rawIndexChange)));
-      const newDenominator = validDenominators[newIndex];
-
-      // Only send when we step to a new denominator AND it's different from last sent
-      if (newDenominator !== lastTimeSignatureValue) {
-        lastTimeSignatureValue = newDenominator;
-        logger.debug(`Setting denominator to ${newDenominator} (integer, index: ${newIndex})`, { component: 'SessionHeaderV6' });
-        setSignatureDenominator(newDenominator);
-      }
-    }
-  }
-
-  function timeSignatureDrag(mode: 'numerator' | 'denominator'): DragOptions {
-    return {
-      commit: 'immediate',
-      touchAction: 'none',
-      onStart: () => {
-        isDraggingTimeSignature = true;
-        timeSignatureDragMode = mode;
-        dragStartNumerator = session.timeSignature.numerator;
-        dragStartDenominator = session.timeSignature.denominator;
-      },
-      onMove: ({ dy }: DragInfo) => applyTimeSignatureDrag(dy),
-      onEnd: () => {
-        isDraggingTimeSignature = false;
-        timeSignatureDragMode = null;
-        lastTimeSignatureValue = null; // Reset throttling
-      }
-    };
-  }
-
-  const numeratorDrag: DragOptions = $derived(timeSignatureDrag('numerator'));
-  const denominatorDrag: DragOptions = $derived(timeSignatureDrag('denominator'));
+    onActiveChange: (active) => (signatureActive = active ? 'denominator' : null)
+  });
 
   /**
    * Song position as `bar.beat` (Ben, 2026-10-09): Live's reading without
@@ -250,7 +208,7 @@
     <!-- Tempo — drag to change, same address the master view writes. -->
     <div
       class="hdr-field"
-      class:is-active={isDragging}
+      class:is-active={tempoActive}
       role="slider"
       aria-label="Tempo"
       aria-valuenow={Math.round(session.tempo)}
@@ -270,7 +228,7 @@
         <button
           type="button"
           class="hdr-digit is-num"
-          class:is-active={isDraggingTimeSignature && timeSignatureDragMode === 'numerator'}
+          class:is-active={signatureActive === 'numerator'}
           aria-label="Time signature numerator"
           use:dragAction={numeratorDrag}
           title="Drag up/down to change numerator"
@@ -279,7 +237,7 @@
         <button
           type="button"
           class="hdr-digit is-den"
-          class:is-active={isDraggingTimeSignature && timeSignatureDragMode === 'denominator'}
+          class:is-active={signatureActive === 'denominator'}
           aria-label="Time signature denominator"
           use:dragAction={denominatorDrag}
           title="Drag up/down to change denominator"

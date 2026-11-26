@@ -70,6 +70,8 @@ from __future__ import annotations
 import logging
 
 from . import path_resolver
+from ._common import LOM_ERRORS, coerce_str as _coerce_str
+from .component_util import begin_undo_step, end_undo_step
 from .drum_vm_functions import DRUM_RACK_CLASS_NAME
 from .key_detect import (
     BAND_NO_KEY,
@@ -84,7 +86,7 @@ from .key_detect import (
     quantize_clip,
 )
 from .LOMListeners import _safe_int_id
-from .TrackMetadataComponent import TRACK_ROLE_DATA_KEY, _coerce_str
+from .TrackMetadataComponent import TRACK_ROLE_DATA_KEY
 
 logger = logging.getLogger("Looping.KeyDetect")
 
@@ -94,7 +96,7 @@ V3_SESSION_SCALE_DETECTED_ADDRESS = "/looping/v3/session/scale/detected"
 #: The reasons string is one OSC arg in one datagram; leave room for the rest.
 REASONS_MAX_CHARS = 1500
 
-_LOM_ERRORS = (RuntimeError, AttributeError, TypeError, IndexError, ValueError)
+_LOM_ERRORS = LOM_ERRORS + (IndexError, ValueError)
 
 #: Launches, stops and finished takes coalesce behind this delay (ms); one
 #: ``schedule_message`` tick is ~100 ms.
@@ -682,11 +684,7 @@ class KeyDetectComponent:
         opened = False
         self._writing = True
         try:
-            try:
-                song.begin_undo_step()
-                opened = True
-            except _LOM_ERRORS as e:
-                logger.warning("KeyDetect: begin_undo_step raised: %s", e)
+            opened = begin_undo_step("KeyDetect", song)  # the song's shared step
             if stamp is not None:
                 try:
                     stamp.root_note = root
@@ -706,11 +704,7 @@ class KeyDetectComponent:
                 logger.warning("KeyDetect: writing %s raised: %s", key_name((root, scale)), e)
         finally:
             self._writing = False
-            if opened:
-                try:
-                    song.end_undo_step()
-                except _LOM_ERRORS as e:
-                    logger.warning("KeyDetect: end_undo_step raised: %s", e)
+            end_undo_step("KeyDetect", song, opened)
         after = self._current_key()
         self._last_seen = after
         if after != (root, scale):

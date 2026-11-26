@@ -7,7 +7,6 @@
  * - handlers/ - Domain-specific message handlers
  */
 
-import { handleMessage as handleThemeMessage } from '$lib/stores/theme';
 import { freezeDetector } from '$lib/utils/freeze-detector';
 import { logger } from '$lib/utils/logger';
 import { clearSession } from '$lib/stores/session.svelte';
@@ -26,12 +25,7 @@ import {
 } from './connection/WebSocketConnection';
 
 // Import message handlers
-import {
-	handleBridgeMessage,
-	handleCommandMessage,
-	handlePingPongMessage,
-	handleInitMessage
-} from './handlers';
+import { handleBridgeMessage, handleCommandMessage } from './handlers';
 import {
 	handleV3StateFullTree,
 	handleV3StateFullUnchanged,
@@ -288,17 +282,6 @@ function routeMessage(address: string, args: OSCArg[]): void {
 		return;
 	}
 
-	if (address === '/looping/error') {
-		// Surface-side error — logged here so the source address and
-		// message surface loudly in the dev console without taking the
-		// rest of the maxObserver dispatch path down.
-		logger.warn('Python surface error', {
-			originatingAddress: String(args[0] ?? ''),
-			message: String(args[1] ?? '')
-		});
-		return;
-	}
-
 	// Priority 2: Unrouted /looping/* — drop at debug. After ROW 10
 	// cleanup, every /looping/* address either routes to an explicit
 	// handler above (v3 + legacy tempo via handleV3Session) or is dead
@@ -333,33 +316,13 @@ function routeMessage(address: string, args: OSCArg[]): void {
 		return;
 	}
 
-	// Priority 4: System Messages
-	if (address === '/init') {
-		handleInitMessage(address, ...args);
-		return;
-	}
-
-	// Priority 5: Legacy messages (deprecated V5 routes now ignored)
-	if (
-		address.startsWith('/session/') ||
-		address.startsWith('/tracks/') ||
-		address.startsWith('/currentTrack/') ||
-		address.startsWith('/currentClip/')
-	) {
-		logger.debug('Ignoring V5 legacy message', { address });
-		return;
-	}
-
-	// Still-supported legacy routes
-	if (address.startsWith('/theme/')) {
-		handleThemeMessage(address, ...args);
-	} else if (address.startsWith('/cmd/')) {
+	// The bridge's Reverse ack (`/cmd/clip/reverse/ack`).
+	if (address.startsWith('/cmd/')) {
 		handleCommandMessage(address, ...args);
-	} else if (address === '/pong') {
-		handlePingPongMessage(address, ...args);
-	} else {
-		logger.warn('Unknown address domain', { address });
+		return;
 	}
+
+	logger.warn('Unknown address domain', { address });
 }
 
 // ============================================

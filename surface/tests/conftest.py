@@ -32,3 +32,15 @@ def _no_machine_live_library(monkeypatch):
     from components.live_library import LiveLibrary
 
     monkeypatch.setattr(dlc, "read_live_library", lambda *a, **k: LiveLibrary())
+
+
+@pytest.fixture(autouse=True)
+def _fresh_undo_owner():
+    """The song's undo owner (``component_util``) counts held levels per
+    song; a test that leaves a step open must not leak a level into the
+    next test's song (stub songs are keyed by ``id()``, which is reused)."""
+    from components.component_util import reset_undo_steps
+
+    reset_undo_steps()
+    yield
+    reset_undo_steps()

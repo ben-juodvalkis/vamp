@@ -48,6 +48,7 @@
  */
 
 import { logger } from '$lib/utils/logger';
+import { nextRequestId } from '$lib/api/connection/requestId';
 
 export interface ClipSample {
 	/** False for a MIDI clip — NOT an error; the caller draws notes. */
@@ -82,15 +83,9 @@ const inflightByClipPath = new Map<string, Promise<ClipSample>>();
 const resolvedByClipPath = new Map<string, ClipSample>();
 
 let _sender: SampleSender | null = null;
-let _seq = 0;
 
 export function setSampleSender(sender: SampleSender): void {
 	_sender = sender;
-}
-
-function nextRequestId(): string {
-	_seq = (_seq + 1) & 0x7fffffff;
-	return `sample-${Date.now().toString(36)}-${_seq}`;
 }
 
 /**
@@ -123,7 +118,7 @@ export function requestSample(clipPath: string): Promise<ClipSample> {
 	const existing = inflightByClipPath.get(clipPath);
 	if (existing) return existing;
 
-	const requestId = nextRequestId();
+	const requestId = nextRequestId('sample');
 	const sender = _sender;
 	const promise = new Promise<ClipSample>((resolve, reject) => {
 		const timeoutId = setTimeout(() => {

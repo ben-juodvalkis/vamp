@@ -42,6 +42,12 @@ reactivity also re-sends (not fine). The suppression flag is:
    than use a counter so repeated rapid writes stay silenced.
 3. **Auto-cleared on unarm** if the write raises, so a later unrelated
    fire isn't swallowed. ``DevicesComponent`` handles this contract.
+4. **Not armed for a write Live will not echo.** A write of the value
+   the parameter already holds fires nothing, so an armed flag would
+   wait for the next *real* change and swallow it. ``DevicesComponent``
+   skips the arm when the parameter already reads the clamped value.
+5. **Expires after ``SUPPRESS_TTL_SEC``** in any case: a flag left up
+   by any other no-echo write cannot outlive the echo it was armed for.
 
 The suppression key is ``param_id`` (not a single global flag) because
 two parameters can change simultaneously; the old
@@ -109,6 +115,12 @@ V3_PARAM_DISPLAY_ADDRESS = "/looping/v3/param/display"
 # fire — no wall-clock ticking required.
 HOT_TTL_SEC = 0.75
 
+# How long an armed echo suppression waits for its echo. Live answers a
+# value write with a synchronous fire (a debounced burst settles within
+# the same handler run), so a flag still up after this is waiting for a
+# change that is not the echo of our write.
+SUPPRESS_TTL_SEC = 0.5
+
 
 class MutationComponent:
     """Emits per-event mutation fires in response to listener callbacks.
@@ -127,11 +139,10 @@ class MutationComponent:
         self._listeners = listeners
         self._emit = emit
         self._disconnected = False
-        # Per-param suppression: ``{param_id: True}`` when armed. A
-        # single fire consumes and clears. Dict rather than set because
-        # it documents intent and makes "is this armed?" an O(1)
-        # dict-get rather than an O(1) set-in (same cost, clearer).
-        self._suppress: dict[int, bool] = {}
+        # Per-param suppression: ``{param_id: monotonic_expiry_ts}``
+        # when armed. A single fire consumes and clears; a fire after
+        # the expiry is not swallowed.
+        self._suppress: dict[int, float] = {}
         # Per-path hot map: ``{canonical_path: monotonic_expiry_ts}``.
         # Refreshed by ``mark_hot`` from ``DevicesComponent.handle_set_param_v3``;
         # checked by ``on_param_value_changed`` to decide whether to call
@@ -149,9 +160,10 @@ class MutationComponent:
         ``parameter.value``. The next ``on_param_value_changed`` fire
         for this id is swallowed; all subsequent fires emit normally.
         Re-arming before the first fire lands is idempotent (the flag
-        stays True).
+        stays up, its expiry pushed out). The flag expires after
+        ``SUPPRESS_TTL_SEC`` unfired.
         """
-        self._suppress[int(param_id)] = True
+        self._suppress[int(param_id)] = time.monotonic() + SUPPRESS_TTL_SEC
 
     def unarm_suppression(self, param_id: int) -> None:
         """Clear the one-shot flag for ``param_id``.
@@ -229,7 +241,8 @@ class MutationComponent:
             )
             return
 
-        suppressed = self._suppress.pop(pid, False)
+        expiry = self._suppress.pop(pid, None)
+        suppressed = expiry is not None and time.monotonic() < expiry
 
         # Display string rides parallel to the value emit. Compute
         # only when the path is hot — keeps the str() cost off the

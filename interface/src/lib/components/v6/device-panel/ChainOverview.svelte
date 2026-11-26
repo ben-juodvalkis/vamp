@@ -57,7 +57,6 @@
   import Plug from '@lucide/svelte/icons/plug';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
-  import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import ChainListFace from './chain/ChainListFace.svelte';
   import { CHAIN_DEVICES, SHOW_DEVICES, SELECTED_CHAIN, chainDevicePathOf, chainPathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
@@ -68,7 +67,7 @@
   import { isPatternRackMacroName, liveMacroSlots } from '$lib/utils/macroLayoutUtils';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
-  import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
+  import { getSlotByDeviceType, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import GuitarControl from './GuitarControl.svelte';
   import BassControl from './BassControl.svelte';
@@ -76,10 +75,8 @@
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
-  import PaletteChip from './chain/PaletteChip.svelte';
-  import { addEffectToChain, type ChainEffect } from '$lib/services/chainEffects.svelte';
-  import { drag as dragGesture } from '$lib/actions/drag';
-  import { fitBlocks, PALETTE_ROWS, paletteBlocks, paletteColumns, paletteLabel, paletteTail, type PaletteKind } from '$lib/services/effectPalette';
+  import ChainPalette from './chain/ChainPalette.svelte';
+  import type { PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
@@ -90,14 +87,11 @@
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
-  import { shouldRestoreOnRelease } from '../tracks/TrackStrip/utils/momentaryPress';
-  import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag as dragAction, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
   import { moveDevice, moveDeviceInto } from '$lib/services/deviceMoveService';
   import { isHiddenFromChain, visibleDevices } from '$lib/config/hiddenDevices';
   import {
     arrange,
-    chainUnitLayout,
     chainIndexAt,
     dropIntoTarget,
     dropSide,
@@ -105,19 +99,32 @@
     type ChainPlace,
     clampChainIndex,
     moved,
-    planReorder,
     liveChainIndex,
-    REORDER_IDLE,
-    sameDevices,
-    type ReorderState
+    sameDevices
   } from '$lib/utils/chainDrop';
+  import { ChainReorder } from './chain/useChainReorder.svelte';
+  import {
+    chainLayout,
+    deviceIndexOf,
+    deviceKind,
+    expandChain,
+    levelOf,
+    nthOfKind,
+    rackArms,
+    topAt,
+    withLanding,
+    type Cell,
+    type ExpandDeps
+  } from './chain/chainCells';
+  import { childKeys, flipChildren, flyFrom, measureChildren, slideFrom } from './chain/flip';
+  import { useKeyedSubscriptions } from './chain/useKeyedSubscriptions.svelte';
   import { onDestroy, tick, untrack } from 'svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { instrumentService } from '$lib/services/instrumentService';
   import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
   import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
-  import { DEVICE_PRESETS, DEVICE_FAMILY_INKS, type DeviceFamily } from '$lib/config/devicePresets';
+  import { DEVICE_PRESETS, DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
   import ControlGlyph from './ControlGlyph.svelte';
   import { DEVICE_CLASS_GLYPHS, DEVICE_KEY_GLYPHS, glyphForName, type ControlGlyphName } from '$lib/config/controlGlyphMap';
   import { pickSlotDevice } from '$lib/utils/deviceSlotMatch';
@@ -135,72 +142,44 @@
   import TrackDeviceView from '$lib/components/v6/tracks/TrackStrip/components/TrackDeviceView.svelte';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 
-  /** The tiles that control a device, by preset key, and what each is called on the grid. */
   // The devices' pictures draw here (devicePictures), not on the FX grid.
   setContext(PICTURE_CONTEXT, true);
 
-  const TILE_LABELS: Record<string, string> = {
-    random: 'Rand Oct',
-    octave: 'Pitch',
-    eq: 'EQ',
-    filter: 'Filter',
-    drum: 'Drum',
-    chorus: 'Chorus',
-    glitchLoop: 'Glitch',
-    squash: 'Glue',
-    guitar: 'Gtr',
-    bass: 'Bass',
-    saturator: 'Drive',
-    tremolo: 'Tremolo',
-    echo: 'Echo',
-    reverb: 'Reverb',
-    variation: 'Stutter',
-    utility: 'Gain',
-    sequencer: 'Permute'
-  };
+  /** A slot's tile, as the slot table has it (`fxGridLayout`). */
+  function slotTile(type: DeviceTypeKey): { Tile: Component<any>; position: string } {
+    const slot = getSlotByDeviceType(type)!;
+    return { Tile: slot.component, position: slot.position };
+  }
 
-  /** The grid's tile for a device type, by `DEVICE_PRESETS` key: the layout's slots, then the tiles placed outside it. */
-  const TILE_COMPONENTS: Record<string, { Tile: Component<any>; position?: string }> = {
-    ...Object.fromEntries(FX_GRID_LAYOUT.map((slot) => [slot.deviceType, { Tile: slot.component, position: slot.position }])),
-    guitar: { Tile: GuitarControl },
-    bass: { Tile: BassControl },
-    octave: { Tile: PitchControl },
-    glitchLoop: { Tile: GlitchControl },
-    squash: { Tile: SquashControl }
+  /**
+   * The tiles that control a device, by `DEVICE_PRESETS` key: what each is
+   * called on the grid, and the grid's tile component (the slot table's,
+   * else one placed outside it). Permute has a name and no tile. In order:
+   * where two keys pick the same device, the first names it.
+   */
+  const TILES: Record<string, { label: string; Tile?: Component<any>; position?: string }> = {
+    random: { label: 'Rand Oct', ...slotTile('random') },
+    octave: { label: 'Pitch', Tile: PitchControl },
+    eq: { label: 'EQ', ...slotTile('eq') },
+    filter: { label: 'Filter', ...slotTile('filter') },
+    drum: { label: 'Drum', ...slotTile('drum') },
+    chorus: { label: 'Chorus', ...slotTile('chorus') },
+    glitchLoop: { label: 'Glitch', Tile: GlitchControl },
+    squash: { label: 'Glue', Tile: SquashControl },
+    guitar: { label: 'Gtr', Tile: GuitarControl },
+    bass: { label: 'Bass', Tile: BassControl },
+    saturator: { label: 'Drive', ...slotTile('saturator') },
+    tremolo: { label: 'Tremolo', ...slotTile('tremolo') },
+    echo: { label: 'Echo', ...slotTile('echo') },
+    reverb: { label: 'Reverb', ...slotTile('reverb') },
+    variation: { label: 'Stutter', ...slotTile('variation') },
+    utility: { label: 'Gain', ...slotTile('utility') },
+    sequencer: { label: 'Permute' }
   };
 
   /** MidiWheels, re-found as the surface finds it: class + the name Live gives the loaded `.amxd`. */
   const MIDI_WHEELS = constants.devices.midiWheels;
   const isMidiWheels = (d: DeviceRecord) => d.className === MIDI_WHEELS.className && d.name === MIDI_WHEELS.deviceName;
-
-  /**
-   * What a cell is: only what changes when the chain does. Live values
-   * (Device On, a rack's macros) are read in the markup, so a moving
-   * parameter repaints its own cell and never rebuilds the list.
-   */
-  type Cell = {
-    /** Stable across Live's renumbering (paths are positions): name, class, and which of those it is. */
-    key: string;
-    /** Class and name: what the device is, shared by two of a kind. */
-    sig: string;
-    /** Where Live has it now. */
-    path: string;
-    device: DeviceRecord;
-    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains';
-    presetKey: string | null;
-    tile: string | null;
-    ink: string;
-    /** The track's Drum Rack, drawn as its Trnsp, and kept first while a pad is scoped. */
-    kit: boolean;
-    /** A rack Live lets the wire into (ADR-529): it folds and unfolds. */
-    foldable?: boolean;
-    /** Drawn inside an unfolded rack (ADR-529): the rack, its ink, how deep. */
-    inside?: { rackPath: string; ink: string; depth: number; chain: RackChain; chains: number };
-    /** The chain list of an unfolded rack: its chains. */
-    chains?: RackChain[];
-    /** An effect on its way into Live (ADR-540): its load's id. Drawn, editable, not yet a device (no path to move or open). */
-    landing?: string;
-  };
 
   // A held strip (`trackHoldScope`) shows ITS chain while the finger stays,
   // without selecting it: the cells, their inks and their tiles are the
@@ -243,7 +222,7 @@
   const liveDevices = $derived(
     padChain
       ? padChain.map((c) => c.device)
-      : visibleDevices(trackDevices).sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
+      : visibleDevices(trackDevices).sort((a, b) => deviceIndexOf(a.devicePath) - deviceIndexOf(b.devicePath))
   );
 
   /*
@@ -269,21 +248,6 @@
       };
     });
   }
-  /** Live's devices with the landing ones put where Live will put them. */
-  function withLanding(live: DeviceRecord[], landing: { device: DeviceRecord }[]): DeviceRecord[] {
-    if (!landing.length) return live;
-    const out = [...live];
-    for (const { device: d } of landing) {
-      if (!isMidiEffectClass(d.className)) {
-        out.push(d);
-        continue;
-      }
-      const at = out.findIndex((x) => !isMidiEffectClass(x.className));
-      out.splice(at < 0 ? out.length : at, 0, d);
-    }
-    return out;
-  }
-  const isMidiEffectClass = (className: string) => className.startsWith('Midi') || className === 'MxDeviceMidiEffect';
   const landing = $derived(landingDevices(padScope?.padPath ?? trackPath));
   /** The blue hand, a ghost's resolved to the device it became (a chip's pick shows at once). */
   const appointedPath = $derived(landingEffects.resolve(fxChainStore.appointed));
@@ -300,7 +264,7 @@
   /** devicePath → the grid tile that controls it, under the type-first rule and the picks. */
   const tileOf = $derived.by(() => {
     const out = new Map<string, string>();
-    for (const [key, label] of Object.entries(TILE_LABELS)) {
+    for (const [key, { label }] of Object.entries(TILES)) {
       const config = DEVICE_PRESETS[key];
       if (!config) continue;
       const chosen = pickSlotDevice(devices, config, fxChainStore.pickFor(pickScope, key));
@@ -311,21 +275,13 @@
 
   const cells = $derived<Cell[]>(
     devices.map((device, i, all) => {
-      const nth = all.slice(0, i).filter((d) => d.name === device.name && d.className === device.className).length;
+      const nth = nthOfKind(all, i);
       const presetKey = presetKeyFor(device);
       const isInstrument = padChain
         ? (padChain.find((c) => c.device === device)?.instrument ?? false)
         : glance.kind === 'instrument' && glance.headPath === device.devicePath;
-      const kind: Cell['kind'] = isInstrument
-        ? 'instrument'
-        : isChainRack(device.className) && !presetKey
-          ? 'rack'
-          : device.className.startsWith('MxDevice') && !presetKey
-            ? 'max'
-            : device.className.endsWith('PluginDevice')
-              ? 'plugin'
-              : 'effect';
-      const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
+      const kind: Cell['kind'] = isInstrument ? 'instrument' : deviceKind(device.className, presetKey, isChainRack);
+      const family = familyInk(presetKey, kind);
       const sig = `${device.className}|${device.name}`;
       return {
         key: `${sig}|${nth}`,
@@ -356,11 +312,11 @@
    */
   const kitCell = $derived.by<Cell | null>(() => {
     if (!padChain || !padScope) return null;
-    const all = [...trackDevices].sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath));
+    const all = [...trackDevices].sort((a, b) => deviceIndexOf(a.devicePath) - deviceIndexOf(b.devicePath));
     const i = all.findIndex((d) => d.devicePath === padScope.rackPath);
     if (i < 0) return null;
     const device = all[i];
-    const nth = all.slice(0, i).filter((d) => d.name === device.name && d.className === device.className).length;
+    const nth = nthOfKind(all, i);
     const sig = `${device.className}|${device.name}`;
     return { key: `${sig}|${nth}`, sig, path: device.devicePath, device, kind: 'instrument', presetKey: null, tile: null, ink: trackColor, kit: true };
   });
@@ -394,12 +350,10 @@
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
   }
 
-  function indexOf(path: string): number {
-    const m = /\/devices\/(\d+)$/.exec(path);
-    return m ? Number(m[1]) : 0;
-  }
-
   const presetKeyFor = (device: DeviceRecord) => effectTypeOf(device);
+  /** A device's family ink, raw: its preset's, a rack's voice, else utility. */
+  const familyInk = (presetKey: string | null, kind: Cell['kind']) =>
+    presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
 
   /** How many macros Live shows on a rack (its macro count button); subscribed for every rack drawn. */
   const VISIBLE_MACROS = 'visible_macro_count';
@@ -453,11 +407,8 @@
    * Reordering (2026-10-26). Three layers, each changing only as often as
    * it must:
    *
-   * - `reorder` — drops Live has not shown yet (`utils/chainDrop`'s
-   *   `planReorder`): the order held on screen, and the one move on the
-   *   wire. A move is sent against the paths Live last reported, and the
-   *   next waits until Live shows the last, so two quick drops never send
-   *   a path the first has shifted.
+   * - `reorder` — drops Live has not shown yet (`chain/useChainReorder`):
+   *   the order held on screen, and the one move on the wire.
    * - `drag` — the drag in flight: the order it started from and where it
    *   would land. It changes when the landing changes, not per finger
    *   frame.
@@ -474,7 +425,13 @@
   const GRID_GAP = 8;
 
   let chainEl = $state<HTMLElement | null>(null);
-  let reorder = $state<ReorderState>(REORDER_IDLE);
+  const reorder = new ChainReorder(
+    () => cells,
+    // `to` is a position in the chain as drawn; Live moves by its own index.
+    (path, to, drawnCells) => moveDevice(path, liveChainIndex(drawnCells, to)),
+    MOVE_TIMEOUT_MS
+  );
+  onDestroy(() => reorder.destroy());
 
   type Drag = {
     key: string;
@@ -502,22 +459,6 @@
   /** The dragged cell's own node. */
   let dragNode: HTMLElement | null = null;
 
-  // Drops on the wire follow Live: each report lands the move in flight
-  // (or not), and the next goes out.
-  $effect(() => {
-    const state = reorder;
-    if (!state.desired) return;
-    const now = Date.now();
-    const { state: next, send } = planReorder(state, cells, now, MOVE_TIMEOUT_MS);
-    // `send.to` is a position in the chain as drawn; Live moves by its own index.
-    if (send) void moveDevice(send.path, liveChainIndex(cells, send.to)).catch(() => (reorder = REORDER_IDLE));
-    if (next !== state) reorder = next;
-    if (!next.inflight) return;
-    // Wake when the move in flight runs out, if Live never shows it.
-    const timer = setTimeout(() => (reorder = { ...reorder }), Math.max(0, next.inflight.until - now));
-    return () => clearTimeout(timer);
-  });
-
   // Another track or pad: nothing in flight here means anything there.
   const scopeKey = $derived(`${trackPath}|${padScope?.padPath ?? ''}`);
   let lastScope = '';
@@ -525,7 +466,7 @@
     if (scopeKey === lastScope) return;
     lastScope = scopeKey;
     untrack(() => {
-      reorder = REORDER_IDLE;
+      reorder.reset();
       drag = null;
     });
   });
@@ -536,7 +477,7 @@
   });
 
   /** The cells as Live will have them once the drops land. */
-  const settled = $derived((reorder.desired && arrange(cells, reorder.desired)) || cells);
+  const settled = $derived((reorder.state.desired && arrange(cells, reorder.state.desired)) || cells);
 
   /** The cells in the order to draw them: the drag's preview, else `settled`. */
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
@@ -548,26 +489,16 @@
    * belong to the rack: never dragged, and a top-level device dropped on
    * one, or on the chain's +, goes into that chain (ADR-551). `tops[i]` is the chain position a drawn cell stands for.
    */
-  const MAX_DEPTH = 4;
-  function expand(cell: Cell, depth: number, out: Cell[]): void {
-    out.push(cell);
-    if (!cell.foldable || depth >= MAX_DEPTH || !rackFold.isOpen(cell.path)) return;
-    const rackPath = cell.path;
-    const chains = rackChainsOf(rackPath);
-    if (!chains) return;
-    const ink = cell.ink;
-    // A rack with no macros shows its chain list in its own cell (bareChains).
-    if (chains.length > 1 && !isBareRack(cell)) {
-      out.push({ ...listCell(cell), chains, inside: { rackPath, ink, depth, chain: chains[0], chains: chains.length } });
-    }
-    if (chains.length === 0) return;
-    const chosen = chains[Math.min(rackFold.chainOf(rackPath), chains.length - 1)];
-    const inside = { rackPath, ink, depth, chain: chosen, chains: chains.length };
-    // An empty chain draws nothing past the list: its row says it is chosen.
-    chosen.devices.forEach((d, i) => {
+  const expandDeps: ExpandDeps = {
+    isOpen: (path) => rackFold.isOpen(path),
+    chainsOf: (path) => rackChainsOf(path),
+    chosenOf: (path) => rackFold.chainOf(path),
+    isBare: (cell) => isBareRack(cell),
+    nested(parent, chosen, i, inside) {
+      const d = chosen.devices[i];
       // A hidden device (a Tuner) is no cell inside a rack either.
-      if (isHiddenFromChain(d)) return;
-      const devicePath = chainDevicePathOf(rackPath, chosen.index, d.index);
+      if (isHiddenFromChain(d)) return null;
+      const devicePath = chainDevicePathOf(inside.rackPath, chosen.index, d.index);
       const device: DeviceRecord = selectedTrackStore.deviceAt(devicePath) ?? {
         devicePath,
         name: d.name,
@@ -575,77 +506,49 @@
         params: new Map(),
         properties: new Map()
       };
-      const nth = chosen.devices.slice(0, i).filter((x) => x.name === d.name && x.className === d.className).length;
+      const nth = nthOfKind(chosen.devices, i);
       const presetKey = presetKeyFor(device);
-      const kind: Cell['kind'] =
-        isChainRack(device.className) && !presetKey
-          ? 'rack'
-          : device.className.startsWith('MxDevice') && !presetKey
-            ? 'max'
-            : device.className.endsWith('PluginDevice')
-              ? 'plugin'
-              : 'effect';
-      const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
+      const kind = deviceKind(device.className, presetKey, isChainRack);
       // Keyed by the chain row's own class and name, as `nth` counts them:
       // the device's record can lag the row by a message after a change,
       // and a key from the record then collides with its neighbour's.
       const sig = `${d.className}|${d.name}`;
-      const nested: Cell = {
-        key: `${cell.key}|c${chosen.index}|${sig}|${nth}`,
+      return {
+        key: `${parent.key}|c${chosen.index}|${sig}|${nth}`,
         sig,
         path: devicePath,
         device,
         kind: d.type === 1 ? 'instrument' : kind,
         presetKey,
         tile: null,
-        ink: presetKey && DEVICE_PRESETS[presetKey].trackTint ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
+        ink: presetKey && DEVICE_PRESETS[presetKey].trackTint ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(familyInk(presetKey, kind), paint),
         kit: false,
         foldable: isChainRack(device.className),
         inside
       };
-      expand(nested, depth + 1, out);
-    });
-    // An effect on its way into this chain (ADR-540): a ghost cell at its end.
-    for (const { device, id } of landingDevices(chainPathOf(rackPath, chosen.index))) {
-      const presetKey = presetKeyFor(device);
-      const sig = `${device.className}|${device.name}`;
-      const nth = chosen.devices.filter((x) => x.name === device.name && x.className === device.className).length;
-      out.push({
-        key: `${cell.key}|c${chosen.index}|${sig}|${nth}`,
-        sig,
-        path: device.devicePath,
-        device,
-        kind: 'effect',
-        presetKey,
-        tile: null,
-        ink: presetKey ? trackInk(DEVICE_PRESETS[presetKey].color.primary, paint) : trackColor,
-        kit: false,
-        inside,
-        landing: id
+    },
+    landing(parent, chosen, inside) {
+      return landingDevices(chainPathOf(inside.rackPath, chosen.index)).map(({ device, id }) => {
+        const presetKey = presetKeyFor(device);
+        const sig = `${device.className}|${device.name}`;
+        const nth = chosen.devices.filter((x) => x.name === device.name && x.className === device.className).length;
+        return {
+          key: `${parent.key}|c${chosen.index}|${sig}|${nth}`,
+          sig,
+          path: device.devicePath,
+          device,
+          kind: 'effect' as const,
+          presetKey,
+          tile: null,
+          ink: presetKey ? trackInk(DEVICE_PRESETS[presetKey].color.primary, paint) : trackColor,
+          kit: false,
+          inside,
+          landing: id
+        };
       });
     }
-  }
-  function listCell(rack: Cell): Cell {
-    return { ...rack, key: `${rack.key}|chains`, kind: 'chains', tile: null, presetKey: null, foldable: false, kit: false };
-  }
-
-  const expanded = $derived.by(() => {
-    const out: Cell[] = [];
-    const tops: (number | null)[] = [];
-    if (kitCell) {
-      out.push(kitCell);
-      tops.push(null);
-    }
-    shown.forEach((cell, i) => {
-      const part: Cell[] = [];
-      expand(cell, 0, part);
-      for (const [j, c] of part.entries()) {
-        out.push(c);
-        tops.push(j === 0 ? i : null);
-      }
-    });
-    return { cells: out, tops };
-  });
+  };
+  const expanded = $derived(expandChain(kitCell, shown, expandDeps));
   const drawn = $derived(expanded.cells);
   /**
    * The cell lit as the one whose view is open below: Live's blue hand, or,
@@ -659,15 +562,6 @@
     return drawn.find((c) => c.kind === 'instrument' && !c.inside)?.device.devicePath ?? appointedPath;
   });
 
-  /** The chain position a drawn place stands for: its own, else its rack's. */
-  function topAt(drawnIndex: number): number {
-    const tops = expanded.tops;
-    for (let i = Math.min(drawnIndex, tops.length - 1); i >= 0; i--) {
-      if (tops[i] !== null) return tops[i]!;
-    }
-    return 0;
-  }
-
   /*
    * Each unfolded rack on screen holds its `chain_devices` row: the surface
    * sends the chains and the devices' records and keeps their values live
@@ -677,51 +571,18 @@
   const openRacks = $derived(
     drawn.filter((c) => c.foldable && rackFold.isOpen(c.path)).map((c) => c.path)
   );
-  const rackRows = new Map<string, () => void>();
-  // Every rack drawn follows Live's Show Devices toggle, open or not, so a
-  // rack unfolded in Live unfolds here (the fold mirrors it both ways).
-  const foldRows = new Map<string, () => void>();
   const drawnRacks = $derived(drawn.filter((c) => c.foldable).map((c) => c.path));
-  $effect(() => {
-    const want = new Set(drawnRacks);
-    untrack(() => {
-      for (const [path, release] of [...foldRows]) {
-        if (!want.has(path)) {
-          release();
-          foldRows.delete(path);
-        }
-      }
-      for (const path of want) {
-        if (foldRows.has(path)) continue;
-        // …and Live's visible macro count, which says how many knobs its face draws.
-        const releases = [SHOW_DEVICES, VISIBLE_MACROS].map((row) => selectedTrackStore.subscribeProperty(path, row));
-        foldRows.set(path, () => releases.forEach((release) => release()));
-      }
-    });
-  });
-  $effect(() => {
-    const want = new Set(openRacks);
-    untrack(() => {
-      for (const [path, release] of [...rackRows]) {
-        if (!want.has(path)) {
-          release();
-          rackRows.delete(path);
-        }
-      }
-      for (const path of want) {
-        if (rackRows.has(path)) continue;
-        // An open rack's chains, and which of them Live shows (the chosen chain).
-        const releases = [CHAIN_DEVICES, SELECTED_CHAIN].map((row) => selectedTrackStore.subscribeProperty(path, row));
-        rackRows.set(path, () => releases.forEach((release) => release()));
-      }
-    });
-  });
-  onDestroy(() => {
-    for (const release of rackRows.values()) release();
-    rackRows.clear();
-    for (const release of foldRows.values()) release();
-    foldRows.clear();
-  });
+  /** Subscribe `rows` of the device at `path`; the release lets go of all of them. */
+  function holdRows(path: string, rows: string[]): () => void {
+    const releases = rows.map((row) => selectedTrackStore.subscribeProperty(path, row));
+    return () => releases.forEach((release) => release());
+  }
+  // Every rack drawn follows Live's Show Devices toggle, open or not, so a
+  // rack unfolded in Live unfolds here (the fold mirrors it both ways), and
+  // Live's visible macro count, which says how many knobs its face draws.
+  useKeyedSubscriptions(() => drawnRacks, (path) => holdRows(path, [SHOW_DEVICES, VISIBLE_MACROS]));
+  // An open rack's chains, and which of them Live shows (the chosen chain).
+  useKeyedSubscriptions(() => openRacks, (path) => holdRows(path, [CHAIN_DEVICES, SELECTED_CHAIN]));
 
   /*
    * The chain has the section's lower two thirds, under the palette bar
@@ -731,14 +592,7 @@
    * so the room a second row leaves widens its last cell, as a row's end
    * always has.
    */
-  const layout = $derived.by(() => {
-    const widths = drawn.map(unitsOf);
-    const laid = chainUnitLayout(widths, 0, ROW_UNITS);
-    const places = laid.places.map((p) => ({ ...p }));
-    const last = places[places.length - 1];
-    if (last && laid.ghost.span > 0 && laid.ghost.row === last.row) last.span += laid.ghost.span;
-    return { ...laid, places };
-  });
+  const layout = $derived(chainLayout(drawn.map(unitsOf), ROW_UNITS));
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
 
   /*
@@ -751,53 +605,14 @@
    * an arm folds the rack.
    */
   const ARM_STEP = 18;
-  function levelOf(cell: Cell): number {
-    return cell.inside ? cell.inside.depth + 1 : 0;
-  }
-  const arms = $derived.by(() => {
-    const out: { key: string; path: string; name: string; ink: string; row: number; from: number; to: number; level: number; joined: boolean }[] = [];
-    drawn.forEach((cell, i) => {
-      if (!cell.foldable || cell.kind === 'chains' || !rackFold.isOpen(cell.path)) return;
-      const own = layout.places[i];
-      const under = (c: Cell) => !!c.inside && (c.inside.rackPath === cell.path || c.inside.rackPath.startsWith(`${cell.path}/`));
-      let j = i + 1;
-      while (j < drawn.length && under(drawn[j])) j++;
-      const rows = new Map<number, { from: number; to: number }>();
-      for (let k = i + 1; k < j; k++) {
-        const p = layout.places[k];
-        if (!p) continue;
-        const r = rows.get(p.row);
-        rows.set(p.row, r ? { from: Math.min(r.from, p.col), to: Math.max(r.to, p.col + p.span) } : { from: p.col, to: p.col + p.span });
-      }
-      for (const [row, { from, to }] of rows) {
-        out.push({
-          key: `${cell.key}|arm|${row}`,
-          path: cell.path,
-          name: cell.device.name,
-          ink: cell.ink,
-          row,
-          from,
-          to,
-          level: levelOf(cell),
-          joined: !!own && own.row === row && own.col + own.span === from
-        });
-      }
-    });
-    return out;
-  });
+  const arms = $derived(rackArms(drawn, layout.places, (path) => rackFold.isOpen(path)));
   /** Racks whose arm grows out of their own cell: their top-right corner squares. */
   const armedRacks = $derived(new Set(arms.filter((a) => a.joined).map((a) => a.path)));
 
   /*
-   * The palette bar (the user, 2026-11-11; `services/effectPalette`): ghost
-   * effects across the top in family blocks, each family's main effects on
-   * the first row and its others under them, a seam between blocks. The
-   * chain's own + is the way to anything else (the user, 2026-11-11). Which effects depends on the kind of track
-   * alone; how many blocks fit on the width, chips at least
-   * `PALETTE_TILE_MIN` wide (whole blocks, dropped from the end).
+   * The palette bar (ADR-523, ADR-548, ADR-549): `ChainPalette`. Which
+   * effects depends on the kind of track alone.
    */
-  const PALETTE_TILE_MIN = 60;
-  let paletteWidth = $state(0);
   const paletteKind = $derived<PaletteKind>(
     padScope || cells.some((c) => c.kind === 'instrument' && c.device.className === 'DrumGroupDevice')
       ? 'kit'
@@ -805,143 +620,11 @@
         ? 'audio'
         : 'instrument'
   );
-  /*
-   * The bar is one row (ADR-548): its first row of chips and the chevron,
-   * the chain under it taking the rest. The chevron opens it to four rows
-   * and closes it, lit while open; a finger on a chip opens it for as long
-   * as it is down: slide to any chip and let go to load it, and the bar
-   * closes again. The bar has no way to the browser (Ben, 2026-11-18).
-   * Open, held or latched, it lies over the chain, which never moves
-   * (ADR-549); latched, a touch anywhere outside it closes it, and on the
-   * chain (`.palette-catch`) presses nothing under it.
-   */
-  let paletteOpen = $state(false);
-  let paletteEl = $state<HTMLElement | null>(null);
-  /* The chevron is a press on the bar's own gesture, so its finger can
-   * slide down onto a chip (Ben, 2026-11-20). It opens the bar at
-   * finger-down. Let go on a chip and that chip loads; the bar then closes
-   * unless it was latched before the press. Let go anywhere else and it is
-   * Solo's rule (ADR-427): a tap latches, a hold past MOMENTARY_HOLD_MS (or
-   * a slide that found no chip) closes it again. On an open bar the
-   * chevron closes it, unless the finger slides off to load a chip. */
-  let chevron: { wasOpen: boolean; downAt: number; held: boolean } | null = null;
-  function onChevron(event: PointerEvent | null): boolean {
-    return event?.target instanceof Element && !!event.target.closest('[data-debug="chain-add"]');
-  }
-  function startChevron() {
-    swallowNextClick();
-    chevron = { wasOpen: paletteOpen, downAt: Date.now(), held: false };
-    paletteOpen = true;
-  }
-  function endChevron(reason: 'up' | 'cancel', moved: boolean) {
-    if (!chevron) return;
-    const { wasOpen, downAt } = chevron;
-    chevron = null;
-    const target = reason === 'up' ? hotChip : null;
-    hotChip = null;
-    if (target) {
-      loadChip(target);
-      paletteOpen = wasOpen;
-    } else if (wasOpen) {
-      paletteOpen = false;
-    } else if (moved || shouldRestoreOnRelease({ elapsedMs: Date.now() - downAt, reason })) {
-      paletteOpen = false;
-    }
-  }
-  /** A keyboard press on the chevron (a pointer's press is the gesture's).
-   *  Taken on keydown, not click: click is no input on the performance
-   *  surface (ADR-427); preventing the default keeps the button from
-   *  clicking as well. */
-  function keyToggle(event: KeyboardEvent) {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    paletteOpen = !paletteOpen;
-  }
-  function closePalette() {
-    swallowNextClick();
-    paletteOpen = false;
-  }
-  /* Latched, the bar stays open until the chevron closes it or a touch
-   * lands outside it (Ben, 2026-11-19). Outside the chain that touch also
-   * does its own job (Record still records); on the chain, `.palette-catch`
-   * takes it, so it only closes the bar. */
-  $effect(() => {
-    if (!paletteOpen) return;
-    const onDown = (event: PointerEvent) => {
-      if (paletteEl && event.target instanceof Node && paletteEl.contains(event.target)) return;
-      paletteOpen = false;
-    };
-    window.addEventListener('pointerdown', onDown, true);
-    return () => window.removeEventListener('pointerdown', onDown, true);
-  });
-  /* A tap loads the chip it lands on; a release off the
-   * chips loads nothing. It opens on a short hold (a quick tap only loads)
-   * or at once on a slide; 300ms felt laggy (Ben, 2026-11-18). One gesture
-   * on the whole bar, so the chips take no press of their own and the
-   * finger can cross them.
-   */
-  const PEEK_HOLD_MS = 120;
-  let palettePeek = $state(false);
-  let hotChip = $state<string | null>(null);
-  let chipGesture = false;
-  const barOpen = $derived(paletteOpen || palettePeek);
+  /** The palette open over the chain (latched or held), from `ChainPalette`. */
+  let barOpen = $state(false);
   /* At rest the bar shows two rows of chips while the chain fits one row,
-   * and one once the chain wraps to two (Ben, 2026-11-20). The phone keeps
-   * its one fixed row (CSS hides the second there). */
+   * and one once the chain wraps to two (Ben, 2026-11-20). */
   const restRows = $derived(grid.rows > 1 ? 1 : 2);
-  const shownRows = $derived(barOpen ? PALETTE_ROWS : restRows);
-  const chipById = $derived.by(() => {
-    const map = new Map<string, ChainEffect>();
-    for (const { block, start } of placed.blocks) {
-      block.rows.forEach((row, r) => row.forEach((fx, i) => fx && map.set(`${r + 1}:${start + i}`, fx)));
-    }
-    for (const { fx, row } of placed.tailChips) if (fx) map.set(`${row}:${placed.tail}`, fx);
-    return map;
-  });
-  function chipAt(x: number, y: number): string | null {
-    const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-chip-id]');
-    return el?.dataset.chipId ?? null;
-  }
-  function loadChip(id: string | null) {
-    const fx = id ? chipById.get(id) : undefined;
-    if (fx) void addEffectToChain(fx);
-  }
-  function endChipGesture(load: boolean) {
-    if (chipGesture && load) loadChip(hotChip);
-    chipGesture = false;
-    palettePeek = false;
-    hotChip = null;
-  }
-  /** The blocks that fit, each placed: its first column, after the seams before it. */
-  const placed = $derived.by(() => {
-    const all = paletteBlocks(paletteKind);
-    const room = paletteColumns(paletteWidth, PALETTE_TILE_MIN, 0);
-    // The chevron closes the bar, a chip's width, three chips under it.
-    const blocks = paletteWidth > 0 ? fitBlocks(all, room - 1) : all;
-    // One grid, no seams between the families: their washes divide them.
-    let col = 1;
-    const out = blocks.map((block) => {
-      const start = col;
-      col += block.cols;
-      return { block, start };
-    });
-    const template = `repeat(${col}, minmax(0, 1fr))`;
-    const tailChips = paletteTail().map((chip, i) => ({ ...chip, row: i + 2 }));
-    return { blocks: out, template, tail: col, tailChips };
-  });
-  /** A chip's ink: its device's family colour, as the cell it would become wears it. */
-  /* A chip's faint wash is its palette block's family colour (ADR-547):
-     the raw table, since a preset's scheme answers with the track's ink. */
-  const BLOCK_FAMILY: Record<string, DeviceFamily> = {
-    midi: 'pitchSeq', guitar: 'guitar', tone: 'filter', dynamics: 'dynamics',
-    distortion: 'distortion', modulation: 'modulation', glitch: 'glitch', time: 'timeSpace',
-    utility: 'utility'
-  };
-  function chipInk(blockFamily: string): string | undefined {
-    const family = BLOCK_FAMILY[blockFamily];
-    return family ? DEVICE_FAMILY_INKS[family].primary : undefined;
-  }
-
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -992,52 +675,25 @@
   $effect.pre(() => {
     void orderKey;
     if (!chainEl) return;
-    before = new Map();
-    for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
-      if (el !== dragNode) before.set(el.dataset.cellKey!, el.getBoundingClientRect());
-    }
+    before = measureChildren(chainEl, dragNode);
   });
   $effect(() => {
     void orderKey;
     if (!chainEl || before.size === 0) return;
-    const now = [...chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')].map((el) => el.dataset.cellKey!);
-    const reorder = now.length === before.size + (dragNode ? 1 : 0) && now.every((k) => before.has(k) || dragNode?.dataset.cellKey === k);
+    const now = childKeys(chainEl);
+    const sameCells = now.length === before.size + (dragNode ? 1 : 0) && now.every((k) => before.has(k) || dragNode?.dataset.cellKey === k);
     const into = landInto && Date.now() < landInto.until ? landInto : null;
-    if (!reorder && !into) {
+    if (!sameCells && !into) {
       before = new Map();
       return;
     }
-    for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
-      const key = el.dataset.cellKey!;
-      const from = before.get(key);
-      if (!from) {
-        // The dropped device, arriving in its chain: from the drop to here.
-        if (into && el !== into.node && key.includes(`|${into.sig}|`)) {
-          for (const a of el.getAnimations()) a.cancel();
-          const to = el.getBoundingClientRect();
-          const sx = to.width ? into.rect.width / to.width : 1;
-          const sy = to.height ? into.rect.height / to.height : 1;
-          el.animate(
-            [
-              { transformOrigin: '0 0', transform: `translate(${into.rect.left - to.left}px, ${into.rect.top - to.top}px) scale(${sx}, ${sy})` },
-              { transformOrigin: '0 0', transform: 'none' }
-            ],
-            { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
-          );
-          landInto = null;
-        }
-        continue;
+    flipChildren(chainEl, before, (el, key) => {
+      // The dropped device, arriving in its chain: from the drop to here.
+      if (into && el !== into.node && key.includes(`|${into.sig}|`)) {
+        flyFrom(el, into.rect);
+        landInto = null;
       }
-      for (const a of el.getAnimations()) a.cancel();
-      const to = el.getBoundingClientRect();
-      const dx = from.left - to.left;
-      const dy = from.top - to.top;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
-      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
-        duration: 180,
-        easing: 'cubic-bezier(0.2, 0, 0, 1)'
-      });
-    }
+    });
     before = new Map();
     // Its slot moved under it: keep the dragged cell under the finger
     // before this frame paints.
@@ -1144,7 +800,7 @@
       if (into.key !== d.into?.key || into.after !== d.into?.after || d.to !== d.from) drag = { ...d, to: d.from, into };
       return;
     }
-    const to = clampChainIndex({ from: d.from, to: topAt(at), count: d.base.length, instrument: d.instrument });
+    const to = clampChainIndex({ from: d.from, to: topAt(expanded.tops, at), count: d.base.length, instrument: d.instrument });
     if ((to !== null && to !== d.to) || d.into) drag = { ...d, to: to ?? d.to, into: null };
   }
 
@@ -1176,7 +832,7 @@
       }
       return;
     } else if (d && info.reason === 'up' && d.to !== d.from) {
-      reorder = { desired: moved(d.base, d.from, d.to), inflight: reorder.inflight };
+      reorder.drop(moved(d.base, d.from, d.to));
     }
     if (node) settle(node);
   }
@@ -1186,16 +842,7 @@
     const from = node.getBoundingClientRect();
     node.style.transform = '';
     void tick().then(() => {
-      if (!node.isConnected) return;
-      for (const a of node.getAnimations()) a.cancel();
-      const to = node.getBoundingClientRect();
-      const dx = from.left - to.left;
-      const dy = from.top - to.top;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-      node.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
-        duration: 180,
-        easing: 'cubic-bezier(0.2, 0, 0, 1)'
-      });
+      if (node.isConnected) slideFrom(node, from);
     });
   }
 
@@ -1280,7 +927,7 @@
 
 {#snippet cellBody(cell: Cell, position: number)}
   {@const glyph = glyphOf(cell)}
-  {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
+  {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILES[cell.presetKey] : undefined}
   {@const caption = captionOf(cell)}
       <!-- The header bar (2026-11-08, ADR-518): the panels' bar (ADR-516)
            at the height of a strip's name band, so there is room to grab
@@ -1359,7 +1006,7 @@
         <!-- The pitch and mod wheels, as the instrument views draw them:
              side by side, stacked only in a narrow cell. -->
         <div class="cell-control" role="presentation"><CellSize><MidiWheelsFace /></CellSize></div>
-      {:else if tile}
+      {:else if tile?.Tile}
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
         <div class="cell-control" role="presentation"><CellSize>
@@ -1403,102 +1050,7 @@
 {/snippet}
 
 <div class="chain-wrap" class:palette-open={barOpen} class:two-rows={grid.rows > 1} class:rest-two={restRows === 2} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
-<!-- The palette bar: family blocks, a seam between them. Every chip in a
-     fixed place; the + at its end opens the second and third rows, Gain
-     beside it. -->
-<div
-  class="palette"
-  bind:this={paletteEl}
-  bind:clientWidth={paletteWidth}
-  style:grid-template-columns={placed.template}
-  data-debug="chain-palette"
-  data-palette-kind={paletteKind}
-  data-palette-open={barOpen}
-  role="group"
-  aria-label="Effects to add"
-  use:dragGesture={{
-    commit: 'either',
-    holdMs: PEEK_HOLD_MS,
-    onDown: ({ downX, downY, event }) => {
-      if (onChevron(event)) {
-        startChevron();
-        hotChip = null;
-        chipGesture = false;
-        return;
-      }
-      hotChip = chipAt(downX, downY);
-      chipGesture = hotChip !== null;
-    },
-    onHold: () => {
-      if (chevron) chevron.held = true;
-      else if (chipGesture) palettePeek = true;
-    },
-    onStart: ({ x, y }) => {
-      if (chevron) hotChip = chipAt(x, y);
-      else if (chipGesture) palettePeek = true;
-    },
-    onMove: ({ x, y }) => {
-      if (chevron || chipGesture) hotChip = chipAt(x, y);
-    },
-    onTap: () => {
-      if (chevron) endChevron('up', false);
-      else endChipGesture(true);
-    },
-    onEnd: ({ reason }) => {
-      if (chevron) endChevron(reason === 'up' ? 'up' : 'cancel', true);
-      else endChipGesture(reason === 'up');
-    },
-    onPressEnd: ({ mode, event }) => {
-      if (chevron) {
-        // A hold let go without moving ends here; a quick tap ends in onTap.
-        if (mode === 'undecided' && event?.type === 'pointerup' && chevron.held) endChevron('up', false);
-        else if (mode === 'undecided' && event?.type === 'pointercancel') endChevron('cancel', false);
-        return;
-      }
-      // A hold let go without moving: the release is here, not in onEnd.
-      if (mode === 'undecided' && palettePeek && event?.type === 'pointerup') endChipGesture(true);
-      else if (mode === 'undecided' && event?.type === 'pointercancel') endChipGesture(false);
-    }
-  }}
->
-  {#each placed.blocks as { block, start } (block.family)}
-    {#each block.rows.slice(0, shownRows) as row, r (r)}
-      {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
-        <div class="palette-slot" class:rest-extra={!barOpen && r > 0} class:blank={!fx} class:family-head={r === 0} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family} data-chip-id={fx ? `${r + 1}:${start + i}` : undefined}>
-          {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(block.family)} passive hot={hotChip === `${r + 1}:${start + i}`} />{/if}
-        </div>
-      {/each}
-    {/each}
-  {/each}
-  {#if shownRows > 1}
-    {#each placed.tailChips.filter((c) => c.row <= shownRows) as { family, fx, row } (row)}
-      <div class="palette-slot" class:rest-extra={!barOpen} class:blank={!fx} style:grid-column={placed.tail} style:grid-row={row} data-family={family} data-chip-id={fx ? `${row}:${placed.tail}` : undefined}>
-        {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(family)} passive hot={hotChip === `${row}:${placed.tail}`} />{/if}
-      </div>
-    {/each}
-  {/if}
-  <div class="palette-slot" style:grid-column={placed.tail} style:grid-row="1">
-    <button
-      type="button"
-      class="chain-add palette-add"
-      class:open={paletteOpen}
-      aria-label={paletteOpen ? 'Fewer effects' : 'More effects'}
-      aria-expanded={paletteOpen}
-      data-debug="chain-add"
-      onkeydown={keyToggle}
-    >
-      <span class="chain-add-plus" aria-hidden="true">{#if paletteOpen}<ChevronUp />{:else}<ChevronDown />{/if}</span>
-    </button>
-  </div>
-</div>
-{#if paletteOpen}
-  <div
-    class="palette-catch"
-    aria-hidden="true"
-    data-debug="chain-palette-catch"
-    use:press={{ onPress: closePalette, touchAction: 'none', fireOn: 'down', stopPropagation: true }}
-  ></div>
-{/if}
+<ChainPalette kind={paletteKind} {restRows} bind:barOpen />
 <div
   class="chain"
   style:--chain-cols={grid.cols}
@@ -1549,7 +1101,7 @@
           if (pressInHead && isPowered(cell) && cell.kind !== 'instrument') togglePower(cell);
           else open(cell, pressInControl);
         },
-        onStart: (info) => dragStart(cell, topAt(position), info),
+        onStart: (info) => dragStart(cell, topAt(expanded.tops, position), info),
         onMove: dragMove,
         onEnd: dragEnd
       }}
@@ -1618,24 +1170,11 @@
   :global([data-phone-layout]) .chain-wrap .chain {
     grid-row: 2 / span 2;
   }
-  /* Two rows of chips at rest: the bar takes two sixths, the chain four,
-     and an open bar still covers four, over the chain's first two rows. */
-  .chain-wrap.rest-two .palette {
-    grid-row: 1 / span 2;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-  }
   .chain-wrap.rest-two .chain {
     grid-row: 3 / span 4;
   }
-  :global([data-phone-layout]) .chain-wrap.rest-two .palette {
-    grid-row: 1;
-    grid-template-rows: minmax(0, 1fr);
-  }
   :global([data-phone-layout]) .chain-wrap.rest-two .chain {
     grid-row: 2 / span 2;
-  }
-  :global([data-phone-layout]) .palette-slot.rest-extra {
-    display: none;
   }
   .chain-wrap.pad-scoped {
     outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));
@@ -1670,36 +1209,6 @@
     z-index: 3;
     pointer-events: none;
   }
-  /* The + cell: the strips row's add buttons' dashed ghost (NewTrackButtons),
-     the firmest of the ghosts, since it is the one that always does
-     something. */
-  .chain-add {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    min-width: 0;
-    min-height: 0;
-    padding: 0;
-    border: 1px dashed var(--ghost-line-strong);
-    border-radius: var(--ghost-radius);
-    background: transparent;
-    color: var(--muted-foreground);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise);
-  }
-  .chain-add > span {
-    opacity: 0.7;
-  }
-  .chain-add:active {
-    background: var(--secondary);
-    color: var(--foreground);
-  }
-  .chain-add:active > span {
-    opacity: 1;
-  }
   /* A dragged device over a cell in an unfolded rack's chain (ADR-551):
      the cell lights, and a bar on the side the drop goes to. */
   .chain-cell.drop-into {
@@ -1722,32 +1231,6 @@
   .chain-cell.drop-into.drop-after::after {
     right: 0;
   }
-  /* A big +, as tall as the tile allows (the user, 2026-11-05). */
-  .chain-add-plus {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-  }
-  .chain-add-plus :global(svg) {
-    width: auto;
-    height: min(60%, 56px);
-    aspect-ratio: 1;
-    stroke-width: 1.5;
-  }
-  /* The chevron: a chip's height, its mark sized to the chip; lit while
-     the bar is open (on has no hue, ADR-544). */
-  .palette-add .chain-add-plus :global(svg) {
-    height: min(70%, 32px);
-  }
-  .palette-add.open {
-    border-style: solid;
-    border-color: var(--on-bg);
-    background: var(--on-bg);
-    color: var(--on-fg);
-  }
-
   /* A cell is a panel: the strips' own surface on the page, a hairline,
      the header bar across its top and its face in the field below. */
   .chain-cell {
@@ -1768,65 +1251,6 @@
     overflow: hidden;
     transition: border-color var(--t-fast) var(--ease-precise), box-shadow var(--t-fast) var(--ease-precise);
   }
-  /* The palette bar: the MIDI chips, a seam, the audio chips and +, one
-     row of chips of one size, each placed by its slot. */
-  /* The bar runs to the right edge, its + and Gain chips last. */
-  /* One grid with no gaps (ADR-548, the experiment): a finger sliding
-     across it never falls between two chips. Each chip draws half a
-     hairline on its own edges, so two together make one line. */
-  .palette {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    min-width: 0;
-    min-height: 0;
-    display: grid;
-    grid-template-rows: minmax(0, 1fr);
-    gap: 0;
-    border-radius: var(--ghost-radius);
-    overflow: hidden;
-  }
-  .palette :global(.palette-chip) {
-    border: 0;
-    border-radius: 0;
-    box-shadow: inset 0 0 0 0.5px var(--line);
-  }
-  /* Each family's column wears a stripe of its ink across the top of its
-     first-row chips, so the blocks read at a glance while the chips stay
-     quiet. */
-  .palette .palette-slot.family-head :global(.palette-chip) {
-    box-shadow:
-      inset 0 3px 0 color-mix(in srgb, var(--chip-ink) 85%, transparent),
-      inset 0 0 0 0.5px var(--line);
-  }
-  .palette .palette-slot.blank {
-    border: 0;
-    border-radius: 0;
-    box-shadow: inset 0 0 0 0.5px var(--line);
-  }
-  .palette .chain-add {
-    border-radius: 0;
-  }
-  /* Four rows and the three gaps they replace, so the bar ends on the
-     section's fourth sixth. */
-  /* Open, the bar lies OVER the chain (ADR-549): the chain keeps its five
-     sixths and never moves, held or latched. The bar is opaque and casts
-     a shadow on the chain's cells under it. */
-  .chain-wrap.palette-open .palette {
-    grid-row: 1 / span 4;
-    grid-template-rows: repeat(4, minmax(0, 1fr));
-    position: relative;
-    z-index: 3;
-    background: var(--background);
-    box-shadow: 0 6px 16px -4px color-mix(in srgb, black 55%, transparent);
-  }
-  :global([data-phone-layout]) .chain-wrap.palette-open .palette {
-    grid-row: 1;
-    align-self: start;
-    height: 186px;
-    /* Restated: the phone's one-row rest rule outranks the open bar's,
-       which left the first row tall and the others squeezed. */
-    grid-template-rows: repeat(4, minmax(0, 1fr));
-  }
   /* Under the open bar the chain dims, held or latched (Ben, 2026-11-19):
      it is out of play, its names at the cells' feet still read. Quick,
      since a hold opens the bar for under a second. */
@@ -1835,28 +1259,6 @@
   }
   .chain-wrap.palette-open .chain {
     opacity: 0.6;
-  }
-  /* A latched bar: the rest of the chain takes one tap, which closes the
-     bar and presses nothing under it. */
-  .palette-catch {
-    grid-column: 1;
-    grid-row: 2 / span 5;
-    position: relative;
-    z-index: 2;
-  }
-  :global([data-phone-layout]) .palette-catch {
-    grid-row: 2 / span 2;
-  }
-  .palette-slot {
-    min-width: 0;
-    min-height: 0;
-    display: grid;
-  }
-  /* A slot a block leaves empty (a shorter row, an effect not on this
-     Mac): a faint outline, so the chips beside it read as where they are. */
-  .palette-slot.blank {
-    border: 1px dashed color-mix(in oklab, var(--ghost-line) 45%, transparent);
-    border-radius: var(--ghost-radius);
   }
   /* Bypassed: the bar keeps its name, its wash goes and the face dims, as
      a board's tile ghosts its body when its section is off (ADR-516). */
